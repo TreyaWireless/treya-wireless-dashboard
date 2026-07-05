@@ -20,7 +20,7 @@ class CConfigFile {
 	const CONFIG_ERROR = 2;
 	const CONFIG_VAULT_ERROR = 3;
 
-	const CONFIG_FILE_PATH = '/conf/treya_wireless.conf.php';
+	const CONFIG_FILE_PATH = '/conf/treya.conf.php';
 
 	private static $supported_db_types = [
 		ZBX_DB_MYSQL => true,

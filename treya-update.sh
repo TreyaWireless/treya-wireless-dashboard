@@ -35,11 +35,16 @@ if [ -f "$TMP_DIR/repo/omada_monitor.py" ]; then
     echo "omada_monitor.py updated."
 fi
 
-# 5. Permissions fix
+# 5. Permissions fix & Configuration symlinks restore
 chown -R nginx:nginx $WEB_DIR 2>/dev/null || \
 chown -R apache:apache $WEB_DIR 2>/dev/null || true
 find $WEB_DIR -type f -exec chmod 644 {} \;
 find $WEB_DIR -type d -exec chmod 755 {} \;
+
+# Ensure treya.conf.php configuration symlink exists
+ln -sf /etc/zabbix/web/treya.conf.php /usr/share/zabbix/conf/treya.conf.php 2>/dev/null || true
+ln -sf /etc/treya-wireless/web/treya.conf.php /usr/share/treya-wireless/conf/treya.conf.php 2>/dev/null || true
+chmod 644 /etc/zabbix/web/treya.conf.php /etc/treya-wireless/web/treya.conf.php 2>/dev/null || true
 
 # 6. PHP Cache clear
 php -r "opcache_reset();" 2>/dev/null || true
