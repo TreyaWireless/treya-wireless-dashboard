@@ -17,6 +17,8 @@ RELEASE="release1.el9"
 NAME="treya-wireless-web"
 TARBALL="${NAME}-${VERSION}.tar.gz"
 
+ORIG_DIR=$(pwd)
+
 echo "Creating source tarball..."
 TMP_DIR=$(mktemp -d)
 mkdir -p "${TMP_DIR}/${NAME}-${VERSION}/ui"
@@ -30,6 +32,7 @@ rm -rf "${REPO_DIR}"
 # Create tar.gz in SOURCES
 cd "${TMP_DIR}"
 tar -czf ~/rpmbuild/SOURCES/"${TARBALL}" "${NAME}-${VERSION}"
+cd "${ORIG_DIR}"
 rm -rf "${TMP_DIR}"
 
 echo "Creating RPM spec file..."
@@ -64,8 +67,8 @@ SPEC
 echo "Building RPM package..."
 rpmbuild -bb ~/rpmbuild/SPECS/${NAME}.spec
 
-echo "Copying built RPM to current directory..."
-cp ~/rpmbuild/RPMS/noarch/${NAME}-${VERSION}-${RELEASE}.noarch.rpm .
+echo "Copying built RPM to original directory..."
+cp ~/rpmbuild/RPMS/noarch/${NAME}-${VERSION}-${RELEASE}.noarch.rpm "${ORIG_DIR}/"
 
 echo "======================================================"
 echo " RPM Build Complete!"
