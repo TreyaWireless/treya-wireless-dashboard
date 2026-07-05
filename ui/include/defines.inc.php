@@ -17,7 +17,7 @@ define('ZABBIX_VERSION',		'7.4.11');
 define('ZABBIX_API_VERSION',	'7.4.11');
 define('ZABBIX_EXPORT_VERSION',	'7.4');
 
-define('ZABBIX_DB_VERSION',		7040000);
+define('ZABBIX_DB_VERSION',		7000000);
 
 define('DB_VERSION_SUPPORTED',						0);
 define('DB_VERSION_LOWER_THAN_MINIMUM',				1);
