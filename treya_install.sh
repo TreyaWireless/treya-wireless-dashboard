@@ -207,7 +207,15 @@ systemctl enable --now treya-wireless-server 2>/dev/null || systemctl enable --n
 systemctl restart treya-wireless-server 2>/dev/null || systemctl restart zabbix-server 2>/dev/null || true
 
 systemctl enable --now treya-wireless-agent 2>/dev/null || systemctl enable --now zabbix-agent 2>/dev/null || true
-systemctl restart treya-wireless-agent 2>/dev/null || systemctl restart zabbix-agent 2>/dev/null || true
+
+# ── STEP 10b: Import Custom Zabbix Templates ─────────────────
+echo ""
+echo "[STEP 10b] Importing Custom Zabbix Templates..."
+if [ -f /home/ec2-user/treya-wireless-dashboard/import_template.py ]; then
+    python3 /home/ec2-user/treya-wireless-dashboard/import_template.py 2>/dev/null || true
+elif [ -f ./import_template.py ]; then
+    python3 ./import_template.py 2>/dev/null || true
+fi
 
 # ── STEP 11: Firewall & SELinux ────────────────────────────
 echo ""
