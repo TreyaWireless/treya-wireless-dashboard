@@ -23,6 +23,17 @@ $this->includeJsFile('configuration.host.edit.html.js.php');
 
 $host_is_discovered = ($data['host']['flags'] == ZBX_FLAG_DISCOVERY_CREATED);
 
+$is_api_host = false;
+if (isset($data['host']['macros'])) {
+	foreach ($data['host']['macros'] as $macro) {
+		if ($macro['macro'] === '{$MONITORED_BY_API}' && (string)$macro['value'] === '1') {
+			$is_api_host = true;
+			break;
+		}
+	}
+}
+$monitored_by_value = $is_api_host ? ZBX_MONITORED_BY_API : (int) $data['host']['monitored_by'];
+
 $host_form = (new CForm())
 	->addItem((new CVar(CSRF_TOKEN_NAME, CCsrfTokenHelper::get('host')))->removeId())
 	->setId($data['form_name'])
@@ -256,10 +267,11 @@ $host_tab
 	->addItem([
 		new CLabel(_('Monitored by'), 'label-proxy'),
 		new CFormField(
-			(new CRadioButtonList('monitored_by', (int) $data['host']['monitored_by']))
+			(new CRadioButtonList('monitored_by', $monitored_by_value))
 				->addValue(_('Server'), ZBX_MONITORED_BY_SERVER)
 				->addValue(_('Proxy'), ZBX_MONITORED_BY_PROXY)
 				->addValue(_('Proxy group'), ZBX_MONITORED_BY_PROXY_GROUP)
+				->addValue(_('API'), ZBX_MONITORED_BY_API)
 				->setReadonly($host_is_discovered)
 				->setModern()
 		)

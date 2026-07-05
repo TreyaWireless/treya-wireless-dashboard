@@ -1838,6 +1838,7 @@ define('ZBX_MONITORED_BY_ANY',			-1);
 define('ZBX_MONITORED_BY_SERVER',		0);
 define('ZBX_MONITORED_BY_PROXY',		1);
 define('ZBX_MONITORED_BY_PROXY_GROUP',	2);
+define('ZBX_MONITORED_BY_API',			3);
 
 // queue modes
 define('QUEUE_OVERVIEW', 0);

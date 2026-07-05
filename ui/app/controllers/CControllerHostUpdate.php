@@ -78,11 +78,31 @@ class CControllerHostUpdate extends CControllerHostUpdateGeneral {
 				$this->getInput('add_templates', [])
 			);
 
+			$monitored_by = $this->getInput('monitored_by', $this->host['monitored_by']);
+			$raw_macros = $this->getInput('macros', []);
+			if ($monitored_by == ZBX_MONITORED_BY_API) {
+				$api_macro_exists = false;
+				foreach ($raw_macros as &$macro) {
+					if (isset($macro['macro']) && $macro['macro'] === '{$MONITORED_BY_API}') {
+						$macro['value'] = '1';
+						$api_macro_exists = true;
+					}
+				}
+				unset($macro);
+				if (!$api_macro_exists) {
+					$raw_macros[] = [
+						'macro' => '{$MONITORED_BY_API}',
+						'value' => '1',
+						'description' => 'Monitored by API'
+					];
+				}
+			}
+
 			$host = [
 				'hostid' => $this->host['hostid'],
 				'host' => $this->getInput('host', $this->host['host']),
 				'name' => $this->getInput('visiblename', $this->host['name']),
-				'monitored_by' => $this->getInput('monitored_by', $this->host['monitored_by']),
+				'monitored_by' => ($monitored_by == ZBX_MONITORED_BY_API) ? ZBX_MONITORED_BY_SERVER : $monitored_by,
 				'status' => $this->getInput('status', $this->host['status']),
 				'groups' => $this->processHostGroups($this->getInput('groups', [])),
 				'interfaces' => $this->processHostInterfaces($this->getInput('interfaces', [])),
@@ -91,7 +111,7 @@ class CControllerHostUpdate extends CControllerHostUpdateGeneral {
 					$this->getInput('add_templates', []), $this->getInput('templates', [])
 				]),
 				'templates_clear' => zbx_toObject($clear_templates, 'templateid'),
-				'macros' => $this->processUserMacros($this->getInput('macros', []), $this->host['macros']),
+				'macros' => $this->processUserMacros($raw_macros, $this->host['macros']),
 				'inventory' => $inventory_enabled ? $this->getInput('host_inventory', []) : [],
 				'tls_connect' => $this->getInput('tls_connect', $this->host['tls_connect']),
 				'tls_accept' => $this->getInput('tls_accept', $this->host['tls_accept'])

@@ -43,7 +43,7 @@ class CControllerHostEdit extends CController {
 			'status'				=> 'db hosts.status|in '.implode(',', [HOST_STATUS_MONITORED,
 											HOST_STATUS_NOT_MONITORED
 										]),
-			'monitored_by'			=> 'db hosts.monitored_by|in '.implode(',', [ZBX_MONITORED_BY_SERVER, ZBX_MONITORED_BY_PROXY, ZBX_MONITORED_BY_PROXY_GROUP]),
+			'monitored_by'			=> 'db hosts.monitored_by|in '.implode(',', [ZBX_MONITORED_BY_SERVER, ZBX_MONITORED_BY_PROXY, ZBX_MONITORED_BY_PROXY_GROUP, ZBX_MONITORED_BY_API]),
 			'proxyid'				=> 'db hosts.proxyid',
 			'proxy_groupid'			=> 'db hosts.proxy_groupid',
 			'interfaces'			=> 'array',

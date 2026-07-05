@@ -30,7 +30,7 @@ class CControllerPopupMassupdateHost extends CControllerPopupMassupdateAbstract 
 			'templates' => 'array',
 			'inventories' => 'array',
 			'description' => 'string',
-			'monitored_by' => 'in '.implode(',', [ZBX_MONITORED_BY_SERVER, ZBX_MONITORED_BY_PROXY, ZBX_MONITORED_BY_PROXY_GROUP]),
+			'monitored_by' => 'in '.implode(',', [ZBX_MONITORED_BY_SERVER, ZBX_MONITORED_BY_PROXY, ZBX_MONITORED_BY_PROXY_GROUP, ZBX_MONITORED_BY_API]),
 			'proxyid' => 'string',
 			'proxy_groupid' => 'string',
 			'ipmi_username' => 'string',
@@ -210,7 +210,8 @@ class CControllerPopupMassupdateHost extends CControllerPopupMassupdateAbstract 
 				}
 
 				if (array_key_exists('monitored_by', $visible)) {
-					$new_values['monitored_by'] = $this->getInput('monitored_by', ZBX_MONITORED_BY_SERVER);
+					$monitored_by = $this->getInput('monitored_by', ZBX_MONITORED_BY_SERVER);
+					$new_values['monitored_by'] = ($monitored_by == ZBX_MONITORED_BY_API) ? ZBX_MONITORED_BY_SERVER : $monitored_by;
 
 					if ($new_values['monitored_by'] == ZBX_MONITORED_BY_PROXY) {
 						$new_values['proxyid'] = $this->getInput('proxyid', 0);

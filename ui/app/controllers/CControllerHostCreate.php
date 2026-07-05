@@ -61,16 +61,36 @@ class CControllerHostCreate extends CControllerHostUpdateGeneral {
 		try {
 			DBstart();
 
+			$monitored_by = $this->getInput('monitored_by', ZBX_MONITORED_BY_SERVER);
+			$raw_macros = $this->getInput('macros', []);
+			if ($monitored_by == ZBX_MONITORED_BY_API) {
+				$api_macro_exists = false;
+				foreach ($raw_macros as &$macro) {
+					if (isset($macro['macro']) && $macro['macro'] === '{$MONITORED_BY_API}') {
+						$macro['value'] = '1';
+						$api_macro_exists = true;
+					}
+				}
+				unset($macro);
+				if (!$api_macro_exists) {
+					$raw_macros[] = [
+						'macro' => '{$MONITORED_BY_API}',
+						'value' => '1',
+						'description' => 'Monitored by API'
+					];
+				}
+			}
+
 			$host = [
 				'status' => $this->getInput('status', HOST_STATUS_NOT_MONITORED),
-				'monitored_by' => $this->getInput('monitored_by', ZBX_MONITORED_BY_SERVER),
+				'monitored_by' => ($monitored_by == ZBX_MONITORED_BY_API) ? ZBX_MONITORED_BY_SERVER : $monitored_by,
 				'groups' => $this->processHostGroups($this->getInput('groups', [])),
 				'interfaces' => $this->processHostInterfaces($this->getInput('interfaces', [])),
 				'tags' => $this->processTags($this->getInput('tags', [])),
 				'templates' => $this->processTemplates([
 					$this->getInput('add_templates', []), $this->getInput('templates', [])
 				]),
-				'macros' => $this->processUserMacros($this->getInput('macros', [])),
+				'macros' => $this->processUserMacros($raw_macros),
 				'inventory' => ($this->getInput('inventory_mode', HOST_INVENTORY_DISABLED) != HOST_INVENTORY_DISABLED)
 					? $this->getInput('host_inventory', [])
 					: [],

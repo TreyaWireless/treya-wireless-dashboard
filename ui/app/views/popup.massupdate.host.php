@@ -108,6 +108,7 @@ $host_tab->addRow(
 			->addValue(_('Server'), ZBX_MONITORED_BY_SERVER)
 			->addValue(_('Proxy'), ZBX_MONITORED_BY_PROXY)
 			->addValue(_('Proxy group'), ZBX_MONITORED_BY_PROXY_GROUP)
+			->addValue(_('API'), ZBX_MONITORED_BY_API)
 			->setModern(),
 		(new CDiv(
 			(new CMultiSelect([
