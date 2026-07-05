@@ -1,0 +1,474 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: 7df96b18c230490a9a0a9e230722d624
+      name: Templates/Applications
+  templates:
+    - uuid: c61c7d89b1c0490a9a0a9e230722d624
+      template: 'TP-Link Omada Controller Custom API'
+      name: 'TP-Link Omada Controller Custom API'
+      groups:
+        - name: Templates/Applications
+      items:
+        - uuid: 1f9a2b8e3d0c490a9a0a9e230722d624
+          name: 'Omada: Get Controller Data'
+          type: EXTERNAL
+          key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+          delay: 30s
+          history: 1d
+          trends: '0'
+          value_type: TEXT
+          description: 'Runs the Python script to fetch raw JSON metrics from Omada Controller SDN API.'
+        - uuid: 2f9a2b8e3d0c490a9a0a9e230722d624
+          name: 'Omada APs: Online'
+          type: DEPENDENT
+          key: omada.online_aps
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          master_item:
+            key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.online_aps
+        - uuid: 3f9a2b8e3d0c490a9a0a9e230722d624
+          name: 'Omada APs: Offline'
+          type: DEPENDENT
+          key: omada.offline_aps
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          master_item:
+            key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.offline_aps
+        - uuid: 4f9a2b8e3d0c490a9a0a9e230722d624
+          name: 'Omada APs: Total'
+          type: DEPENDENT
+          key: omada.total_aps
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          master_item:
+            key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.total_aps
+        - uuid: 5f9a2b8e3d0c490a9a0a9e230722d624
+          name: 'Omada Switches: Online'
+          type: DEPENDENT
+          key: omada.online_switches
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          master_item:
+            key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.online_switches
+        - uuid: 6f9a2b8e3d0c490a9a0a9e230722d624
+          name: 'Omada Switches: Offline'
+          type: DEPENDENT
+          key: omada.offline_switches
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          master_item:
+            key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.offline_switches
+        - uuid: 7f9a2b8e3d0c490a9a0a9e230722d624
+          name: 'Omada Switches: Total'
+          type: DEPENDENT
+          key: omada.total_switches
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          master_item:
+            key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.total_switches
+        - uuid: 8f9a2b8e3d0c490a9a0a9e230722d624
+          name: 'Omada Connected Clients'
+          type: DEPENDENT
+          key: omada.total_clients
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          master_item:
+            key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.total_clients
+        - uuid: 9f9a2b8e3d0c490a9a0a9e230722d624
+          name: 'Omada API: Status'
+          type: DEPENDENT
+          key: omada.status
+          delay: '0'
+          history: 7d
+          value_type: CHAR
+          master_item:
+            key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.status
+        - uuid: af9a2b8e3d0c490a9a0a9e230722d624
+          name: 'Omada API: Error Message'
+          type: DEPENDENT
+          key: omada.error_message
+          delay: '0'
+          history: 7d
+          value_type: CHAR
+          master_item:
+            key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.error_message
+              error_handler: DISCARD_VALUE
+        - uuid: dda75bc0a11748909d71e9aea622c51c
+          name: 'Omada Active Loops Count'
+          type: DEPENDENT
+          key: omada.active_loops
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          master_item:
+            key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.active_loops
+        - uuid: b1aed3f1c9c045c7bdd6459194a1ee2b
+          name: 'Omada Loop Status Text'
+          type: DEPENDENT
+          key: omada.loop_status_text
+          delay: '0'
+          history: 7d
+          value_type: CHAR
+          master_item:
+            key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.loop_status_text
+      discovery_rules:
+        - uuid: 2d3a6001ce1740898fb0e320afaa37af
+          name: 'Switches Discovery'
+          type: DEPENDENT
+          key: omada.switches.discovery
+          delay: '0'
+          master_item:
+            key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+          lld_macro_paths:
+            - lld_macro: '{#SWITCH_MAC}'
+              path: $.mac
+            - lld_macro: '{#SWITCH_NAME}'
+              path: $.name
+            - lld_macro: '{#SWITCH_IP}'
+              path: $.ip
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.switches
+          item_prototypes:
+            - uuid: 50a355ea547f4e2a9232abac3c54acff
+              name: 'Switch {#SWITCH_NAME}: CPU Utilization'
+              type: DEPENDENT
+              key: 'omada.switch.cpu[{#SWITCH_MAC}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              units: '%'
+              master_item:
+                key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.switches[?(@.mac=="{#SWITCH_MAC}")].cpu.first()'
+            - uuid: 170efe1e2f87458b98ed0797d6dce484
+              name: 'Switch {#SWITCH_NAME}: Memory Utilization'
+              type: DEPENDENT
+              key: 'omada.switch.mem[{#SWITCH_MAC}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              units: '%'
+              master_item:
+                key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.switches[?(@.mac=="{#SWITCH_MAC}")].memory.first()'
+            - uuid: 8ff5ab8761eb4e11a22ba1c064c7d9a8
+              name: 'Switch {#SWITCH_NAME}: Status'
+              type: DEPENDENT
+              key: 'omada.switch.status[{#SWITCH_MAC}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              master_item:
+                key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.switches[?(@.mac=="{#SWITCH_MAC}")].status.first()'
+              trigger_prototypes:
+                - uuid: 1c2dfaeef9a84383b2436cf3ed08d238
+                  expression: 'last(/TP-Link Omada Controller Custom API/omada.switch.status[{#SWITCH_MAC}])=0'
+                  name: 'Switch {#SWITCH_NAME} is Offline on {HOST.NAME}'
+                  priority: WARNING
+                  description: 'Switch {#SWITCH_NAME} has disconnected from the Omada Controller.'
+                - uuid: 9c10c7b0577549c09bf0a17349f9a050
+                  expression: 'last(/TP-Link Omada Controller Custom API/omada.switch.cpu[{#SWITCH_MAC}])>90'
+                  name: 'High CPU utilization on switch {#SWITCH_NAME} on {HOST.NAME} (potential loop)'
+                  priority: AVERAGE
+                  description: 'High CPU utilization (>90%) detected on Switch {#SWITCH_NAME}. This is a classic symptom of a network loop / broadcast storm.'
+            - uuid: 4f4ecfecb5c24a8fbb4b139ce14d8fb5
+              name: 'Switch {#SWITCH_NAME}: Uptime'
+              type: DEPENDENT
+              key: 'omada.switch.uptime[{#SWITCH_MAC}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              units: 's'
+              master_item:
+                key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.switches[?(@.mac=="{#SWITCH_MAC}")].uptime.first()'
+              trigger_prototypes:
+                - uuid: 922f11290f284fc79104fadc982e71aa
+                  expression: 'last(/TP-Link Omada Controller Custom API/omada.switch.uptime[{#SWITCH_MAC}])<300 and last(/TP-Link Omada Controller Custom API/omada.switch.uptime[{#SWITCH_MAC}])>0'
+                  name: 'Switch {#SWITCH_NAME} was rebooted recently on {HOST.NAME}'
+                  priority: WARNING
+                  description: 'Switch {#SWITCH_NAME} has restarted within the last 5 minutes.'
+        - uuid: a93baad4ca71472894c9b9d08e46218d
+          name: 'Access Points Discovery'
+          type: DEPENDENT
+          key: omada.eaps.discovery
+          delay: '0'
+          master_item:
+            key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+          lld_macro_paths:
+            - lld_macro: '{#AP_MAC}'
+              path: $.mac
+            - lld_macro: '{#AP_NAME}'
+              path: $.name
+            - lld_macro: '{#AP_IP}'
+              path: $.ip
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.eaps
+          item_prototypes:
+            - uuid: 89b76505df4d4bb4b3db13b785616805
+              name: 'AP {#AP_NAME}: Status'
+              type: DEPENDENT
+              key: 'omada.ap.status[{#AP_MAC}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              master_item:
+                key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.eaps[?(@.mac=="{#AP_MAC}")].status.first()'
+              trigger_prototypes:
+                - uuid: 3ce242c7dfd44664815534f05007570f
+                  expression: 'last(/TP-Link Omada Controller Custom API/omada.ap.status[{#AP_MAC}])=0'
+                  name: 'AP {#AP_NAME} ({{#AP_MAC}}) is Offline on {HOST.NAME}'
+                  priority: WARNING
+                  description: 'Access Point {#AP_NAME} ({{#AP_MAC}}) has disconnected from the controller.'
+            - uuid: dbec5b20227345db8c2d4a935c44678e
+              name: 'AP {#AP_NAME}: 2.4GHz Channel Utilization'
+              type: DEPENDENT
+              key: 'omada.ap.chan_util_2g[{#AP_MAC}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              units: '%'
+              description: '2.4 GHz चॅनेल वापर टक्केवारी. 70% पेक्षा जास्त असल्यास इंटरफेरन्स अलर्ट येतो.'
+              master_item:
+                key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.eaps[?(@.mac=="{#AP_MAC}")].channel_util_2g.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 3600s
+              trigger_prototypes:
+                - uuid: dc2f0bdb190e4508a7c8166730b69f2a
+                  expression: 'last(/TP-Link Omada Controller Custom API/omada.ap.chan_util_2g[{#AP_MAC}])>70 and last(/TP-Link Omada Controller Custom API/omada.ap.chan_util_2g[{#AP_MAC}])>=0'
+                  name: 'High 2.4GHz Channel Interference on AP {#AP_NAME} on {HOST.NAME} (>{$OMADA_CHAN_UTIL_WARN}%)'
+                  priority: WARNING
+                  description: 'AP {#AP_NAME} च्या 2.4 GHz रेडिओवर चॅनेल वापर {$OMADA_CHAN_UTIL_WARN}% पेक्षा जास्त आहे. यामुळे WiFi कार्यक्षमता कमी होऊ शकते.'
+                  dependencies:
+                    - name: 'Critical 2.4GHz Channel Saturation on AP {#AP_NAME} on {HOST.NAME} (>{$OMADA_CHAN_UTIL_CRIT}%)'
+                      expression: 'last(/TP-Link Omada Controller Custom API/omada.ap.chan_util_2g[{#AP_MAC}])>90 and last(/TP-Link Omada Controller Custom API/omada.ap.chan_util_2g[{#AP_MAC}])>=0'
+                - uuid: 9fb2ecef7ad5494b935bcb0f7ee531a8
+                  expression: 'last(/TP-Link Omada Controller Custom API/omada.ap.chan_util_2g[{#AP_MAC}])>90 and last(/TP-Link Omada Controller Custom API/omada.ap.chan_util_2g[{#AP_MAC}])>=0'
+                  name: 'Critical 2.4GHz Channel Saturation on AP {#AP_NAME} on {HOST.NAME} (>{$OMADA_CHAN_UTIL_CRIT}%)'
+                  priority: AVERAGE
+                  description: 'AP {#AP_NAME} च्या 2.4 GHz रेडिओवर चॅनेल {$OMADA_CHAN_UTIL_CRIT}% पेक्षा जास्त संतृप्त आहे. AP पुन्हा चालू करणे किंवा चॅनेल बदल आवश्यक असू शकतो.'
+            - uuid: 63247eb6bcf34b5e95ecfe640ca98899
+              name: 'AP {#AP_NAME}: 5GHz Channel Utilization'
+              type: DEPENDENT
+              key: 'omada.ap.chan_util_5g[{#AP_MAC}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              units: '%'
+              description: '5 GHz चॅनेल वापर टक्केवारी. 70% पेक्षा जास्त असल्यास इंटरफेरन्स अलर्ट येतो.'
+              master_item:
+                key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.eaps[?(@.mac=="{#AP_MAC}")].channel_util_5g.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 3600s
+              trigger_prototypes:
+                - uuid: cf0828b767404c148ca9c89c95e9e7b0
+                  expression: 'last(/TP-Link Omada Controller Custom API/omada.ap.chan_util_5g[{#AP_MAC}])>70 and last(/TP-Link Omada Controller Custom API/omada.ap.chan_util_5g[{#AP_MAC}])>=0'
+                  name: 'High 5GHz Channel Interference on AP {#AP_NAME} on {HOST.NAME} (>{$OMADA_CHAN_UTIL_WARN}%)'
+                  priority: WARNING
+                  description: 'AP {#AP_NAME} च्या 5 GHz रेडिओवर चॅनेल वापर {$OMADA_CHAN_UTIL_WARN}% पेक्षा जास्त आहे.'
+                  dependencies:
+                    - name: 'Critical 5GHz Channel Saturation on AP {#AP_NAME} on {HOST.NAME} (>{$OMADA_CHAN_UTIL_CRIT}%)'
+                      expression: 'last(/TP-Link Omada Controller Custom API/omada.ap.chan_util_5g[{#AP_MAC}])>90 and last(/TP-Link Omada Controller Custom API/omada.ap.chan_util_5g[{#AP_MAC}])>=0'
+                - uuid: 8cf203ff20ab479db316bc9fc0ecebb3
+                  expression: 'last(/TP-Link Omada Controller Custom API/omada.ap.chan_util_5g[{#AP_MAC}])>90 and last(/TP-Link Omada Controller Custom API/omada.ap.chan_util_5g[{#AP_MAC}])>=0'
+                  name: 'Critical 5GHz Channel Saturation on AP {#AP_NAME} on {HOST.NAME} (>{$OMADA_CHAN_UTIL_CRIT}%)'
+                  priority: AVERAGE
+                  description: 'AP {#AP_NAME} च्या 5 GHz रेडिओवर चॅनेल {$OMADA_CHAN_UTIL_CRIT}% पेक्षा जास्त संतृप्त आहे.'
+            - uuid: e0a4f9fc1a34481dbf03cc6acdd23592
+              name: 'AP {#AP_NAME}: 2.4GHz Noise Floor'
+              type: DEPENDENT
+              key: 'omada.ap.noise_2g[{#AP_MAC}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              units: dBm
+              description: '2.4 GHz Noise Floor. -65 dBm पेक्षा जास्त (कमी negative) असल्यास RF इंटरफेरन्स जास्त आहे.'
+              master_item:
+                key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.eaps[?(@.mac=="{#AP_MAC}")].noise_floor_2g.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 3600s
+              trigger_prototypes:
+                - uuid: bc69931de8164508ba764b9b2d474b8f
+                  expression: 'last(/TP-Link Omada Controller Custom API/omada.ap.noise_2g[{#AP_MAC}])>-65 and last(/TP-Link Omada Controller Custom API/omada.ap.noise_2g[{#AP_MAC}])<0'
+                  name: 'High RF Noise on AP {#AP_NAME} 2.4GHz on {HOST.NAME} (Noise > {$OMADA_NOISE_THRESHOLD} dBm)'
+                  priority: WARNING
+                  description: 'AP {#AP_NAME} च्या 2.4 GHz बँडवर RF Noise {$OMADA_NOISE_THRESHOLD} dBm पेक्षा जास्त आहे. आजूबाजूला जास्त इंटरफेरन्स स्रोत असण्याची शक्यता आहे.'
+            - uuid: 73a9e20e7ecb46e9bef0e72bc6544bca
+              name: 'AP {#AP_NAME}: 5GHz Noise Floor'
+              type: DEPENDENT
+              key: 'omada.ap.noise_5g[{#AP_MAC}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              units: dBm
+              description: '5 GHz Noise Floor. -65 dBm पेक्षा जास्त (कमी negative) असल्यास RF इंटरफेरन्स जास्त आहे.'
+              master_item:
+                key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.eaps[?(@.mac=="{#AP_MAC}")].noise_floor_5g.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 3600s
+              trigger_prototypes:
+                - uuid: 1256760ae1a44e5193ccd07970a01741
+                  expression: 'last(/TP-Link Omada Controller Custom API/omada.ap.noise_5g[{#AP_MAC}])>-65 and last(/TP-Link Omada Controller Custom API/omada.ap.noise_5g[{#AP_MAC}])<0'
+                  name: 'High RF Noise on AP {#AP_NAME} 5GHz on {HOST.NAME} (Noise > {$OMADA_NOISE_THRESHOLD} dBm)'
+                  priority: WARNING
+                  description: 'AP {#AP_NAME} च्या 5 GHz बँडवर RF Noise {$OMADA_NOISE_THRESHOLD} dBm पेक्षा जास्त आहे.'
+            - uuid: ad2c8839257a4b44b66e51c7f9c19819
+              name: 'AP {#AP_NAME}: 2.4GHz TX Power'
+              type: DEPENDENT
+              key: 'omada.ap.tx_power_2g[{#AP_MAC}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              units: dBm
+              description: '2.4 GHz Transmit Power (dBm).'
+              master_item:
+                key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.eaps[?(@.mac=="{#AP_MAC}")].tx_power_2g.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 3600s
+            - uuid: cfd0ae3ff8a24465805c2607f90b3207
+              name: 'AP {#AP_NAME}: 5GHz TX Power'
+              type: DEPENDENT
+              key: 'omada.ap.tx_power_5g[{#AP_MAC}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              units: dBm
+              description: '5 GHz Transmit Power (dBm).'
+              master_item:
+                key: 'omada_monitor.py["{HOST.CONN}","{$OMADA_PORT}","{$OMADA_CLIENT_ID}","{$OMADA_CLIENT_SECRET}","{$OMADA_ID}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.eaps[?(@.mac=="{#AP_MAC}")].tx_power_5g.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 3600s
+      macros:
+        - macro: '{$OMADA_CLIENT_ID}'
+          description: 'Omada Controller OpenAPI Client ID'
+        - macro: '{$OMADA_CLIENT_SECRET}'
+          type: SECRET_TEXT
+          description: 'Omada Controller OpenAPI Client Secret'
+        - macro: '{$OMADA_ID}'
+          description: 'Omada Controller ID'
+        - macro: '{$OMADA_PORT}'
+          value: '4253'
+          description: 'Omada Controller API Port'
+        - macro: '{$OMADA_CHAN_UTIL_WARN}'
+          value: '70'
+          description: 'Channel Utilization WARNING threshold (%). Trigger fires when utilization exceeds this value.'
+        - macro: '{$OMADA_CHAN_UTIL_CRIT}'
+          value: '90'
+          description: 'Channel Utilization CRITICAL threshold (%). Trigger fires when utilization exceeds this value.'
+        - macro: '{$OMADA_NOISE_THRESHOLD}'
+          value: '-65'
+          description: 'RF Noise Floor WARNING threshold (dBm). Trigger fires when noise is higher than this value (less negative = more noise).'
+  triggers:
+    - uuid: d61c7d89b1c0490a9a0a9e230722d627
+      expression: 'last(/TP-Link Omada Controller Custom API/omada.status)="error"'
+      name: 'Omada: API connection failure on {HOST.NAME}'
+      priority: AVERAGE
+      description: 'The external script failed to query the Omada Controller Open API.'
+    - uuid: 0142330d05314753b22cfb3c94c72462
+      expression: 'last(/TP-Link Omada Controller Custom API/omada.loop_status_text)<>"No loops detected."'
+      name: 'Omada: {ITEM.VALUE}'
+      priority: HIGH
+      description: 'Omada Controller has detected a physical network loop / cycle in the switch LLDP topology.'
