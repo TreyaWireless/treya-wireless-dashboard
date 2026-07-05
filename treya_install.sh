@@ -172,6 +172,8 @@ if [ -n "$CONF_FILE" ]; then
     sed -i "s|^LogFile=.*|LogFile=/var/log/treya-wireless/treya_server.log|" "$CONF_FILE"
     sed -i "s|^# ExternalScripts=.*|ExternalScripts=/usr/lib/treya-wireless/externalscripts|" "$CONF_FILE"
     sed -i "s|^ExternalScripts=.*|ExternalScripts=/usr/lib/treya-wireless/externalscripts|" "$CONF_FILE"
+    sed -i "s|^# Timeout=.*|Timeout=30|" "$CONF_FILE"
+    sed -i "s|^Timeout=.*|Timeout=30|" "$CONF_FILE"
     
     # Ensure ownership is correct
     chown treya_wireless:treya_wireless "$CONF_FILE" 2>/dev/null || true
