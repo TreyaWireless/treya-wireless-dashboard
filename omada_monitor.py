@@ -16,7 +16,8 @@ def make_request(url, method="GET", data=None, token=None):
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+        "ngrok-skip-browser-warning": "true"
     }
     if token:
         if token.startswith("Bearer ") or token.startswith("AccessToken="):
