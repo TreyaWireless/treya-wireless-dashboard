@@ -8,7 +8,7 @@ import json
 import sys
 import urllib.request
 
-url = 'http://localhost/api_jsonrpc.php'
+url = 'http://127.0.0.1/api_jsonrpc.php'
 headers = {'Content-Type': 'application/json-rpc'}
 
 # 1. Log in to Zabbix API
