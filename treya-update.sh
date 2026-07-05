@@ -56,10 +56,15 @@ if [ -f "$TMP_DIR/repo/omada_monitor.py" ]; then
     echo "omada_monitor.py updated."
 fi
 
-# Ensure conf files are readable
+# Ensure config directories have correct ownerships
+chown -R treya_wireless:treya_wireless /etc/treya /etc/treya-wireless 2>/dev/null || true
+chmod 750 /etc/treya /etc/treya-wireless 2>/dev/null || true
+[ -f /etc/treya-wireless/treya_server.conf ] && chmod 640 /etc/treya-wireless/treya_server.conf 2>/dev/null || true
+
+chown -R nginx:nginx /etc/treya/web /etc/treya-wireless/web 2>/dev/null || \
+chown -R apache:apache /etc/treya/web /etc/treya-wireless/web 2>/dev/null || true
+chmod 755 /etc/treya/web /etc/treya-wireless/web 2>/dev/null || true
 chmod 644 /etc/treya/web/treya.conf.php /etc/treya-wireless/web/treya.conf.php 2>/dev/null || true
-chown -R nginx:nginx /etc/treya /etc/treya-wireless 2>/dev/null || \
-chown -R apache:apache /etc/treya /etc/treya-wireless 2>/dev/null || true
 
 # 6. PHP Cache clear
 php -r "opcache_reset();" 2>/dev/null || true
