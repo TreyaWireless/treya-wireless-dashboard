@@ -57,7 +57,7 @@ class CControllerPopupProxyEdit extends CController {
 			$db_proxies = API::Proxy()->get([
 				'output' => ['proxyid', 'name', 'proxy_groupid', 'local_address', 'local_port', 'operating_mode',
 					'allowed_addresses', 'address', 'port', 'description', 'tls_connect', 'tls_accept', 'tls_issuer',
-					'tls_subject', 'custom_timeouts', 'timeout_zabbix_agent', 'timeout_simple_check',
+					'tls_subject', 'custom_timeouts', 'timeout_treya_agent', 'timeout_simple_check',
 					'timeout_snmp_agent', 'timeout_external_check', 'timeout_db_monitor', 'timeout_http_agent',
 					'timeout_ssh_agent', 'timeout_telnet_agent', 'timeout_script', 'timeout_browser', 'compatibility'
 				],
@@ -110,7 +110,7 @@ class CControllerPopupProxyEdit extends CController {
 
 			$data['form'] += $this->proxy['custom_timeouts'] == ZBX_PROXY_CUSTOM_TIMEOUTS_DISABLED
 				? [
-					'timeout_zabbix_agent' => CSettingsHelper::get(CSettingsHelper::TIMEOUT_ZABBIX_AGENT),
+					'timeout_treya_agent' => CSettingsHelper::get(CSettingsHelper::TIMEOUT_ZABBIX_AGENT),
 					'timeout_simple_check' => CSettingsHelper::get(CSettingsHelper::TIMEOUT_SIMPLE_CHECK),
 					'timeout_snmp_agent' => CSettingsHelper::get(CSettingsHelper::TIMEOUT_SNMP_AGENT),
 					'timeout_external_check' => CSettingsHelper::get(CSettingsHelper::TIMEOUT_EXTERNAL_CHECK),
@@ -122,7 +122,7 @@ class CControllerPopupProxyEdit extends CController {
 					'timeout_browser' => CSettingsHelper::get(CSettingsHelper::TIMEOUT_BROWSER)
 				]
 				: [
-					'timeout_zabbix_agent' => $this->proxy['timeout_zabbix_agent'],
+					'timeout_treya_agent' => $this->proxy['timeout_treya_agent'],
 					'timeout_simple_check' => $this->proxy['timeout_simple_check'],
 					'timeout_snmp_agent' => $this->proxy['timeout_snmp_agent'],
 					'timeout_external_check' => $this->proxy['timeout_external_check'],
@@ -155,7 +155,7 @@ class CControllerPopupProxyEdit extends CController {
 					'tls_issuer' => DB::getDefault('proxy', 'tls_issuer'),
 					'tls_subject' => DB::getDefault('proxy', 'tls_subject'),
 					'custom_timeouts' => (int) DB::getDefault('proxy', 'custom_timeouts'),
-					'timeout_zabbix_agent' => CSettingsHelper::get(CSettingsHelper::TIMEOUT_ZABBIX_AGENT),
+					'timeout_treya_agent' => CSettingsHelper::get(CSettingsHelper::TIMEOUT_ZABBIX_AGENT),
 					'timeout_simple_check' => CSettingsHelper::get(CSettingsHelper::TIMEOUT_SIMPLE_CHECK),
 					'timeout_snmp_agent' => CSettingsHelper::get(CSettingsHelper::TIMEOUT_SNMP_AGENT),
 					'timeout_external_check' => CSettingsHelper::get(CSettingsHelper::TIMEOUT_EXTERNAL_CHECK),

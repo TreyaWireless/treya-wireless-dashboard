@@ -383,7 +383,7 @@ class testItemTimeouts extends CIntegrationTest {
 		$this->clearLog(self::COMPONENT_SERVER);
 
 		$initial_timeouts = [
-			'timeout_zabbix_agent' => '4s',
+			'timeout_treya_agent' => '4s',
 			'timeout_simple_check' => '5s',
 			'timeout_snmp_agent' => '6s',
 			'timeout_external_check' => '7s',
@@ -405,7 +405,7 @@ class testItemTimeouts extends CIntegrationTest {
 		$this->assertEqualsCanonicalizing($synced_timeouts, $initial_timeouts);
 
 		$updated_timeouts = [
-			'timeout_zabbix_agent' => '1m',
+			'timeout_treya_agent' => '1m',
 			'timeout_simple_check' => '1m',
 			'timeout_snmp_agent' => '1m',
 			'timeout_external_check' => '1m',
@@ -589,7 +589,7 @@ class testItemTimeouts extends CIntegrationTest {
 	 */
 	public function testItemTimeouts_checkProxyconfig() {
 		$proxy_timeouts = [
-			'timeout_zabbix_agent' => '4s',
+			'timeout_treya_agent' => '4s',
 			'timeout_simple_check' => '5s',
 			'timeout_snmp_agent' => '6s',
 			'timeout_external_check' => '7s',
@@ -629,7 +629,7 @@ class testItemTimeouts extends CIntegrationTest {
 		$this->assertEqualsCanonicalizing($synced_timeouts, $proxy_timeouts);
 
 		$updated_timeouts = [
-			'timeout_zabbix_agent' => '1m',
+			'timeout_treya_agent' => '1m',
 			'timeout_simple_check' => '1m',
 			'timeout_snmp_agent' => '1m',
 			'timeout_external_check' => '1m',

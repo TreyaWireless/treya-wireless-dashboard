@@ -62,7 +62,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 	];
 
 	public $db_default_values = [
-		'timeout_zabbix_agent' => '3s',
+		'timeout_treya_agent' => '3s',
 		'timeout_simple_check' => '3s',
 		'timeout_snmp_agent' => '3s',
 		'timeout_external_check' => '3s',
@@ -152,7 +152,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 						'Zabbix agent' => '15s'
 					],
 					'db' => [
-						'timeout_zabbix_agent' => '15s'
+						'timeout_treya_agent' => '15s'
 					]
 				]
 			],
@@ -337,7 +337,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 						'Browser' => '33s'
 					],
 					'db' => [
-						'timeout_zabbix_agent' => '33s',
+						'timeout_treya_agent' => '33s',
 						'timeout_simple_check' => '33s',
 						'timeout_snmp_agent' => '33s',
 						'timeout_external_check' => '33s',
@@ -393,7 +393,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 						'Scheduled report test' => '25s'
 					],
 					'db' => [
-						'timeout_zabbix_agent' => '22s',
+						'timeout_treya_agent' => '22s',
 						'timeout_simple_check' => '22s',
 						'timeout_snmp_agent' => '22s',
 						'timeout_external_check' => '22s',
@@ -434,7 +434,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 						'Scheduled report test' => '29'
 					],
 					'db' => [
-						'timeout_zabbix_agent' => '33',
+						'timeout_treya_agent' => '33',
 						'timeout_simple_check' => '33',
 						'timeout_snmp_agent' => '33',
 						'timeout_external_check' => '33',
@@ -469,7 +469,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 						'Browser' => '{$MACROS}'
 					],
 					'db' => [
-						'timeout_zabbix_agent' => '{$MACROS}',
+						'timeout_treya_agent' => '{$MACROS}',
 						'timeout_simple_check' => '{$MACROS}',
 						'timeout_snmp_agent' => '{$MACROS}',
 						'timeout_external_check' => '{$MACROS}',
@@ -503,7 +503,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 						'Scheduled report test' => '1m'
 					],
 					'db' => [
-						'timeout_zabbix_agent' => '10m',
+						'timeout_treya_agent' => '10m',
 						'timeout_simple_check' => '10m',
 						'timeout_snmp_agent' => '10m',
 						'timeout_external_check' => '10m',
@@ -528,7 +528,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 					'fields' => [
 						'Zabbix agent' => '0s'
 					],
-					'details' => 'Invalid parameter "/timeout_zabbix_agent": value must be one of 1-600.'
+					'details' => 'Invalid parameter "/timeout_treya_agent": value must be one of 1-600.'
 				]
 			],
 			// #23.
@@ -538,7 +538,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 					'fields' => [
 						'Zabbix agent' => '601s'
 					],
-					'details' => 'Invalid parameter "/timeout_zabbix_agent": value must be one of 1-600.'
+					'details' => 'Invalid parameter "/timeout_treya_agent": value must be one of 1-600.'
 				]
 			],
 			// #24.
@@ -788,7 +788,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 						'Scheduled report test' => ''
 					],
 					'details' => [
-						'Incorrect value for field "timeout_zabbix_agent": cannot be empty.',
+						'Incorrect value for field "timeout_treya_agent": cannot be empty.',
 						'Incorrect value for field "timeout_simple_check": cannot be empty.',
 						'Incorrect value for field "timeout_snmp_agent": cannot be empty.',
 						'Incorrect value for field "timeout_external_check": cannot be empty.',
@@ -814,7 +814,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 					'fields' => [
 						'Zabbix agent' => 'test'
 					],
-					'details' => 'Invalid parameter "/timeout_zabbix_agent": a time unit is expected.'
+					'details' => 'Invalid parameter "/timeout_treya_agent": a time unit is expected.'
 				]
 			],
 			// #46.
@@ -1046,7 +1046,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 					'fields' => [
 						'Zabbix agent' => '1d'
 					],
-					'details' => 'Invalid parameter "/timeout_zabbix_agent": value must be one of 1-600.'
+					'details' => 'Invalid parameter "/timeout_treya_agent": value must be one of 1-600.'
 				]
 			],
 			// #62.
@@ -1056,7 +1056,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 					'fields' => [
 						'Zabbix agent' => '1w'
 					],
-					'details' => 'Invalid parameter "/timeout_zabbix_agent": value must be one of 1-600.'
+					'details' => 'Invalid parameter "/timeout_treya_agent": value must be one of 1-600.'
 				]
 			],
 			// #63.
@@ -1066,7 +1066,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 					'fields' => [
 						'Zabbix agent' => '1M'
 					],
-					'details' => 'Invalid parameter "/timeout_zabbix_agent": a time unit is expected.'
+					'details' => 'Invalid parameter "/timeout_treya_agent": a time unit is expected.'
 				]
 			],
 			// #64.
@@ -1346,7 +1346,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 					'fields' => [
 						'Zabbix agent' => '123456789123456789'
 					],
-					'details' => 'Invalid parameter "/timeout_zabbix_agent": a number is too large.'
+					'details' => 'Invalid parameter "/timeout_treya_agent": a number is too large.'
 				]
 			],
 			// #92.
@@ -1446,7 +1446,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 					'fields' => [
 						'Zabbix agent' => '{HOST.HOST}'
 					],
-					'details' => 'Invalid parameter "/timeout_zabbix_agent": a time unit is expected.'
+					'details' => 'Invalid parameter "/timeout_treya_agent": a time unit is expected.'
 				]
 			],
 			// #102.
@@ -1456,7 +1456,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 					'fields' => [
 						'Zabbix agent' => '{#LDD_MACROS}'
 					],
-					'details' => 'Invalid parameter "/timeout_zabbix_agent": a time unit is expected.'
+					'details' => 'Invalid parameter "/timeout_treya_agent": a time unit is expected.'
 				]
 			],
 			// #103.
@@ -1728,7 +1728,7 @@ class testFormAdministrationGeneralTimeouts extends testFormAdministrationGenera
 						'Scheduled report test' => '   15s   '
 					],
 					'db' => [
-						'timeout_zabbix_agent' => '15s',
+						'timeout_treya_agent' => '15s',
 						'timeout_simple_check' => '15s',
 						'timeout_snmp_agent' => '15s',
 						'timeout_external_check' => '15s',

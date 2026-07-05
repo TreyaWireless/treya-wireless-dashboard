@@ -22,7 +22,7 @@ class CControllerTimeoutsEdit extends CController {
 
 	protected function checkInput(): bool {
 		$fields = [
-			'timeout_zabbix_agent' =>		'db config.timeout_zabbix_agent',
+			'timeout_treya_agent' =>		'db config.timeout_treya_agent',
 			'timeout_simple_check' =>		'db config.timeout_simple_check',
 			'timeout_snmp_agent' =>			'db config.timeout_snmp_agent',
 			'timeout_external_check' =>		'db config.timeout_external_check',
@@ -55,7 +55,7 @@ class CControllerTimeoutsEdit extends CController {
 
 	protected function doAction(): void {
 		$data = [
-			'timeout_zabbix_agent' => $this->getInput('timeout_zabbix_agent', CSettingsHelper::get(
+			'timeout_treya_agent' => $this->getInput('timeout_treya_agent', CSettingsHelper::get(
 				CSettingsHelper::TIMEOUT_ZABBIX_AGENT
 			)),
 			'timeout_simple_check' => $this->getInput('timeout_simple_check', CSettingsHelper::get(

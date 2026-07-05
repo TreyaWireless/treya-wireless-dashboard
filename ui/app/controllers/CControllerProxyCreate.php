@@ -47,7 +47,7 @@ class CControllerProxyCreate extends CController {
 			'clone_proxyid' =>			'db proxy.proxyid',
 			'clone_psk' =>				'required|bool',
 			'custom_timeouts' =>		'db proxy.custom_timeouts|in '.implode(',', [ZBX_PROXY_CUSTOM_TIMEOUTS_DISABLED, ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED]),
-			'timeout_zabbix_agent' =>	'db proxy.timeout_zabbix_agent',
+			'timeout_treya_agent' =>	'db proxy.timeout_treya_agent',
 			'timeout_simple_check' =>	'db proxy.timeout_simple_check',
 			'timeout_snmp_agent' =>		'db proxy.timeout_snmp_agent',
 			'timeout_external_check' =>	'db proxy.timeout_external_check',
@@ -139,7 +139,7 @@ class CControllerProxyCreate extends CController {
 
 			if ($custom_timeouts == ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED) {
 				$fields = [
-					'timeout_zabbix_agent' =>	'required|not_empty',
+					'timeout_treya_agent' =>	'required|not_empty',
 					'timeout_simple_check' =>	'required|not_empty',
 					'timeout_snmp_agent' =>		'required|not_empty',
 					'timeout_external_check' =>	'required|not_empty',
@@ -239,7 +239,7 @@ class CControllerProxyCreate extends CController {
 		$custom_timeouts = $this->getInput('custom_timeouts', ZBX_PROXY_CUSTOM_TIMEOUTS_DISABLED);
 
 		if ($custom_timeouts == ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED) {
-			$this->getInputs($proxy, ['custom_timeouts', 'timeout_zabbix_agent', 'timeout_simple_check',
+			$this->getInputs($proxy, ['custom_timeouts', 'timeout_treya_agent', 'timeout_simple_check',
 				'timeout_snmp_agent', 'timeout_external_check', 'timeout_db_monitor', 'timeout_http_agent',
 				'timeout_ssh_agent', 'timeout_telnet_agent', 'timeout_script', 'timeout_browser'
 			]);

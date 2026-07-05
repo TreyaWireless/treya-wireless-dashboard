@@ -3013,7 +3013,7 @@ return [
 				'ref_table' => 'usrgrp',
 				'ref_field' => 'usrgrpid'
 			],
-			'timeout_zabbix_agent' => [
+			'timeout_treya_agent' => [
 				'null' => false,
 				'type' => DB::FIELD_TYPE_CHAR,
 				'length' => 255,
@@ -10165,7 +10165,7 @@ return [
 				'length' => 10,
 				'default' => '0'
 			],
-			'timeout_zabbix_agent' => [
+			'timeout_treya_agent' => [
 				'null' => false,
 				'type' => DB::FIELD_TYPE_CHAR,
 				'length' => 255,

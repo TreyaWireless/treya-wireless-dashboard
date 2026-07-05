@@ -36,10 +36,10 @@ $form_grid = (new CFormGrid())
 	->addItem(
 		(new CFormFieldset(_('Timeouts for item types')))
 			->addItem([
-				(new CLabel(_('Zabbix agent'), 'timeout_zabbix_agent'))->setAsteriskMark(),
+				(new CLabel(_('Zabbix agent'), 'timeout_treya_agent'))->setAsteriskMark(),
 				new CFormField(
-					(new CTextBox('timeout_zabbix_agent', $data['timeout_zabbix_agent'], false,
-						DB::getFieldLength('config', 'timeout_zabbix_agent')
+					(new CTextBox('timeout_treya_agent', $data['timeout_treya_agent'], false,
+						DB::getFieldLength('config', 'timeout_treya_agent')
 					))
 						->setWidth(ZBX_TEXTAREA_TINY_WIDTH)
 						->setAriaRequired()
@@ -218,7 +218,7 @@ $form->addItem(
 (new CScriptTag('
 	view.init('.json_encode([
 		'default_timeouts' => [
-			'timeout_zabbix_agent' => DB::getDefault('config', 'timeout_zabbix_agent'),
+			'timeout_treya_agent' => DB::getDefault('config', 'timeout_treya_agent'),
 			'timeout_simple_check' => DB::getDefault('config', 'timeout_simple_check'),
 			'timeout_snmp_agent' => DB::getDefault('config', 'timeout_snmp_agent'),
 			'timeout_external_check' => DB::getDefault('config', 'timeout_external_check'),

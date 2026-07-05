@@ -144,7 +144,7 @@ window.proxy_edit_popup = new class {
 		const custom_timeouts_enabled =
 			this.form.querySelector('#custom_timeouts input:checked').value == <?= ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED ?>;
 
-		for (const id of ['timeout_zabbix_agent', 'timeout_simple_check', 'timeout_snmp_agent',
+		for (const id of ['timeout_treya_agent', 'timeout_simple_check', 'timeout_snmp_agent',
 				'timeout_external_check', 'timeout_db_monitor', 'timeout_http_agent', 'timeout_ssh_agent',
 				'timeout_telnet_agent', 'timeout_script', 'timeout_browser']) {
 			document.getElementById(id).readOnly = !custom_timeouts_enabled;
@@ -207,7 +207,7 @@ window.proxy_edit_popup = new class {
 		}
 
 		for (const name of ['name', 'local_address', 'local_port', 'allowed_addresses', 'address', 'port',
-				'description', 'tls_psk_identity', 'tls_psk', 'tls_issuer', 'tls_subject', 'timeout_zabbix_agent',
+				'description', 'tls_psk_identity', 'tls_psk', 'tls_issuer', 'tls_subject', 'timeout_treya_agent',
 				'timeout_simple_check', 'timeout_snmp_agent', 'timeout_external_check', 'timeout_db_monitor',
 				'timeout_http_agent', 'timeout_ssh_agent', 'timeout_telnet_agent', 'timeout_script',
 				'timeout_browser']) {

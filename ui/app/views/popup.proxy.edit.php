@@ -239,10 +239,10 @@ $timeouts_tab = (new CFormGrid())
 		])
 	])
 	->addItem([
-		(new CLabel(_('Zabbix agent'), 'timeout_zabbix_agent'))->setAsteriskMark(),
+		(new CLabel(_('Zabbix agent'), 'timeout_treya_agent'))->setAsteriskMark(),
 		new CFormField(
-			(new CTextBox('timeout_zabbix_agent', $data['form']['timeout_zabbix_agent'], false,
-				DB::getFieldLength('proxy', 'timeout_zabbix_agent')
+			(new CTextBox('timeout_treya_agent', $data['form']['timeout_treya_agent'], false,
+				DB::getFieldLength('proxy', 'timeout_treya_agent')
 			))
 				->setWidth(ZBX_TEXTAREA_SMALL_WIDTH)
 				->setReadonly($custom_timeouts_disabled)

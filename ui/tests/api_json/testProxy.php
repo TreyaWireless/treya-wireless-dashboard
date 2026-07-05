@@ -173,7 +173,7 @@ class testProxy extends CAPITest {
 				'name' => 'API test proxy - with custom timeouts',
 				'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 				'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-				'timeout_zabbix_agent' => '10s',
+				'timeout_treya_agent' => '10s',
 				'timeout_simple_check' => '10s',
 				'timeout_snmp_agent' => '10s',
 				'timeout_external_check' => '10s',
@@ -204,7 +204,7 @@ class testProxy extends CAPITest {
 				'name' => 'API test proxy - version current and custom timeouts enabled',
 				'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 				'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-				'timeout_zabbix_agent' => '10s',
+				'timeout_treya_agent' => '10s',
 				'timeout_simple_check' => '10s',
 				'timeout_snmp_agent' => '10s',
 				'timeout_external_check' => '10s',
@@ -610,7 +610,7 @@ class testProxy extends CAPITest {
 					'output' => ['abc']
 				],
 				'expected_result' => [],
-				'expected_error' => 'Invalid parameter "/output/1": value must be one of "proxyid", "name", "proxy_groupid", "local_address", "local_port", "operating_mode", "allowed_addresses", "address", "port", "description", "tls_connect", "tls_accept", "tls_issuer", "tls_subject", "custom_timeouts", "timeout_zabbix_agent", "timeout_simple_check", "timeout_snmp_agent", "timeout_external_check", "timeout_db_monitor", "timeout_http_agent", "timeout_ssh_agent", "timeout_telnet_agent", "timeout_script", "timeout_browser", "lastaccess", "version", "compatibility", "state".'
+				'expected_error' => 'Invalid parameter "/output/1": value must be one of "proxyid", "name", "proxy_groupid", "local_address", "local_port", "operating_mode", "allowed_addresses", "address", "port", "description", "tls_connect", "tls_accept", "tls_issuer", "tls_subject", "custom_timeouts", "timeout_treya_agent", "timeout_simple_check", "timeout_snmp_agent", "timeout_external_check", "timeout_db_monitor", "timeout_http_agent", "timeout_ssh_agent", "timeout_telnet_agent", "timeout_script", "timeout_browser", "lastaccess", "version", "compatibility", "state".'
 			],
 
 			// Check write-only fields are not returned.
@@ -619,14 +619,14 @@ class testProxy extends CAPITest {
 					'output' => ['tls_psk_identity']
 				],
 				'expected_result' => [],
-				'expected_error' => 'Invalid parameter "/output/1": value must be one of "proxyid", "name", "proxy_groupid", "local_address", "local_port", "operating_mode", "allowed_addresses", "address", "port", "description", "tls_connect", "tls_accept", "tls_issuer", "tls_subject", "custom_timeouts", "timeout_zabbix_agent", "timeout_simple_check", "timeout_snmp_agent", "timeout_external_check", "timeout_db_monitor", "timeout_http_agent", "timeout_ssh_agent", "timeout_telnet_agent", "timeout_script", "timeout_browser", "lastaccess", "version", "compatibility", "state".'
+				'expected_error' => 'Invalid parameter "/output/1": value must be one of "proxyid", "name", "proxy_groupid", "local_address", "local_port", "operating_mode", "allowed_addresses", "address", "port", "description", "tls_connect", "tls_accept", "tls_issuer", "tls_subject", "custom_timeouts", "timeout_treya_agent", "timeout_simple_check", "timeout_snmp_agent", "timeout_external_check", "timeout_db_monitor", "timeout_http_agent", "timeout_ssh_agent", "timeout_telnet_agent", "timeout_script", "timeout_browser", "lastaccess", "version", "compatibility", "state".'
 			],
 			'Test proxy.get: write-only field "tls_psk"' => [
 				'request' => [
 					'output' => ['tls_psk']
 				],
 				'expected_result' => [],
-				'expected_error' => 'Invalid parameter "/output/1": value must be one of "proxyid", "name", "proxy_groupid", "local_address", "local_port", "operating_mode", "allowed_addresses", "address", "port", "description", "tls_connect", "tls_accept", "tls_issuer", "tls_subject", "custom_timeouts", "timeout_zabbix_agent", "timeout_simple_check", "timeout_snmp_agent", "timeout_external_check", "timeout_db_monitor", "timeout_http_agent", "timeout_ssh_agent", "timeout_telnet_agent", "timeout_script", "timeout_browser", "lastaccess", "version", "compatibility", "state".'
+				'expected_error' => 'Invalid parameter "/output/1": value must be one of "proxyid", "name", "proxy_groupid", "local_address", "local_port", "operating_mode", "allowed_addresses", "address", "port", "description", "tls_connect", "tls_accept", "tls_issuer", "tls_subject", "custom_timeouts", "timeout_treya_agent", "timeout_simple_check", "timeout_snmp_agent", "timeout_external_check", "timeout_db_monitor", "timeout_http_agent", "timeout_ssh_agent", "timeout_telnet_agent", "timeout_script", "timeout_browser", "lastaccess", "version", "compatibility", "state".'
 			],
 
 			// Check "selectAssignedHosts" option.
@@ -858,7 +858,7 @@ class testProxy extends CAPITest {
 			// Filter by "custom_timeouts".
 			'Test proxy.get: filter by "with_custom_timeouts"' => [
 				'request' => [
-					'output' => ['name', 'custom_timeouts', 'timeout_zabbix_agent'],
+					'output' => ['name', 'custom_timeouts', 'timeout_treya_agent'],
 					'proxyids' => ['active_defaults', 'passive_defaults', 'with_custom_timeouts'],
 					'filter' => [
 						'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED
@@ -868,25 +868,25 @@ class testProxy extends CAPITest {
 					[
 						'name' => 'API test proxy - with custom timeouts',
 						'custom_timeouts' => (string) ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-						'timeout_zabbix_agent' => '10s'
+						'timeout_treya_agent' => '10s'
 					]
 				],
 				'expected_error' => null
 			],
 
-			// Filter by "timeout_zabbix_agent".
-			'Test proxy.get: filter by "timeout_zabbix_agent"' => [
+			// Filter by "timeout_treya_agent".
+			'Test proxy.get: filter by "timeout_treya_agent"' => [
 				'request' => [
-					'output' => ['name', 'timeout_zabbix_agent'],
+					'output' => ['name', 'timeout_treya_agent'],
 					'proxyids' => ['active_defaults', 'passive_defaults', 'with_custom_timeouts'],
 					'filter' => [
-						'timeout_zabbix_agent' => '10s'
+						'timeout_treya_agent' => '10s'
 					]
 				],
 				'expected_result' => [
 					[
 						'name' => 'API test proxy - with custom timeouts',
-						'timeout_zabbix_agent' => '10s'
+						'timeout_treya_agent' => '10s'
 					]
 				],
 				'expected_error' => null
@@ -2217,84 +2217,84 @@ class testProxy extends CAPITest {
 					implode(', ', [ZBX_PROXY_CUSTOM_TIMEOUTS_DISABLED, ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED]).'.'
 			],
 
-			// Check "timeout_zabbix_agent".
-			'Test proxy.create: invalid "timeout_zabbix_agent" (null) if custom timeouts are disabled' => [
+			// Check "timeout_treya_agent".
+			'Test proxy.create: invalid "timeout_treya_agent" (null) if custom timeouts are disabled' => [
 				'proxy' => [
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
-					'timeout_zabbix_agent' => null
+					'timeout_treya_agent' => null
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": a character string is expected.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": a character string is expected.'
 			],
-			'Test proxy.create: invalid "timeout_zabbix_agent" (boolean) if custom timeouts are disabled' => [
+			'Test proxy.create: invalid "timeout_treya_agent" (boolean) if custom timeouts are disabled' => [
 				'proxy' => [
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
-					'timeout_zabbix_agent' => false
+					'timeout_treya_agent' => false
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": a character string is expected.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": a character string is expected.'
 			],
-			'Test proxy.create: invalid "timeout_zabbix_agent" (not empty) if custom timeouts are disabled' => [
+			'Test proxy.create: invalid "timeout_treya_agent" (not empty) if custom timeouts are disabled' => [
 				'proxy' => [
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
-					'timeout_zabbix_agent' => '5s'
+					'timeout_treya_agent' => '5s'
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": value must be empty.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": value must be empty.'
 			],
-			'Test proxy.create: invalid "timeout_zabbix_agent" (null)' => [
+			'Test proxy.create: invalid "timeout_treya_agent" (null)' => [
 				'proxy' => [
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => null
+					'timeout_treya_agent' => null
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": a character string is expected.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": a character string is expected.'
 			],
-			'Test proxy.create: invalid "timeout_zabbix_agent" (boolean)' => [
+			'Test proxy.create: invalid "timeout_treya_agent" (boolean)' => [
 				'proxy' => [
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => false
+					'timeout_treya_agent' => false
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": a character string is expected.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": a character string is expected.'
 			],
-			'Test proxy.create: invalid "timeout_zabbix_agent" (empty string)' => [
+			'Test proxy.create: invalid "timeout_treya_agent" (empty string)' => [
 				'proxy' => [
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => ''
+					'timeout_treya_agent' => ''
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": cannot be empty.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": cannot be empty.'
 			],
-			'Test proxy.create: invalid "timeout_zabbix_agent" (not a time unit)' => [
+			'Test proxy.create: invalid "timeout_treya_agent" (not a time unit)' => [
 				'proxy' => [
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => 'abc'
+					'timeout_treya_agent' => 'abc'
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": a time unit is expected.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": a time unit is expected.'
 			],
-			'Test proxy.create: invalid "timeout_zabbix_agent" (too small)' => [
+			'Test proxy.create: invalid "timeout_treya_agent" (too small)' => [
 				'proxy' => [
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => -1
+					'timeout_treya_agent' => -1
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": value must be one of 1-600.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": value must be one of 1-600.'
 			],
-			'Test proxy.create: invalid "timeout_zabbix_agent" (too large)' => [
+			'Test proxy.create: invalid "timeout_treya_agent" (too large)' => [
 				'proxy' => [
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => self::INVALID_NUMBER
+					'timeout_treya_agent' => self::INVALID_NUMBER
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": value must be one of 1-600.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": value must be one of 1-600.'
 			],
 
 			// Check "timeout_simple_check".
@@ -2327,7 +2327,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s'
+					'timeout_treya_agent' => '5s'
 				],
 				'expected_error' => 'Invalid parameter "/1": the parameter "timeout_simple_check" is missing.'
 			],
@@ -2336,7 +2336,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => null
 				],
 				'expected_error' => 'Invalid parameter "/1/timeout_simple_check": a character string is expected.'
@@ -2346,7 +2346,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => false
 				],
 				'expected_error' => 'Invalid parameter "/1/timeout_simple_check": a character string is expected.'
@@ -2356,7 +2356,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => ''
 				],
 				'expected_error' => 'Invalid parameter "/1/timeout_simple_check": cannot be empty.'
@@ -2366,7 +2366,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => 'abc'
 				],
 				'expected_error' => 'Invalid parameter "/1/timeout_simple_check": a time unit is expected.'
@@ -2376,7 +2376,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => -1
 				],
 				'expected_error' => 'Invalid parameter "/1/timeout_simple_check": value must be one of 1-600.'
@@ -2386,7 +2386,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => self::INVALID_NUMBER
 				],
 				'expected_error' => 'Invalid parameter "/1/timeout_simple_check": value must be one of 1-600.'
@@ -2422,7 +2422,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s'
 				],
 				'expected_error' => 'Invalid parameter "/1": the parameter "timeout_snmp_agent" is missing.'
@@ -2432,7 +2432,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => null
 				],
@@ -2443,7 +2443,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => false
 				],
@@ -2454,7 +2454,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => ''
 				],
@@ -2465,7 +2465,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => 'abc'
 				],
@@ -2476,7 +2476,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => -1
 				],
@@ -2487,7 +2487,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => self::INVALID_NUMBER
 				],
@@ -2524,7 +2524,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s'
 				],
@@ -2535,7 +2535,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => null
@@ -2547,7 +2547,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => false
@@ -2559,7 +2559,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => ''
@@ -2571,7 +2571,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => 'abc'
@@ -2583,7 +2583,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => -1
@@ -2595,7 +2595,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => self::INVALID_NUMBER
@@ -2633,7 +2633,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s'
@@ -2645,7 +2645,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2658,7 +2658,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2671,7 +2671,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2684,7 +2684,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2697,7 +2697,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2710,7 +2710,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2749,7 +2749,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2762,7 +2762,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2776,7 +2776,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2790,7 +2790,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2804,7 +2804,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2818,7 +2818,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2832,7 +2832,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2872,7 +2872,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2886,7 +2886,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2901,7 +2901,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2916,7 +2916,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2931,7 +2931,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2946,7 +2946,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -2961,7 +2961,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3002,7 +3002,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3017,7 +3017,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3033,7 +3033,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3049,7 +3049,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3065,7 +3065,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3081,7 +3081,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3097,7 +3097,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3139,7 +3139,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3155,7 +3155,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3172,7 +3172,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3189,7 +3189,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3206,7 +3206,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3223,7 +3223,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3240,7 +3240,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3283,7 +3283,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3300,7 +3300,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3318,7 +3318,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3336,7 +3336,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3354,7 +3354,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3372,7 +3372,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3390,7 +3390,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -3533,7 +3533,7 @@ class testProxy extends CAPITest {
 					'name' => 'API create proxy with custom timeouts enabled',
 					'operating_mode' => PROXY_OPERATING_MODE_ACTIVE,
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '{$TIMEOUT.ZABBIX.AGENT}',
+					'timeout_treya_agent' => '{$TIMEOUT.ZABBIX.AGENT}',
 					'timeout_simple_check' => '{$TIMEOUT.SIMPLE.CHECK}',
 					'timeout_snmp_agent' => '{$TIMEOUT.SNMP.AGENT}',
 					'timeout_external_check' => '{$TIMEOUT.EXTERNAL.CHECK}',
@@ -3581,7 +3581,7 @@ class testProxy extends CAPITest {
 			self::$data['created'] = array_merge(self::$data['created'], $result['result']['proxyids']);
 
 			$db_defaults = DB::getDefaults('proxy');
-			$timeout_fields = ['timeout_zabbix_agent', 'timeout_simple_check', 'timeout_snmp_agent',
+			$timeout_fields = ['timeout_treya_agent', 'timeout_simple_check', 'timeout_snmp_agent',
 				'timeout_external_check', 'timeout_db_monitor', 'timeout_http_agent', 'timeout_ssh_agent',
 				'timeout_telnet_agent', 'timeout_script', 'timeout_browser'
 			];
@@ -4172,7 +4172,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'version_outdated',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '4s',
+					'timeout_treya_agent' => '4s',
 					'timeout_simple_check' => '4s',
 					'timeout_snmp_agent' => '4s',
 					'timeout_external_check' => '4s',
@@ -4189,7 +4189,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'version_unsupported',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '4s',
+					'timeout_treya_agent' => '4s',
 					'timeout_simple_check' => '4s',
 					'timeout_snmp_agent' => '4s',
 					'timeout_external_check' => '4s',
@@ -4203,75 +4203,75 @@ class testProxy extends CAPITest {
 				'expected_error' => 'Invalid parameter "/1/custom_timeouts": timeouts are disabled because the proxy and server versions do not match.'
 			],
 
-			// Check "timeout_zabbix_agent".
-			'Test proxy.update: invalid "timeout_zabbix_agent" (null) if custom timeouts are disabled' => [
+			// Check "timeout_treya_agent".
+			'Test proxy.update: invalid "timeout_treya_agent" (null) if custom timeouts are disabled' => [
 				'proxy' => [
 					'proxyid' => 'active_defaults',
-					'timeout_zabbix_agent' => null
+					'timeout_treya_agent' => null
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": a character string is expected.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": a character string is expected.'
 			],
-			'Test proxy.update: invalid "timeout_zabbix_agent" (boolean) if custom timeouts are disabled' => [
+			'Test proxy.update: invalid "timeout_treya_agent" (boolean) if custom timeouts are disabled' => [
 				'proxy' => [
 					'proxyid' => 'active_defaults',
-					'timeout_zabbix_agent' => false
+					'timeout_treya_agent' => false
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": a character string is expected.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": a character string is expected.'
 			],
-			'Test proxy.update: invalid "timeout_zabbix_agent" (not empty) if custom timeouts are disabled' => [
+			'Test proxy.update: invalid "timeout_treya_agent" (not empty) if custom timeouts are disabled' => [
 				'proxy' => [
 					'proxyid' => 'active_defaults',
-					'timeout_zabbix_agent' => '5s'
+					'timeout_treya_agent' => '5s'
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": value must be empty.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": value must be empty.'
 			],
-			'Test proxy.update: invalid "timeout_zabbix_agent" (null)' => [
+			'Test proxy.update: invalid "timeout_treya_agent" (null)' => [
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => null
+					'timeout_treya_agent' => null
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": a character string is expected.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": a character string is expected.'
 			],
-			'Test proxy.update: invalid "timeout_zabbix_agent" (boolean)' => [
+			'Test proxy.update: invalid "timeout_treya_agent" (boolean)' => [
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => false
+					'timeout_treya_agent' => false
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": a character string is expected.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": a character string is expected.'
 			],
-			'Test proxy.update: invalid "timeout_zabbix_agent" (empty string)' => [
+			'Test proxy.update: invalid "timeout_treya_agent" (empty string)' => [
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => ''
+					'timeout_treya_agent' => ''
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": cannot be empty.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": cannot be empty.'
 			],
-			'Test proxy.update: invalid "timeout_zabbix_agent" (not a time unit)' => [
+			'Test proxy.update: invalid "timeout_treya_agent" (not a time unit)' => [
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => 'abc'
+					'timeout_treya_agent' => 'abc'
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": a time unit is expected.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": a time unit is expected.'
 			],
-			'Test proxy.update: invalid "timeout_zabbix_agent" (too small)' => [
+			'Test proxy.update: invalid "timeout_treya_agent" (too small)' => [
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => -1
+					'timeout_treya_agent' => -1
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": value must be one of 1-600.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": value must be one of 1-600.'
 			],
-			'Test proxy.update: invalid "timeout_zabbix_agent" (too large)' => [
+			'Test proxy.update: invalid "timeout_treya_agent" (too large)' => [
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => self::INVALID_NUMBER
+					'timeout_treya_agent' => self::INVALID_NUMBER
 				],
-				'expected_error' => 'Invalid parameter "/1/timeout_zabbix_agent": value must be one of 1-600.'
+				'expected_error' => 'Invalid parameter "/1/timeout_treya_agent": value must be one of 1-600.'
 			],
 
 			// Check "timeout_simple_check".
@@ -4300,7 +4300,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s'
+					'timeout_treya_agent' => '5s'
 				],
 				'expected_error' => 'Invalid parameter "/1/timeout_simple_check": cannot be empty.'
 			],
@@ -4308,7 +4308,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => null
 				],
 				'expected_error' => 'Invalid parameter "/1/timeout_simple_check": a character string is expected.'
@@ -4317,7 +4317,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => false
 				],
 				'expected_error' => 'Invalid parameter "/1/timeout_simple_check": a character string is expected.'
@@ -4326,7 +4326,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => ''
 				],
 				'expected_error' => 'Invalid parameter "/1/timeout_simple_check": cannot be empty.'
@@ -4335,7 +4335,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => 'abc'
 				],
 				'expected_error' => 'Invalid parameter "/1/timeout_simple_check": a time unit is expected.'
@@ -4344,7 +4344,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => -1
 				],
 				'expected_error' => 'Invalid parameter "/1/timeout_simple_check": value must be one of 1-600.'
@@ -4353,7 +4353,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => self::INVALID_NUMBER
 				],
 				'expected_error' => 'Invalid parameter "/1/timeout_simple_check": value must be one of 1-600.'
@@ -4385,7 +4385,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => null
 				],
@@ -4395,7 +4395,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => false
 				],
@@ -4405,7 +4405,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => ''
 				],
@@ -4415,7 +4415,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => 'abc'
 				],
@@ -4425,7 +4425,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => -1
 				],
@@ -4435,7 +4435,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => self::INVALID_NUMBER
 				],
@@ -4468,7 +4468,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => null
@@ -4479,7 +4479,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => false
@@ -4490,7 +4490,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => ''
@@ -4501,7 +4501,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => 'abc'
@@ -4512,7 +4512,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => -1
@@ -4523,7 +4523,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => self::INVALID_NUMBER
@@ -4557,7 +4557,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4569,7 +4569,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4581,7 +4581,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4593,7 +4593,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4605,7 +4605,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4617,7 +4617,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4652,7 +4652,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4665,7 +4665,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4678,7 +4678,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4691,7 +4691,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4704,7 +4704,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4717,7 +4717,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4753,7 +4753,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4767,7 +4767,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4781,7 +4781,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4795,7 +4795,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4809,7 +4809,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4823,7 +4823,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4860,7 +4860,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4875,7 +4875,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4890,7 +4890,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4905,7 +4905,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4920,7 +4920,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4935,7 +4935,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4973,7 +4973,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -4989,7 +4989,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -5005,7 +5005,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -5021,7 +5021,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -5037,7 +5037,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -5053,7 +5053,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -5092,7 +5092,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -5109,7 +5109,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -5126,7 +5126,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -5143,7 +5143,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -5160,7 +5160,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -5177,7 +5177,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '5s',
+					'timeout_treya_agent' => '5s',
 					'timeout_simple_check' => '5s',
 					'timeout_snmp_agent' => '5s',
 					'timeout_external_check' => '5s',
@@ -5291,7 +5291,7 @@ class testProxy extends CAPITest {
 				'proxy' => [
 					'proxyid' => 'active_defaults',
 					'custom_timeouts' => ZBX_PROXY_CUSTOM_TIMEOUTS_ENABLED,
-					'timeout_zabbix_agent' => '10s',
+					'timeout_treya_agent' => '10s',
 					'timeout_simple_check' => '10s',
 					'timeout_snmp_agent' => '10s',
 					'timeout_external_check' => '10s',
@@ -5329,7 +5329,7 @@ class testProxy extends CAPITest {
 			'Test proxy.update: update multiple per-item-type timeouts with macros values if custom timeouts are enabled' => [
 				'proxy' => [
 					'proxyid' => 'version_current_with_custom_timeouts',
-					'timeout_zabbix_agent' => '{$TIMEOUT.ZABBIX.AGENT}',
+					'timeout_treya_agent' => '{$TIMEOUT.ZABBIX.AGENT}',
 					'timeout_simple_check' => '{$TIMEOUT.SIMPLE.CHECK}',
 					'timeout_snmp_agent' => '{$TIMEOUT.SNMP.AGENT}',
 					'timeout_external_check' => '{$TIMEOUT.EXTERNAL.CHECK}',
@@ -5396,7 +5396,7 @@ class testProxy extends CAPITest {
 			$proxies_upd = $this->getProxies($proxyids);
 
 			$db_defaults = DB::getDefaults('proxy');
-			$timeout_fields = ['timeout_zabbix_agent', 'timeout_simple_check', 'timeout_snmp_agent',
+			$timeout_fields = ['timeout_treya_agent', 'timeout_simple_check', 'timeout_snmp_agent',
 				'timeout_external_check', 'timeout_db_monitor', 'timeout_http_agent', 'timeout_ssh_agent',
 				'timeout_telnet_agent', 'timeout_script', 'timeout_browser'
 			];
@@ -5772,7 +5772,7 @@ class testProxy extends CAPITest {
 		$response = $this->call('proxy.get', [
 			'output' => ['proxyid', 'name', 'proxy_groupid', 'local_address', 'local_port', 'operating_mode',
 				'allowed_addresses', 'address', 'port', 'description', 'tls_connect', 'tls_accept', 'tls_issuer',
-				'tls_subject', 'custom_timeouts', 'timeout_zabbix_agent', 'timeout_simple_check', 'timeout_snmp_agent',
+				'tls_subject', 'custom_timeouts', 'timeout_treya_agent', 'timeout_simple_check', 'timeout_snmp_agent',
 				'timeout_external_check', 'timeout_db_monitor', 'timeout_http_agent', 'timeout_ssh_agent',
 				'timeout_telnet_agent', 'timeout_script', 'timeout_browser', 'lastaccess', 'version', 'compatibility',
 				'state'

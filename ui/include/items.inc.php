@@ -2586,7 +2586,7 @@ function getConditionalItemFieldNames(array $field_names, array $input): array {
 function getInheritedTimeouts(string $proxyid): array {
 	if ($proxyid != 0) {
 		$db_proxies = API::Proxy()->get([
-			'output' => ['custom_timeouts', 'timeout_zabbix_agent', 'timeout_simple_check', 'timeout_snmp_agent',
+			'output' => ['custom_timeouts', 'timeout_treya_agent', 'timeout_simple_check', 'timeout_snmp_agent',
 				'timeout_external_check', 'timeout_db_monitor', 'timeout_http_agent', 'timeout_ssh_agent',
 				'timeout_telnet_agent', 'timeout_script', 'timeout_browser'
 			],
@@ -2600,9 +2600,9 @@ function getInheritedTimeouts(string $proxyid): array {
 				'source' => 'proxy',
 				'proxyid' => $proxyid,
 				'timeouts' => [
-					ITEM_TYPE_ZABBIX => $db_proxy['timeout_zabbix_agent'],
+					ITEM_TYPE_ZABBIX => $db_proxy['timeout_treya_agent'],
 					ITEM_TYPE_SIMPLE => $db_proxy['timeout_simple_check'],
-					ITEM_TYPE_ZABBIX_ACTIVE => $db_proxy['timeout_zabbix_agent'],
+					ITEM_TYPE_ZABBIX_ACTIVE => $db_proxy['timeout_treya_agent'],
 					ITEM_TYPE_EXTERNAL => $db_proxy['timeout_external_check'],
 					ITEM_TYPE_DB_MONITOR => $db_proxy['timeout_db_monitor'],
 					ITEM_TYPE_SSH => $db_proxy['timeout_ssh_agent'],

@@ -69,7 +69,7 @@ class testFormAdministrationProxies extends CWebTest {
 				'tls_subject' => 'activerefreshpsk',
 				'allowed_addresses' => '127.0.1.2',
 				'custom_timeouts' => 1,
-				'timeout_zabbix_agent' => '300s',
+				'timeout_treya_agent' => '300s',
 				'timeout_simple_check' => '300s',
 				'timeout_snmp_agent' => '300s',
 				'timeout_external_check' => '300s',
@@ -91,7 +91,7 @@ class testFormAdministrationProxies extends CWebTest {
 				'tls_issuer' => 'passiverefreshpsk',
 				'tls_subject' => 'passiverefreshpsk',
 				'custom_timeouts' => 1,
-				'timeout_zabbix_agent' => '300s',
+				'timeout_treya_agent' => '300s',
 				'timeout_simple_check' => '300s',
 				'timeout_snmp_agent' => '300s',
 				'timeout_external_check' => '300s',
@@ -1051,7 +1051,7 @@ class testFormAdministrationProxies extends CWebTest {
 						'Browser' => ''
 					],
 					'error' => [
-						'Incorrect value for field "timeout_zabbix_agent": cannot be empty.',
+						'Incorrect value for field "timeout_treya_agent": cannot be empty.',
 						'Incorrect value for field "timeout_simple_check": cannot be empty.',
 						'Incorrect value for field "timeout_snmp_agent": cannot be empty.',
 						'Incorrect value for field "timeout_external_check": cannot be empty.',
@@ -1075,7 +1075,7 @@ class testFormAdministrationProxies extends CWebTest {
 						'Zabbix agent' => '0'
 					],
 					'error' => [
-						'Invalid parameter "/1/timeout_zabbix_agent": value must be one of 1-600.'
+						'Invalid parameter "/1/timeout_treya_agent": value must be one of 1-600.'
 					]
 				]
 			],
@@ -1090,7 +1090,7 @@ class testFormAdministrationProxies extends CWebTest {
 						'Zabbix agent' => '0'
 					],
 					'error' => [
-						'Invalid parameter "/1/timeout_zabbix_agent": value must be one of 1-600.'
+						'Invalid parameter "/1/timeout_treya_agent": value must be one of 1-600.'
 					]
 				]
 			],
@@ -1105,7 +1105,7 @@ class testFormAdministrationProxies extends CWebTest {
 						'Zabbix agent' => '1234567890123456'
 					],
 					'error' => [
-						'Invalid parameter "/1/timeout_zabbix_agent": a number is too large.'
+						'Invalid parameter "/1/timeout_treya_agent": a number is too large.'
 					]
 				]
 			],
@@ -1120,7 +1120,7 @@ class testFormAdministrationProxies extends CWebTest {
 						'Zabbix agent' => 'test'
 					],
 					'error' => [
-						'Invalid parameter "/1/timeout_zabbix_agent": a time unit is expected.'
+						'Invalid parameter "/1/timeout_treya_agent": a time unit is expected.'
 					]
 				]
 			],
@@ -1690,7 +1690,7 @@ class testFormAdministrationProxies extends CWebTest {
 						'Zabbix agent' => '{#MACROS}'
 					],
 					'error' => [
-						'Invalid parameter "/1/timeout_zabbix_agent": a time unit is expected.'
+						'Invalid parameter "/1/timeout_treya_agent": a time unit is expected.'
 					]
 				]
 			],
