@@ -228,7 +228,6 @@ final class CItemData {
 			'icmpping[<target>,<packets>,<interval>,<size>,<timeout>,<options>]',
 			'icmppingloss[<target>,<packets>,<interval>,<size>,<timeout>,<options>]',
 			'icmppingsec[<target>,<packets>,<interval>,<size>,<timeout>,<mode>,<options>]',
-			'icmppingretry[<target>,<retries>,<backoff>,<size>,<timeout>,<options>]',
 			'net.tcp.service.perf[service,<ip>,<port>]',
 			'net.tcp.service[service,<ip>,<port>]',
 			'net.udp.service.perf[service,<ip>,<port>]',
@@ -318,7 +317,6 @@ final class CItemData {
 			'vmware.vm.discovery[url]',
 			'vmware.vm.guest.memory.size.swapped[url,uuid]',
 			'vmware.vm.guest.osuptime[url,uuid]',
-			'vmware.vm.hv.maintenance[url,uuid]',
 			'vmware.vm.hv.name[url,uuid]',
 			'vmware.vm.memory.size.ballooned[url,uuid]',
 			'vmware.vm.memory.size.compressed[url,uuid]',
@@ -910,9 +908,6 @@ final class CItemData {
 					'js-item-timeout-field',
 					['id' => 'key', 'defaultValue' => ''],
 					['id' => 'value_type', 'defaultValue' => '']
-				],
-				ITEM_TYPE_NESTED => [
-					['id' => 'key', 'defaultValue' => '']
 				]
 			],
 			// Ids to toggle when the field 'authtype' is changed.
@@ -1113,13 +1108,6 @@ final class CItemData {
 				'value_type' => ITEM_VALUE_TYPE_FLOAT,
 				'documentation_link' => [
 					ITEM_TYPE_SIMPLE => 'config/items/itemtypes/simple_checks#icmppingsec'
-				]
-			],
-			'icmppingretry[<target>,<retries>,<backoff>,<size>,<timeout>,<options>]' => [
-				'description' => _('Checks if host is accessible by ICMP ping with retries. 0 - ICMP ping fails. 1 - ICMP ping successful.'),
-				'value_type' => ITEM_VALUE_TYPE_UINT64,
-				'documentation_link' => [
-					ITEM_TYPE_SIMPLE => 'config/items/itemtypes/simple_checks#icmppingretry'
 				]
 			],
 			'ipmi.get' => [
@@ -2227,7 +2215,7 @@ final class CItemData {
 				]
 			],
 			'vmware.hv.maintenance[url,uuid]' => [
-				'description' => _('VMware hypervisor maintenance status, "url" - VMware service URL, "uuid" - VMware hypervisor global unique identifier. Returns 0 - not in maintenance; 1 - in maintenance'),
+				'description' => _('VVMware hypervisor maintenance status, "url" - VMware service URL, "uuid" - VMware hypervisor global unique identifier. Returns 0 - not in maintenance; 1 - in maintenance'),
 				'value_type' => ITEM_VALUE_TYPE_UINT64,
 				'documentation_link' => [
 					ITEM_TYPE_SIMPLE => 'vm_monitoring/vmware_keys#vmware.hv.maintenance'
@@ -2469,13 +2457,6 @@ final class CItemData {
 				'value_type' => ITEM_VALUE_TYPE_UINT64,
 				'documentation_link' => [
 					ITEM_TYPE_SIMPLE => 'vm_monitoring/vmware_keys#vmware.vm.guest.osuptime'
-				]
-			],
-			'vmware.vm.hv.maintenance[url,uuid]' => [
-				'description' => _('VMware virtual machine hypervisor maintenance status, "url" - VMware service URL, "uuid" - VMware virtual machine global unique identifier. Returns 0 - not in maintenance; 1 - in maintenance'),
-				'value_type' => ITEM_VALUE_TYPE_UINT64,
-				'documentation_link' => [
-					ITEM_TYPE_SIMPLE => 'vm_monitoring/vmware_keys#vmware.vm.hv.maintenance'
 				]
 			],
 			'vmware.vm.hv.name[url,uuid]' => [

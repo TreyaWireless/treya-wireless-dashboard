@@ -100,7 +100,7 @@ class CControllerTriggerExpressionConstructor extends CController {
 		$this->setResponse($response);
 	}
 
-	private function getTriggerExpressionConstructor(array $data, int $expression_type): array {
+	function getTriggerExpressionConstructor(array $data, int $expression_type): array {
 		$show_message_text = ($expression_type === TRIGGER_EXPRESSION)
 			? 'Expression syntax error.'
 			: 'Recovery expression syntax error.';

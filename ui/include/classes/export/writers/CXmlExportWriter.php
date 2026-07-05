@@ -86,10 +86,10 @@ class CXmlExportWriter extends CExportWriter {
 			'graphs' => 'graph',
 			'group_links' => 'group_link',
 			'group_prototypes' => 'group_prototype',
+			'host_groups' => 'host_group',
+			'template_groups' => 'template_group',
 			'groups' => 'group',
 			'headers' => 'header',
-			'highlights' => 'highlight',
-			'host_groups' => 'host_group',
 			'host_prototypes' => 'host_prototype',
 			'hosts' => 'host',
 			'httptests' => 'httptest',
@@ -117,17 +117,14 @@ class CXmlExportWriter extends CExportWriter {
 			'shapes' => 'shape',
 			'steps' => 'step',
 			'tags' => 'tag',
-			'template_groups' => 'template_group',
 			'templates' => 'template',
-			'thresholds' => 'threshold',
 			'tls_accept' => 'option',
 			'trigger_prototypes' => 'trigger_prototype',
 			'triggers' => 'trigger',
 			'urls' => 'url',
 			'valuemaps' => 'valuemap',
 			'variables' => 'variable',
-			'widgets' => 'widget',
-			'options' => 'option'
+			'widgets' => 'widget'
 		];
 
 		return array_key_exists($name, $map) ? $map[$name] : false;

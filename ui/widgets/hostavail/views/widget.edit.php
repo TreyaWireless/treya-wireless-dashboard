@@ -39,5 +39,5 @@
 		new CWidgetFieldCheckBoxView($data['fields']['only_totals'])
 	)
 	->includeJsFile('widget.edit.js.php')
-	->initFormJs('widget_form.init();')
+	->addJavaScript('widget_host_availability_form.init();')
 	->show();

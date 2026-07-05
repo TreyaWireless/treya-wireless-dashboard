@@ -26,20 +26,9 @@ class CWidgetFieldColorView extends CWidgetFieldView {
 		return 'lbl_'.$this->field->getName();
 	}
 
-	public function getView(): CColorPicker {
-		return (new CColorPicker($this->field->getName()))
-			->setColor($this->field->getValue())
-			->setHasDefault($this->field->hasAllowInherited());
-	}
-
-	public function getJavaScript(): string {
-		return '
-			CWidgetForm.addField(
-				new CWidgetFieldColor('.json_encode([
-					'name' => $this->field->getName(),
-					'form_name' => $this->form_name
-				]).')
-			);
-		';
+	public function getView(): CColor {
+		return (new CColor($this->field->getName(), $this->field->getValue()))
+			->appendColorPickerJs(false)
+			->enableUseDefault(!$this->field->hasAllowInherited());
 	}
 }

@@ -24,10 +24,13 @@ class CAutoregistration extends CApiService {
 		'update' => ['min_user_type' => USER_TYPE_SUPER_ADMIN]
 	];
 
+	protected $tableName = 'config';
+	protected $tableAlias = 'c';
+
 	/**
 	 * @param array $options
 	 *
-	 * @throws APIException
+	 * @throws APIException if the input is invalid.
 	 *
 	 * @return array
 	 */
@@ -40,45 +43,78 @@ class CAutoregistration extends CApiService {
 			self::exception(ZBX_API_ERROR_PARAMETERS, $error);
 		}
 
+		if (self::$userData['type'] != USER_TYPE_SUPER_ADMIN) {
+			return [];
+		}
+
 		if ($options['output'] === API_OUTPUT_EXTEND) {
 			$options['output'] = ['tls_accept'];
 		}
 
-		$tls_accept_index = array_search('tls_accept', $options['output']);
-		$db_output = $tls_accept_index !== false
-			? array_replace($options['output'], [$tls_accept_index => 'autoreg_tls_accept'])
-			: $options['output'];
+		$options['output'] = preg_replace("/^(tls_accept)$/", "autoreg_$1", $options['output']);
 
-		return CArrayHelper::renameKeys(CApiSettingsHelper::getParameters($db_output),
-			['autoreg_tls_accept' => 'tls_accept']
-		);
+		$db_autoreg = [];
+
+		$result = DBselect($this->createSelectQuery($this->tableName(), $options));
+		while ($row = DBfetch($result)) {
+			$db_autoreg[] = $row;
+		}
+
+		if ($this->outputIsRequested('autoreg_tls_accept', $options['output'])) {
+			$db_autoreg = CArrayHelper::renameObjectsKeys($db_autoreg, ['autoreg_tls_accept' => 'tls_accept']);
+		}
+
+		$db_autoreg = $this->unsetExtraFields($db_autoreg, ['configid'], []);
+
+		return $db_autoreg[0];
 	}
 
 	/**
 	 * @param array $autoreg
 	 *
-	 * @throws APIException
+	 * @throws APIException if the input is invalid.
 	 *
 	 * @return bool
 	 */
 	public function update(array $autoreg) {
-		$this->validateUpdate($autoreg, $db_settings, $db_autoreg_tls);
+		if (self::$userData['type'] != USER_TYPE_SUPER_ADMIN) {
+			self::exception(ZBX_API_ERROR_PERMISSIONS,
+				_s('No permissions to call "%1$s.%2$s".', 'autoregistration', __FUNCTION__)
+			);
+		}
 
-		self::addFieldDefaultsByTls($autoreg, $db_settings);
+		$this->validateUpdate($autoreg, $db_autoreg);
 
-		CApiSettingsHelper::updateParameters(['autoreg_tls_accept' => $autoreg['tls_accept']], $db_settings);
+		$upd_config = [];
+		$upd_config_autoreg_tls = [];
 
-		$upd_autoreg_tls = DB::getUpdatedValues('config_autoreg_tls', $autoreg, $db_autoreg_tls);
+		if (array_key_exists('tls_accept', $autoreg) && $autoreg['tls_accept'] != $db_autoreg['tls_accept']) {
+			$upd_config['autoreg_tls_accept'] = $autoreg['tls_accept'];
+		}
 
-		if ($upd_autoreg_tls) {
-			DB::update('config_autoreg_tls', [
-				'values' => $upd_autoreg_tls,
-				'where' => ['autoreg_tlsid' => $db_autoreg_tls['autoreg_tlsid']]
+		// strings
+		foreach (['tls_psk_identity', 'tls_psk'] as $field_name) {
+			if (array_key_exists($field_name, $autoreg) && $autoreg[$field_name] !== $db_autoreg[$field_name]) {
+				$upd_config_autoreg_tls[$field_name] = $autoreg[$field_name];
+			}
+		}
+
+		if ($upd_config) {
+			DB::update('config', [
+				'values' => $upd_config,
+				'where' => ['configid' => $db_autoreg['configid']]
 			]);
 		}
 
-		self::addAuditLog(CAudit::ACTION_UPDATE, CAudit::RESOURCE_AUTOREGISTRATION, [$autoreg],
-			[CArrayHelper::renameKeys($db_settings, ['autoreg_tls_accept' => 'tls_accept']) + $db_autoreg_tls]
+		if ($upd_config_autoreg_tls) {
+			DB::update('config_autoreg_tls', [
+				'values' => $upd_config_autoreg_tls,
+				'where' => ['autoreg_tlsid' => $db_autoreg['autoreg_tlsid']]
+			]);
+		}
+
+		self::addAuditLog(CAudit::ACTION_UPDATE, CAudit::RESOURCE_AUTOREGISTRATION,
+			[['configid' => $db_autoreg['configid']] + $autoreg], [$db_autoreg['configid'] => $db_autoreg]
 		);
 
 		return true;
@@ -86,79 +122,67 @@ class CAutoregistration extends CApiService {
 
 	/**
 	 * @param array      $autoreg
-	 * @param array|null $db_settings
-	 * @param array|null $db_autoreg_tls
+	 * @param array|null $db_autoreg
 	 *
-	 * @throws APIException
+	 * @throws APIException if the input is invalid.
 	 */
-	protected function validateUpdate(array &$autoreg, ?array &$db_settings = null,
-			?array &$db_autoreg_tls = null): void {
-		$api_input_rules = ['type' => API_OBJECT, 'flags' => API_ALLOW_UNEXPECTED, 'fields' => [
-			'tls_accept' =>	['type' => API_INT32, 'in' => HOST_ENCRYPTION_NONE.':'.(HOST_ENCRYPTION_NONE | HOST_ENCRYPTION_PSK)]
-		]];
-
-		if (!CApiInputValidator::validate($api_input_rules, $autoreg, '/', $error)) {
-			self::exception(ZBX_API_ERROR_PARAMETERS, $error);
-		}
-
-		$db_settings = CApiSettingsHelper::getParameters(['autoreg_tls_accept']);
-		$db_autoreg_tls = current(DB::select('config_autoreg_tls', [
-			'output' => ['autoreg_tlsid', 'tls_psk_identity', 'tls_psk'],
-			'limit' => 1
-		]));
-
-		$autoreg += ['tls_accept' => $db_settings['autoreg_tls_accept']];
-
-		self::addRequiredFieldsByTls($autoreg, $db_settings, $db_autoreg_tls);
-
+	protected function validateUpdate(array &$autoreg, ?array &$db_autoreg = null): void {
 		$api_input_rules = ['type' => API_OBJECT, 'fields' => [
-			'tls_accept' =>			['type' => API_ANY],
-			'tls_psk_identity' =>	['type' => API_MULTIPLE, 'rules' => [
-										['if' => static fn(array $data): bool => ($data['tls_accept'] & HOST_ENCRYPTION_PSK) != 0, 'type' => API_STRING_UTF8, 'flags' => API_NOT_EMPTY, 'length' => DB::getFieldLength('config_autoreg_tls', 'tls_psk_identity')],
-										['else' => true, 'type' => API_STRING_UTF8, 'in' => DB::getDefault('config_autoreg_tls', 'tls_psk_identity')]
-			]],
-			'tls_psk' =>			['type' => API_MULTIPLE, 'rules' => [
-										['if' => static fn(array $data): bool => ($data['tls_accept'] & HOST_ENCRYPTION_PSK) != 0, 'type' => API_PSK, 'flags' => API_NOT_EMPTY, 'length' => DB::getFieldLength('config_autoreg_tls', 'tls_psk')],
-										['else' => true, 'type' => API_STRING_UTF8, 'in' => DB::getDefault('config_autoreg_tls', 'tls_psk')]
-			]]
+			'tls_accept' =>			['type' => API_INT32, 'in' => HOST_ENCRYPTION_NONE.':'.(HOST_ENCRYPTION_NONE | HOST_ENCRYPTION_PSK)],
+			'tls_psk_identity' =>	['type' => API_STRING_UTF8, 'length' => DB::getFieldLength('config_autoreg_tls', 'tls_psk_identity')],
+			'tls_psk' =>			['type' => API_PSK, 'length' => DB::getFieldLength('config_autoreg_tls', 'tls_psk')]
 		]];
 
 		if (!CApiInputValidator::validate($api_input_rules, $autoreg, '/', $error)) {
 			self::exception(ZBX_API_ERROR_PARAMETERS, $error);
 		}
 
-		self::checkTlsPskPairs($autoreg, $db_autoreg_tls);
-	}
+		$db_autoreg = DBfetch(DBselect(
+			"SELECT c.configid,c.autoreg_tls_accept AS tls_accept,ca.autoreg_tlsid,ca.tls_psk_identity,ca.tls_psk".
+			" FROM config c,config_autoreg_tls ca"
+		));
 
-	private static function addRequiredFieldsByTls(array &$autoreg, array $db_settings, array $db_autoreg_tls): void {
-		if ($autoreg['tls_accept'] & HOST_ENCRYPTION_PSK
-				&& ($db_settings['autoreg_tls_accept'] & HOST_ENCRYPTION_PSK) == 0) {
-			$autoreg += array_intersect_key($db_autoreg_tls, array_flip(['tls_psk_identity', 'tls_psk']));
+		$tls_accept = array_key_exists('tls_accept', $autoreg) ? $autoreg['tls_accept'] : $db_autoreg['tls_accept'];
+
+		// PSK validation.
+		foreach (['tls_psk_identity', 'tls_psk'] as $field_name) {
+			if ($tls_accept & HOST_ENCRYPTION_PSK) {
+				if (!array_key_exists($field_name, $autoreg) && $db_autoreg[$field_name] === '') {
+					self::exception(ZBX_API_ERROR_PARAMETERS,
+						_s('Invalid parameter "%1$s": %2$s.', '/', _s('the parameter "%1$s" is missing', $field_name))
+					);
+				}
+
+				if (array_key_exists($field_name, $autoreg) && $autoreg[$field_name] === '') {
+					self::exception(ZBX_API_ERROR_PARAMETERS,
+						_s('Invalid parameter "%1$s": %2$s.', '/'.$field_name, _('cannot be empty'))
+					);
+				}
+			}
+			else {
+				if (array_key_exists($field_name, $autoreg) && $autoreg[$field_name] !== '') {
+					self::exception(ZBX_API_ERROR_PARAMETERS,
+						_s('Invalid parameter "%1$s": %2$s.', '/'.$field_name, _('should be empty'))
+					);
+				}
+
+				if (!array_key_exists($field_name, $autoreg) && $db_autoreg[$field_name] !== '') {
+					$autoreg[$field_name] = '';
+				}
+			}
 		}
-	}
 
-	private static function checkTlsPskPairs(array $autoreg, array $db_autoreg_tls): void {
-		if ($autoreg['tls_accept'] & HOST_ENCRYPTION_PSK) {
+		if ($tls_accept & HOST_ENCRYPTION_PSK) {
 			$tls_psk_fields = array_flip(['tls_psk_identity', 'tls_psk']);
 
 			$psk_pair = array_intersect_key($autoreg, $tls_psk_fields);
 
 			if ($psk_pair) {
-				$psk_pair += array_intersect_key($db_autoreg_tls, $tls_psk_fields);
+				$psk_pair += array_intersect_key($db_autoreg, $tls_psk_fields);
 
 				CApiPskHelper::checkPskOfIdentityAmongHosts($psk_pair);
 				CApiPskHelper::checkPskOfIdentityAmongProxies($psk_pair);
 			}
-		}
-	}
-
-	private static function addFieldDefaultsByTls(array &$autoreg, array $db_settings): void {
-		if (($autoreg['tls_accept'] & HOST_ENCRYPTION_PSK) == 0
-				&& $db_settings['autoreg_tls_accept'] & HOST_ENCRYPTION_PSK) {
-			$autoreg += [
-				'tls_psk_identity' => DB::getDefault('config_autoreg_tls', 'tls_psk_identity'),
-				'tls_psk' => DB::getDefault('config_autoreg_tls', 'tls_psk')
-			];
 		}
 	}
 }

@@ -24,6 +24,7 @@ if ($data['uncheck']) {
 }
 
 $this->includeJsFile('administration.token.list.js.php');
+$this->addJsFile('class.calendar.js');
 
 $filter = (new CFilter())
 	->setResetUrl((new CUrl('zabbix.php'))->setArgument('action', 'token.list'))
@@ -153,14 +154,9 @@ $token_table = (new CTableInfo())
 $csrf_token = CCsrfTokenHelper::get('token');
 
 foreach ($data['tokens'] as $token) {
-	$token_url = (new CUrl('zabbix.php'))
-		->setArgument('action', 'popup')
-		->setArgument('popup', 'token.edit')
-		->setArgument('tokenid', $token['tokenid'])
-		->setArgument('admin_mode', 1)
-		->getUrl();
-
-	$name = new CLink($token['name'], $token_url);
+	$name = (new CLink($token['name'], 'javascript:void(0)'))
+		->addClass('js-edit-token')
+		->setAttribute('data-tokenid', $token['tokenid']);
 
 	$token_table->addRow([
 		new CCheckBox('tokenids['.$token['tokenid'].']', $token['tokenid']),

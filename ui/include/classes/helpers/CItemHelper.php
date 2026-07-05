@@ -129,7 +129,7 @@ class CItemHelper extends CItemGeneralHelper {
 		}
 
 		try {
-			$dst_master_itemids = self::getDestinationMasterItems($src_items, $dst_hosts, ZBX_FLAG_DISCOVERY_NORMAL);
+			$dst_master_itemids = self::getDestinationMasterItems($src_items, $dst_hosts);
 		}
 		catch (Exception $e) {
 			return false;

@@ -19,6 +19,8 @@
  * @var array $data
  */
 
+$this->addJsFile('class.calendar.js');
+
 $this->includeJsFile('slareport.list.js.php');
 
 $filter = (new CFilter())

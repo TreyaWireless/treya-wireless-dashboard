@@ -17,42 +17,23 @@
 
 window.module_edit = new class {
 
-	init({rules}) {
-		this.overlay = overlays_stack.getById('module.edit');
+	init() {
+		this.overlay = overlays_stack.getById('module-edit');
 		this.dialogue = this.overlay.$dialogue[0];
-		this.form_element = this.overlay.$dialogue.$body[0].querySelector('form');
-		this.form = new CForm(this.form_element, rules);
-
-		const return_url = new URL('zabbix.php', location.href);
-
-		return_url.searchParams.set('action', 'module.list');
-		ZABBIX.PopupManager.setReturnUrl(return_url.href);
+		this.form = this.overlay.$dialogue.$body[0].querySelector('form');
 	}
 
 	submit() {
-		const fields = getFormFields(this.form_element);
+		const fields = getFormFields(this.form);
 
-		this.form.validateSubmit(fields)
-			.then((result) => {
-				if (!result) {
-					return;
-				}
+		const curl = new Curl('zabbix.php');
+		curl.setArgument('action', 'module.update');
 
-				const curl = new Curl('zabbix.php');
+		this._post(curl.getUrl(), fields, (response) => {
+			overlayDialogueDestroy(this.overlay.dialogueid);
 
-				curl.setArgument('action', 'module.update');
-
-				this._post(curl.getUrl(), fields, (response) => {
-					if (!response) {
-						return;
-					}
-
-					overlayDialogueDestroy(this.overlay.dialogueid);
-
-					this.dialogue.dispatchEvent(new CustomEvent('dialogue.submit', {detail: response}));
-				});
-			})
-			.finally(() => this.overlay.unsetLoading());
+			this.dialogue.dispatchEvent(new CustomEvent('dialogue.submit', {detail: response.success}));
+		});
 	}
 
 	_post(url, data, success_callback) {
@@ -63,13 +44,7 @@ window.module_edit = new class {
 		})
 			.then((response) => response.json())
 			.then((response) => {
-				if ('form_errors' in response) {
-					this.form.setErrors(response.form_errors, true, true);
-					this.form.renderErrors();
-
-					return false;
-				}
-				else if ('error' in response) {
+				if ('error' in response) {
 					throw {error: response.error};
 				}
 
@@ -77,7 +52,7 @@ window.module_edit = new class {
 			})
 			.then(success_callback)
 			.catch((exception) => {
-				for (const element of this.form_element.parentNode.children) {
+				for (const element of this.form.parentNode.children) {
 					if (element.matches('.msg-good, .msg-bad, .msg-warning')) {
 						element.parentNode.removeChild(element);
 					}
@@ -95,7 +70,7 @@ window.module_edit = new class {
 
 				const message_box = makeMessageBox('bad', messages, title)[0];
 
-				this.form_element.parentNode.insertBefore(message_box, this.form_element);
+				this.form.parentNode.insertBefore(message_box, this.form);
 			})
 			.finally(() => {
 				this.overlay.unsetLoading();

@@ -27,12 +27,11 @@
 	const view = new class {
 
 		init() {
-			this.#initTagFilter();
-			this.#initActions();
-			this.#initPopupListeners();
+			this._initTagFilter();
+			this._initActions();
 		}
 
-		#initTagFilter() {
+		_initTagFilter() {
 			$('#filter-tags')
 				.dynamicRows({template: '#filter-tag-row-tmpl'})
 				.on('afteradd.dynamicRows', function () {
@@ -46,64 +45,86 @@
 			});
 		}
 
-		#initActions() {
-			document.addEventListener('click', e => {
+		_initActions() {
+			document.addEventListener('click', (e) => {
 				if (e.target.classList.contains('js-create-sla')) {
-					ZABBIX.PopupManager.open('sla.edit');
+					this._edit();
+				}
+				else if (e.target.classList.contains('js-edit-sla')) {
+					this._edit({slaid: e.target.dataset.slaid});
 				}
 				else if (e.target.classList.contains('js-enable-sla')) {
-					this.#enable(e.target, [e.target.dataset.slaid]);
+					this._enable(e.target, [e.target.dataset.slaid]);
 				}
 				else if (e.target.classList.contains('js-disable-sla')) {
-					this.#disable(e.target, [e.target.dataset.slaid]);
+					this._disable(e.target, [e.target.dataset.slaid]);
 				}
 				else if (e.target.classList.contains('js-massenable-sla')) {
-					this.#enable(e.target, Object.keys(chkbxRange.getSelectedIds()), true);
+					this._enable(e.target, Object.keys(chkbxRange.getSelectedIds()));
 				}
 				else if (e.target.classList.contains('js-massdisable-sla')) {
-					this.#disable(e.target, Object.keys(chkbxRange.getSelectedIds()), true);
+					this._disable(e.target, Object.keys(chkbxRange.getSelectedIds()));
 				}
 				else if (e.target.classList.contains('js-massdelete-sla')) {
-					this.#delete(e.target, Object.keys(chkbxRange.getSelectedIds()));
+					this._delete(e.target, Object.keys(chkbxRange.getSelectedIds()));
 				}
 			});
 		}
 
-		#enable(target, slaids, massenable = false) {
-			if (massenable) {
-				const confirmation = slaids.length > 1
-					? <?= json_encode(_('Enable selected SLAs?')) ?>
-					: <?= json_encode(_('Enable selected SLA?')) ?>;
+		_edit(parameters = {}) {
+			const overlay = PopUp('popup.sla.edit', parameters, {
+				dialogueid: 'sla_edit',
+				dialogue_class: 'modal-popup-static',
+				prevent_navigation: true
+			});
 
-				if (!window.confirm(confirmation)) {
-					return;
-				}
+			const dialogue = overlay.$dialogue[0];
+
+			dialogue.addEventListener('dialogue.submit', (e) => this._reload(e.detail));
+		}
+
+		_reload(success) {
+			postMessageOk(success.title);
+
+			if ('messages' in success) {
+				postMessageDetails('success', success.messages);
+			}
+
+			uncheckTableRows('sla');
+			location.href = location.href;
+		}
+
+		_enable(target, slaids) {
+			const confirmation = slaids.length > 1
+				? <?= json_encode(_('Enable selected SLAs?')) ?>
+				: <?= json_encode(_('Enable selected SLA?')) ?>;
+
+			if (!window.confirm(confirmation)) {
+				return;
 			}
 
 			const curl = new Curl('zabbix.php');
 			curl.setArgument('action', 'sla.enable');
 
-			this.#post(target, slaids, curl);
+			this._post(target, slaids, curl);
 		}
 
-		#disable(target, slaids, massdisable = false) {
-			if (massdisable) {
-				const confirmation = slaids.length > 1
-					? <?= json_encode(_('Disable selected SLAs?')) ?>
-					: <?= json_encode(_('Disable selected SLA?')) ?>;
+		_disable(target, slaids) {
+			const confirmation = slaids.length > 1
+				? <?= json_encode(_('Disable selected SLAs?')) ?>
+				: <?= json_encode(_('Disable selected SLA?')) ?>;
 
-				if (!window.confirm(confirmation)) {
-					return;
-				}
+			if (!window.confirm(confirmation)) {
+				return;
 			}
 
 			const curl = new Curl('zabbix.php');
 			curl.setArgument('action', 'sla.disable');
 
-			this.#post(target, slaids, curl);
+			this._post(target, slaids, curl);
 		}
 
-		#delete(target, slaids) {
+		_delete(target, slaids) {
 			const confirmation = slaids.length > 1
 				? <?= json_encode(_('Delete selected SLAs?')) ?>
 				: <?= json_encode(_('Delete selected SLA?')) ?>;
@@ -115,10 +136,10 @@
 			const curl = new Curl('zabbix.php');
 			curl.setArgument('action', 'sla.delete');
 
-			this.#post(target, slaids, curl);
+			this._post(target, slaids, curl);
 		}
 
-		#post(target, slaids, curl) {
+		_post(target, slaids, curl) {
 			target.classList.add('is-loading');
 
 			curl.setArgument(CSRF_TOKEN_NAME, <?= json_encode(CCsrfTokenHelper::get('sla')) ?>);
@@ -161,16 +182,6 @@
 					target.classList.remove('is-loading');
 					target.blur();
 				});
-		}
-
-		#initPopupListeners() {
-			ZABBIX.EventHub.subscribe({
-				require: {
-					context: CPopupManager.EVENT_CONTEXT,
-					event: CPopupManagerEvent.EVENT_SUBMIT
-				},
-				callback: () => uncheckTableRows('sla')
-			});
 		}
 	};
 </script>

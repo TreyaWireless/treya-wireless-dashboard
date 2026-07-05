@@ -24,78 +24,85 @@
 
 		init({eventsource}) {
 			this.eventsource = eventsource;
-			this.#initActions();
-			this.#initPopupListeners();
+			this._initActions();
 		}
 
-		#initActions() {
-			document.addEventListener('click', e => {
+		_initActions() {
+			document.addEventListener('click', (e) => {
 				if (e.target.classList.contains('js-action-create')) {
-					ZABBIX.PopupManager.open('action.edit', {eventsource: this.eventsource});
+					this._edit({eventsource: this.eventsource});
+				}
+				else if (e.target.classList.contains('js-action-edit')) {
+					this._edit({actionid: e.target.dataset.actionid, eventsource: this.eventsource});
 				}
 				else if (e.target.classList.contains('js-enable-action')) {
-					this.#enable(e.target, [e.target.dataset.actionid]);
+					this._enable(e.target, [e.target.dataset.actionid]);
 				}
 				else if (e.target.classList.contains('js-massenable-action')) {
-					this.#enable(e.target, Object.keys(chkbxRange.getSelectedIds()), true);
+					this._enable(e.target, Object.keys(chkbxRange.getSelectedIds()));
 				}
 				else if (e.target.classList.contains('js-disable-action')) {
-					this.#disable(e.target, [e.target.dataset.actionid]);
+					this._disable(e.target, [e.target.dataset.actionid]);
 				}
 				else if (e.target.classList.contains('js-massdisable-action')) {
-					this.#disable(e.target, Object.keys(chkbxRange.getSelectedIds()), true);
+					this._disable(e.target, Object.keys(chkbxRange.getSelectedIds()));
 				}
 				else if (e.target.classList.contains('js-massdelete-action')) {
-					this.#delete(e.target, Object.keys(chkbxRange.getSelectedIds()));
+					this._delete(e.target, Object.keys(chkbxRange.getSelectedIds()));
 				}
 			})
 		}
 
-		#initPopupListeners() {
-			ZABBIX.EventHub.subscribe({
-				require: {
-					context: CPopupManager.EVENT_CONTEXT,
-					event: CPopupManagerEvent.EVENT_SUBMIT
-				},
-				callback: () => uncheckTableRows('action_' + this.eventsource)
+		_edit(parameters = {}) {
+			const overlay = PopUp('popup.action.edit', parameters, {
+				dialogueid: 'action-edit',
+				dialogue_class: 'modal-popup-large',
+				prevent_navigation: true
+			});
+
+			overlay.$dialogue[0].addEventListener('dialogue.submit', (e) => {
+				uncheckTableRows('action_' + this.eventsource);
+				postMessageOk(e.detail.title);
+
+				if ('messages' in e.detail) {
+					postMessageDetails('success', e.detail.messages);
+				}
+
+				location.href = location.href;
 			});
 		}
 
-		#enable(target, actionids, massenable = false) {
-			if (massenable) {
-				const confirmation = actionids.length > 1
-					? <?= json_encode(_('Enable selected actions?')) ?>
-					: <?= json_encode(_('Enable selected action?')) ?>;
+		_enable(target, actionids) {
+			const confirmation = actionids.length > 1
+				? <?= json_encode(_('Enable selected actions?')) ?>
+				: <?= json_encode(_('Enable selected action?')) ?>;
 
-				if (!window.confirm(confirmation)) {
-					return;
-				}
+			if (!window.confirm(confirmation)) {
+				return;
 			}
 
 			const curl = new Curl('zabbix.php');
 			curl.setArgument('action', 'action.enable');
 
-			this.#post(target, actionids, curl);
+			this._post(target, actionids, curl);
 		}
 
-		#disable(target, actionids, massdisable = false) {
-			if (massdisable) {
-				const confirmation = actionids.length > 1
-					? <?= json_encode(_('Disable selected actions?')) ?>
-					: <?= json_encode(_('Disable selected action?')) ?>;
+		_disable(target, actionids) {
+			const confirmation = actionids.length > 1
+				? <?= json_encode(_('Disable selected actions?')) ?>
+				: <?= json_encode(_('Disable selected action?')) ?>;
 
-				if (!window.confirm(confirmation)) {
-					return;
-				}
+			if (!window.confirm(confirmation)) {
+				return;
 			}
 
 			const curl = new Curl('zabbix.php');
 			curl.setArgument('action', 'action.disable');
 
-			this.#post(target, actionids, curl);
+			this._post(target, actionids, curl);
 		}
 
-		#delete(target, actionids) {
+		_delete(target, actionids) {
 			const confirmation = actionids.length > 1
 				? <?= json_encode(_('Delete selected actions?')) ?>
 				: <?= json_encode(_('Delete selected action?')) ?>;
@@ -107,10 +114,10 @@
 			const curl = new Curl('zabbix.php');
 			curl.setArgument('action', 'action.delete');
 
-			this.#post(target, actionids, curl);
+			this._post(target, actionids, curl);
 		}
 
-		#post(target, actionids, url) {
+		_post(target, actionids, url) {
 			url.setArgument(CSRF_TOKEN_NAME, <?= json_encode(CCsrfTokenHelper::get('action')) ?>);
 
 			target.classList.add('is-loading');

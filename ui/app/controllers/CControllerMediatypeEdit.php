@@ -56,8 +56,7 @@ class CControllerMediatypeEdit extends CController {
 					'exec_path', 'gsm_modem', 'username', 'status', 'smtp_security', 'smtp_verify_peer',
 					'smtp_verify_host', 'smtp_authentication', 'maxsessions', 'maxattempts', 'attempt_interval',
 					'message_format', 'script', 'timeout', 'process_tags', 'show_event_menu', 'event_menu_url',
-					'event_menu_name', 'parameters', 'description', 'provider', 'redirection_url', 'client_id',
-					'authorization_url', 'token_url', 'tokens_status', 'access_token_updated', 'access_expires_in'
+					'event_menu_name', 'parameters', 'description', 'provider'
 				],
 				'selectMessageTemplates' => ['eventsource', 'recovery', 'subject', 'message'],
 				'mediatypeids' => $this->getInput('mediatypeid')
@@ -129,7 +128,7 @@ class CControllerMediatypeEdit extends CController {
 				case MEDIA_TYPE_EMAIL:
 					$data['smtp_username'] = $this->mediatype['username'];
 					$data['display_password_input'] =
-						$this->mediatype['smtp_authentication'] != SMTP_AUTHENTICATION_PASSWORD;
+						$this->mediatype['smtp_authentication'] != SMTP_AUTHENTICATION_NORMAL;
 					break;
 
 				case MEDIA_TYPE_EXEC:
@@ -171,11 +170,6 @@ class CControllerMediatypeEdit extends CController {
 		}
 
 		$data['user'] = ['debug_mode' => $this->getDebugMode()];
-		$curl_status = (new CFrontendSetup())->checkPhpCurlModule();
-
-		if ($curl_status['result'] != CFrontendSetup::CHECK_OK) {
-			$data['curl_error'] = $curl_status['error'];
-		}
 
 		$response = new CControllerResponseData($data);
 		$response->setTitle(_('Configuration of media types'));

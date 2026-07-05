@@ -16,7 +16,6 @@
 
 /**
  * @var CView $this
- * @var array $data
  */
 
 $form = (new CForm())
@@ -137,7 +136,6 @@ if ($data['is_item_testable']) {
 						SNMP_V2C => _('SNMPv2'),
 						SNMP_V3 => _('SNMPv3')
 					]))
-					->setAttribute('data-prevent-validation-on-change', 1)
 			))
 				->addClass(CFormField::ZBX_STYLE_FORM_FIELD_FLUID)
 				->addClass('js-popup-row-snmp-version'),
@@ -374,8 +372,7 @@ if (count($data['steps']) > 0) {
 		->setHeader([
 			'',
 			(new CColHeader(_('Name')))->addStyle('width: 100%;'),
-			(new CColHeader(_('Result')))->addClass(ZBX_STYLE_RIGHT),
-			''
+			(new CColHeader(_('Result')))->addClass(ZBX_STYLE_RIGHT)
 		]);
 
 	foreach ($data['steps'] as $i => $step) {
@@ -399,16 +396,7 @@ if (count($data['steps']) > 0) {
 				->addClass(ZBX_STYLE_WORDBREAK),
 			(new CCol())
 				->addClass(ZBX_STYLE_RIGHT)
-				->setId('preproc-test-step-'.$i.'-result'),
-			(new CCol(
-				(new CButton('copy_button-'.$i))
-					->setTitle(_('Copy to clipboard'))
-					->addClass(ZBX_ICON_COPY)
-					->addClass(ZBX_STYLE_BTN_GREY_ICON)
-					->addClass('js-copy-button')
-					->setAttribute('data-index', $i)
-					->addStyle('display: none')
-			))->addClass('result-copy')
+				->setId('preproc-test-step-'.$i.'-result')
 		]);
 	}
 
@@ -425,9 +413,7 @@ if (count($data['steps']) > 0) {
 if ($data['show_final_result']) {
 	$form_grid->addItem([
 		(new CLabel(_('Result')))->addClass('js-final-result'),
-		(new CFormField())
-			->addClass(CFormField::ZBX_STYLE_FORM_FIELD_FLUID)
-			->addClass('item-final-result')
+		(new CFormField())->addClass(CFormField::ZBX_STYLE_FORM_FIELD_FLUID)
 	]);
 }
 

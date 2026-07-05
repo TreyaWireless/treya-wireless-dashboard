@@ -21,7 +21,7 @@
  * @var array $data
  */
 
-use Widgets\Item\Widget;
+use Zabbix\Widgets\Fields\CWidgetFieldColumnsList;
 
 $form = new CWidgetFormView($data);
 
@@ -57,9 +57,6 @@ $form
 			->addFieldsGroup(
 				getChangeIndicatorFieldsGroupView($data['fields'])->addRowClass('fields-group-change-indicator')
 			)
-			->addItem(
-				(new CWidgetFieldSparklineView($data['fields']['sparkline']))->addRowClass('js-sparkline-row')
-			)
 			->addField(
 				new CWidgetFieldColorView($data['fields']['bg_color'])
 			)
@@ -89,8 +86,8 @@ $form
 			)
 	)
 	->includeJsFile('widget.edit.js.php')
-	->initFormJs('widget_form.init('.json_encode([
-		'thresholds_colors' => Widget::DEFAULT_COLOR_PALETTE
+	->addJavaScript('widget_item_form.init('.json_encode([
+		'thresholds_colors' => CWidgetFieldColumnsList::THRESHOLDS_DEFAULT_COLOR_PALETTE
 	], JSON_THROW_ON_ERROR).');')
 	->show();
 

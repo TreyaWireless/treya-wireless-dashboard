@@ -26,7 +26,6 @@ class CNumericBox extends CInput {
 
 		$this->setReadonly($readonly);
 		$this->setAttribute('maxlength', $maxlength);
-		$this->setAttribute('data-field-type', 'text-box');
 
 		$this->allow_empty = $allow_empty;
 		$this->allow_negative = $allow_negative;

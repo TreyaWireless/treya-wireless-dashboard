@@ -53,20 +53,20 @@ class CLegacyAction extends CAction {
 		 * sure to hide left menu and display error in case user has no access to templates or hosts.
 		 */
 		if (in_array(getRequest('context', ''), ['host', 'template'])
-				&& in_array($action, ['host_discovery.php', 'httpconf.php', 'host_prototypes.php'])) {
+				&& in_array($action, ['graphs.php', 'host_discovery.php', 'httpconf.php', 'host_prototypes.php'])) {
 			$action = (getRequest('context') === 'host') ? 'host.list' : 'template.list';
 		}
 
 		if ($user_type < USER_TYPE_ZABBIX_USER) {
 			$denied = ['chart.php', 'chart2.php', 'chart3.php', 'chart4.php', 'chart6.php', 'chart7.php', 'history.php',
 				'hostinventories.php', 'hostinventoriesoverview.php', 'httpdetails.php', 'image.php', 'imgstore.php',
-				'jsrpc.php', 'map.php', 'tr_events.php', 'sysmap.php', 'sysmaps.php'
+				'jsrpc.php', 'map.php', 'tr_events.php', 'sysmap.php', 'sysmaps.php', 'report2.php'
 			];
 		}
 
 		if ($user_type < USER_TYPE_ZABBIX_ADMIN) {
-			$denied = array_merge($denied, ['host_discovery.php', 'host_discovery_prototypes.php',
-				'host_prototypes.php', 'host.list', 'httpconf.php', 'report4.php', 'template.list'
+			$denied = array_merge($denied, ['graphs.php', 'host_discovery.php', 'host_prototypes.php', 'host.list',
+				'httpconf.php', 'report4.php', 'template.list'
 			]);
 		}
 
@@ -83,7 +83,8 @@ class CLegacyAction extends CAction {
 				CRoleHelper::UI_MONITORING_MAPS => ['image.php', 'map.php', 'sysmap.php', 'sysmaps.php'],
 				CRoleHelper::UI_MONITORING_PROBLEMS => ['tr_events.php'],
 				CRoleHelper::UI_INVENTORY_HOSTS => ['hostinventories.php'],
-				CRoleHelper::UI_INVENTORY_OVERVIEW => ['hostinventoriesoverview.php']
+				CRoleHelper::UI_INVENTORY_OVERVIEW => ['hostinventoriesoverview.php'],
+				CRoleHelper::UI_REPORTS_AVAILABILITY_REPORT => ['report2.php']
 			];
 		}
 

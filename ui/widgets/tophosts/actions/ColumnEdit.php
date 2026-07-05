@@ -23,10 +23,11 @@ use CController,
 	CWidgetsData;
 
 use Zabbix\Widgets\CWidgetField;
-use Zabbix\Widgets\Fields\CWidgetFieldTimePeriod;
 
-use Widgets\TopHosts\Includes\CWidgetFieldColumnsList;
-use Widgets\TopHosts\Widget;
+use Zabbix\Widgets\Fields\{
+	CWidgetFieldColumnsList,
+	CWidgetFieldTimePeriod
+};
 
 class ColumnEdit extends CController {
 
@@ -39,23 +40,17 @@ class ColumnEdit extends CController {
 		$fields = [
 			'name' =>				'string',
 			'data' =>				'int32',
-			'text' =>				'string',
 			'item' =>				'string',
-			'base_color' =>			'string',
-			'display_value_as' =>	'int32',
-			'display' =>			'int32',
-			'sparkline' =>			'array',
-			'min' =>				'string',
-			'max' =>				'string',
-			'thresholds' =>			'array',
-			'decimal_places' =>		'string',
-			'highlights' =>			'array',
-			'show_thumbnail' =>		'int32',
 			'aggregate_function' =>	'int32',
 			'time_period' =>		'array',
+			'display' =>			'int32',
 			'history' =>			'int32',
-			'groupids' =>			'array',
-			'hostids' =>			'array',
+			'min' =>				'string',
+			'max' =>				'string',
+			'decimal_places' =>		'string',
+			'base_color' =>			'string',
+			'thresholds' =>			'array',
+			'text' =>				'string',
 			'edit' =>				'in 1',
 			'update' =>				'in 1',
 			'templateid' =>			'string'
@@ -82,11 +77,15 @@ class ColumnEdit extends CController {
 		}
 
 		$input = $this->getInputAll();
-		unset($input['edit'], $input['update'], $input['templateid']);
 
 		$field = new CWidgetFieldColumnsList('columns', '');
 
-		$field->setValue([$input + self::getColumnDefaults()]);
+		if (!$this->hasInput('edit') && !$this->hasInput('update')) {
+			$input += self::getColumnDefaults();
+		}
+
+		unset($input['edit'], $input['update'], $input['templateid']);
+		$field->setValue([$input]);
 
 		$errors = $field->validate(true);
 		array_map('error', $errors);
@@ -95,7 +94,7 @@ class ColumnEdit extends CController {
 	}
 
 	protected function checkPermissions(): bool {
-		return $this->getUserType() >= USER_TYPE_ZABBIX_USER;
+		return true;
 	}
 
 	protected function doAction(): void {
@@ -105,7 +104,7 @@ class ColumnEdit extends CController {
 		if (!$this->hasInput('update')) {
 			$data = [
 				'action' => $this->getAction(),
-				'colors' => Widget::DEFAULT_COLOR_PALETTE,
+				'thresholds_colors' => CWidgetFieldColumnsList::THRESHOLDS_DEFAULT_COLOR_PALETTE,
 				'templateid' => $this->hasInput('templateid') ? $this->getInput('templateid') : null,
 				'errors' => hasErrorMessages() ? getMessages() : null,
 				'user' => [
@@ -113,7 +112,7 @@ class ColumnEdit extends CController {
 				]
 			] + $input + self::getColumnDefaults();
 
-			$data['time_period_field'] = (new CWidgetFieldTimePeriod('time_period', _('Time period')))
+			$data['time_period_field'] = (new CWidgetFieldTimePeriod('time_period', 'Time period'))
 				->setDefaultPeriod(['from' => 'now-1h', 'to' => 'now'])
 				->setInType(CWidgetsData::DATA_TYPE_TIME_PERIOD)
 				->acceptDashboard()
@@ -123,16 +122,45 @@ class ColumnEdit extends CController {
 			$data['time_period_field']->setValue($data['time_period']);
 
 			$this->setResponse(new CControllerResponseData($data));
+
+			return;
 		}
-		else {
-			if (array_key_exists('thresholds', $input)) {
-				$input['thresholds'] = array_values(filterAndSortThresholds($input['thresholds']));
+
+		$number_parser = new CNumberParser(['with_size_suffix' => true, 'with_time_suffix' => true]);
+
+		$thresholds = [];
+
+		if (array_key_exists('thresholds', $input)) {
+			foreach ($input['thresholds'] as $threshold) {
+				$order_threshold = trim($threshold['threshold']);
+
+				if ($order_threshold !== '' && $number_parser->parse($order_threshold) == CParser::PARSE_SUCCESS) {
+					$thresholds[] = $threshold + ['order_threshold' => $number_parser->calcValue()];
+				}
 			}
 
-			$this->setResponse(
-				(new CControllerResponseData(['main_block' => json_encode($input, JSON_THROW_ON_ERROR)]))->disableView()
-			);
+			unset($input['thresholds']);
 		}
+
+		if ($thresholds) {
+			uasort($thresholds,
+				static function (array $threshold_1, array $threshold_2): int {
+					return $threshold_1['order_threshold'] <=> $threshold_2['order_threshold'];
+				}
+			);
+
+			$input['thresholds'] = [];
+
+			foreach ($thresholds as $threshold) {
+				unset($threshold['order_threshold']);
+
+				$input['thresholds'][] = $threshold;
+			}
+		}
+
+		$this->setResponse(
+			(new CControllerResponseData(['main_block' => json_encode($input, JSON_THROW_ON_ERROR)]))->disableView()
+		);
 	}
 
 	/**
@@ -147,25 +175,21 @@ class ColumnEdit extends CController {
 			$column_defaults = [
 				'name' => '',
 				'data' => CWidgetFieldColumnsList::DATA_ITEM_VALUE,
-				'text' => '',
 				'item' => '',
-				'base_color' => '',
-				'display_value_as' => CWidgetFieldColumnsList::DISPLAY_VALUE_AS_NUMERIC,
-				'display' => CWidgetFieldColumnsList::DISPLAY_AS_IS,
-				'sparkline' => CWidgetFieldColumnsList::SPARKLINE_DEFAULT,
-				'min' => '',
-				'max' => '',
-				'thresholds' => [],
-				'decimal_places' => CWidgetFieldColumnsList::DEFAULT_DECIMAL_PLACES,
-				'highlights' => [],
-				'show_thumbnail' => 0,
 				'aggregate_function' => AGGREGATE_NONE,
 				'time_period' => [
 					CWidgetField::FOREIGN_REFERENCE_KEY => CWidgetField::createTypedReference(
 						CWidgetField::REFERENCE_DASHBOARD, CWidgetsData::DATA_TYPE_TIME_PERIOD
 					)
 				],
-				'history' => CWidgetFieldColumnsList::HISTORY_DATA_AUTO
+				'display' => CWidgetFieldColumnsList::DISPLAY_AS_IS,
+				'history' => CWidgetFieldColumnsList::HISTORY_DATA_AUTO,
+				'min' => '',
+				'max' => '',
+				'decimal_places' => CWidgetFieldColumnsList::DEFAULT_DECIMAL_PLACES,
+				'base_color' => '',
+				'text' => '',
+				'thresholds' => []
 			];
 		}
 

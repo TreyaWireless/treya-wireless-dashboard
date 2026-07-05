@@ -106,7 +106,7 @@ if ($item['itemid']) {
 		'class' => implode(' ', [ZBX_STYLE_BTN_ALT, 'js-test-item']),
 		'keepOpen' => true,
 		'isSubmit' => false,
-		'action' => 'item_edit_form.test('.json_encode(['rules' => $data['js_test_validation_rules']]).');'
+		'action' => 'item_edit_form.test();'
 	];
 
 	if ($data['host']['status'] == HOST_STATUS_MONITORED || $data['host']['status'] == HOST_STATUS_NOT_MONITORED) {
@@ -145,7 +145,7 @@ else {
 			'class' => implode(' ', [ZBX_STYLE_BTN_ALT, 'js-test-item']),
 			'keepOpen' => true,
 			'isSubmit' => false,
-			'action' => 'item_edit_form.test('.json_encode(['rules' => $data['js_test_validation_rules']]).');'
+			'action' => 'item_edit_form.test();'
 		]
 	];
 }
@@ -174,8 +174,7 @@ $tabs = (new CTabView(['id' => $tabsid]))
 			'source' => 'item',
 			'tabs_id' => $tabsid,
 			'tags' => $item['tags'],
-			'tags_tab_id' => 'tags-tab',
-			'has_inline_validation' => true
+			'tags_tab_id' => 'tags-tab'
 		]),
 		TAB_INDICATOR_TAGS
 	)
@@ -190,15 +189,9 @@ $tabs = (new CTabView(['id' => $tabsid]))
 		TAB_INDICATOR_PREPROCESSING
 	);
 
-$return_url = (new CUrl('zabbix.php'))
-	->setArgument('action', 'item.list')
-	->setArgument('context', $item['context'])
-	->getUrl();
-
 $form
 	->addItem($tabs)
 	->addItem((new CScriptTag('item_edit_form.init('.json_encode([
-			'rules' => $data['js_validation_rules'],
 			'actions' => [
 				'form' => 'item.edit',
 				'update' => 'item.update',
@@ -214,8 +207,7 @@ $form
 			'source' => 'item',
 			'testable_item_types' => $data['testable_item_types'],
 			'type_with_key_select' => $type_with_key_select,
-			'value_type_keys' => $data['value_type_keys'],
-			'return_url' => $return_url
+			'value_type_keys' => $data['value_type_keys']
 		]).');'))->setOnDocumentReady()
 	);
 $output = [
@@ -223,10 +215,7 @@ $output = [
 	'doc_url' => CDocHelper::getUrl(CDocHelper::DATA_COLLECTION_ITEM_EDIT),
 	'body' => $form->toString().implode('', $scripts),
 	'buttons' => $buttons,
-	'script_inline' => getPagePostJs().
-		$this->readJsFile('item.edit.js.php').
-		$this->readJsFile('host.interface.selector.js.php', null, '/../partials/js'),
-	'dialogue_class' => 'modal-popup-large'
+	'script_inline' => getPagePostJs().$this->readJsFile('item.edit.js.php')
 ];
 
 if ($data['user']['debug_mode'] == GROUP_DEBUG_MODE_ENABLED) {

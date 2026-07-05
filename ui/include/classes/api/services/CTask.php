@@ -552,7 +552,7 @@ class CTask extends CApiService {
 			if (!in_array($item['type'], $allowed_types)) {
 				self::exception(ZBX_API_ERROR_PARAMETERS,
 					_s('Cannot send request: %1$s.',
-						in_array($item['flags'], [ZBX_FLAG_DISCOVERY_RULE, ZBX_FLAG_DISCOVERY_RULE_CREATED])
+						($item['flags'] == ZBX_FLAG_DISCOVERY_RULE)
 							? _('wrong discovery rule type')
 							: _('wrong item type')
 					)
@@ -561,7 +561,7 @@ class CTask extends CApiService {
 
 			if ($item['status'] != ITEM_STATUS_ACTIVE || $item['hosts'][0]['status'] != HOST_STATUS_MONITORED) {
 				$host_name = $item['hosts'][0]['name'];
-				$problem = in_array($item['flags'], [ZBX_FLAG_DISCOVERY_RULE, ZBX_FLAG_DISCOVERY_RULE_CREATED])
+				$problem = ($item['flags'] == ZBX_FLAG_DISCOVERY_RULE)
 					? _s('discovery rule "%1$s" on host "%2$s" is not monitored', $item['name'], $host_name)
 					: _s('item "%1$s" on host "%2$s" is not monitored', $item['name'], $host_name);
 				self::exception(ZBX_API_ERROR_PARAMETERS, _s('Cannot send request: %1$s.', $problem));

@@ -60,17 +60,11 @@ switch ($data['method']) {
 		break;
 
 	case 'zabbix.status':
-		global $ZBX_SERVER, $ZBX_SERVER_PORT;
-
-		$now = time();
-		$check_time = CSessionHelper::get('serverCheckTime') ?? 0;
-
-		if ($check_time + SERVER_CHECK_INTERVAL <= $now || $now < $check_time) {
-			$status = true;
-			$error_code = 0;
+		if (!CSessionHelper::has('serverCheckResult')
+				|| (CSessionHelper::get('serverCheckTime') + SERVER_CHECK_INTERVAL) <= time()) {
 
 			if ($ZBX_SERVER === null && $ZBX_SERVER_PORT === null) {
-				$status = false;
+				$is_running = false;
 			}
 			else {
 				$zabbix_server = new CZabbixServer($ZBX_SERVER, $ZBX_SERVER_PORT,
@@ -78,29 +72,18 @@ switch ($data['method']) {
 					timeUnitToSeconds(CSettingsHelper::get(CSettingsHelper::SOCKET_TIMEOUT)), 0
 				);
 
-				if (!$zabbix_server->isRunning() && !$zabbix_server->canConnect(CSessionHelper::getId())) {
-					$status = false;
-					$error_code = $zabbix_server->getErrorCode();
-				}
+				$is_running = $zabbix_server->isRunning(CSessionHelper::getId());
 			}
 
-			CSessionHelper::set('serverCheckResult', $status);
-			CSessionHelper::set('serverCheckResultErrorCode', $error_code);
-			CSessionHelper::set('serverCheckTime', $now);
-		}
-
-		$server_status = CSessionHelper::get('serverCheckResult');
-		$message = '';
-
-		if ($server_status === false) {
-			$message = (CSessionHelper::get('serverCheckResultErrorCode') === CZabbixServer::ERROR_CODE_TLS)
-				? _('Unable to connect to the Zabbix server due to TLS settings. Some functions are unavailable.')
-				: _('Zabbix server is not running: the information displayed may not be current.');
+			CSessionHelper::set('serverCheckResult', $is_running);
+			CSessionHelper::set('serverCheckTime', time());
 		}
 
 		$result = [
-			'result' => $server_status,
-			'message' => $message
+			'result' => (bool) CSessionHelper::get('serverCheckResult'),
+			'message' => CSessionHelper::get('serverCheckResult')
+				? ''
+				: _('Zabbix server is not running: the information displayed may not be current.')
 		];
 		break;
 
@@ -188,7 +171,6 @@ switch ($data['method']) {
 					'with_httptests' => array_key_exists('with_httptests', $data) ? $data['with_httptests'] : null,
 					'with_triggers' => array_key_exists('with_triggers', $data) ? $data['with_triggers'] : null,
 					'search' => array_key_exists('search', $data) ? ['name' => $data['search']] : null,
-					'filter' => array_key_exists('filter', $data) ? $data['filter'] : null,
 					'editable' => array_key_exists('editable', $data) ? $data['editable'] : false,
 					'limit' => $limit
 				];
@@ -288,7 +270,6 @@ switch ($data['method']) {
 
 				if ($data['object_name'] === 'graph_prototypes') {
 					$options['selectDiscoveryRule'] = ['hostid'];
-					$options['selectDiscoveryRulePrototype'] = ['hostid'];
 
 					$records = API::GraphPrototype()->get($options);
 				}
@@ -308,8 +289,7 @@ switch ($data['method']) {
 					}
 					else {
 						$host_names = array_column($record['hosts'], 'name', 'hostid');
-						$parent_lld = $record['discoveryRule'] ?: $record['discoveryRulePrototype'];
-						$host_name = $host_names[$parent_lld['hostid']];
+						$host_name = $host_names[$record['discoveryRule']['hostid']];
 					}
 
 					$result[] = [
@@ -775,33 +755,17 @@ switch ($data['method']) {
 					$result = CArrayHelper::renameObjectsKeys($sysmaps, ['sysmapid' => 'id']);
 				}
 				break;
-
-			case 'host_inventory':
-				$inventory_fields = array_column(getHostInventories(true), 'title', 'nr');
-
-				if (array_key_exists('search', $data)) {
-					$inventory_fields = preg_grep('/'.preg_quote($data['search']).'/i', $inventory_fields);
-				}
-
-				foreach (array_slice($inventory_fields, 0, $limit, true) as $nr => $title) {
-					$result[] = ['id' => (string) $nr, 'name' => $title];
-				}
-				break;
 		}
 		break;
 
 	case 'patternselect.get':
 		$search = (array_key_exists('search', $data) && $data['search'] !== '') ? $data['search'] : null;
-		$hostids = array_key_exists('hostids', $data) ? $data['hostids'] : null;
-		$items = array_key_exists('items', $data) ? $data['items'] : null;
-		$groupids = array_key_exists('groupids', $data) ? getSubGroups($data['groupids']) : null;
 		$wildcard_enabled = array_key_exists('wildcard_allowed', $data) && strpos($search, '*') !== false;
 
 		switch ($data['object_name']) {
 			case 'hosts':
 				$options = [
 					'output' => ['name'],
-					'groupids' => $groupids,
 					'search' => ['name' => $search.($wildcard_enabled ? '*' : '')],
 					'searchWildcardsEnabled' => $wildcard_enabled,
 					'preservekeys' => true,
@@ -813,6 +777,8 @@ switch ($data['method']) {
 				break;
 
 			case 'items':
+				$hostids = null;
+
 				if (array_key_exists('host_pattern', $data)) {
 					$host_pattern_multiple = array_key_exists('host_pattern_multiple', $data)
 						&& $data['host_pattern_multiple'] == 1;
@@ -822,8 +788,6 @@ switch ($data['method']) {
 
 					$hosts = API::Host()->get([
 						'output' => [],
-						'hostids' => $hostids,
-						'groupids' => $groupids,
 						'search' => [
 							'name' => $host_pattern_wildcard_enabled ? $host_patterns : null
 						],
@@ -849,17 +813,10 @@ switch ($data['method']) {
 					'filter' => array_key_exists('filter', $data) ? $data['filter'] : null,
 					'templated' => array_key_exists('real_hosts', $data) ? false : null,
 					'hostids' => $hostids,
-					'groupids' => $groupids,
 					'webitems' => true,
 					'sortfield' => 'name',
 					'limit' => $limit
 				];
-
-				if ($items) {
-					$options['search'][$name_field] = [...$items, $options['search'][$name_field]];
-					$options['searchWildcardsEnabled'] = true;
-					$options['searchByAny'] = true;
-				}
 
 				$db_result = API::Item()->get($options);
 
@@ -968,25 +925,6 @@ switch ($data['method']) {
 				$result = $scripts[$data['eventid']][0];
 			}
 		}
-		break;
-
-	case 'link_thresholds.validate':
-		$result = [];
-
-		if (array_key_exists('thresholds', $data)) {
-			$validation_rules = ['type' => API_OBJECTS, 'fields' => [
-				'threshold' => ['type' => API_NUMERIC]
-			]];
-
-			CApiInputValidator::validate($validation_rules, $data['thresholds'], 'thresholds', $error);
-
-			if ($error !== '') {
-				$result = [
-					'error' => $error
-				];
-			}
-		}
-
 		break;
 
 	default:

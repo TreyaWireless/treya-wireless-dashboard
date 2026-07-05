@@ -31,12 +31,13 @@ class CControllerDashboardWidgetEdit extends CController {
 
 	protected function checkInput(): bool {
 		$fields = [
-			'type' =>		'string|required',
-			'fields' =>		'array',
-			'templateid' =>	'db dashboard.templateid',
-			'name' =>		'string',
-			'view_mode' =>	'in '.implode(',', [ZBX_WIDGET_VIEW_MODE_NORMAL, ZBX_WIDGET_VIEW_MODE_HIDDEN_HEADER]),
-			'is_new' =>		'in 1'
+			'type' =>						'string|required',
+			'fields' =>						'array',
+			'templateid' =>					'db dashboard.templateid',
+			'name' =>						'string',
+			'view_mode' =>					'in '.implode(',', [ZBX_WIDGET_VIEW_MODE_NORMAL, ZBX_WIDGET_VIEW_MODE_HIDDEN_HEADER]),
+			'unique_id' =>					'string',
+			'dashboard_page_unique_id' =>	'string'
 		];
 
 		$ret = $this->validateInput($fields);
@@ -59,7 +60,7 @@ class CControllerDashboardWidgetEdit extends CController {
 			$this->setResponse(
 				(new CControllerResponseData([
 					'main_block' => json_encode([
-						'header' => $this->hasInput('is_new') ? _('Add widget') : _('Edit widget'),
+						'header' => $this->hasInput('unique_id') ? _('Edit widget') : _('Add widget'),
 						'error' => [
 							'messages' => array_column(get_and_clear_messages(), 'message')
 						]
@@ -94,10 +95,9 @@ class CControllerDashboardWidgetEdit extends CController {
 		natcasesort($known_types);
 		natcasesort($deprecated_types);
 
-		$values = $this->getInput('fields', $this->widget->getInitialFieldsValues());
 		$templateid = $this->hasInput('templateid') ? $this->getInput('templateid') : null;
 
-		$form = $this->widget->getForm($values, $templateid);
+		$form = $this->widget->getForm($this->getInput('fields', []), $templateid);
 		$form->validate();
 
 		$captions = $this->getValuesCaptions($form->fieldsToApi());
@@ -122,7 +122,10 @@ class CControllerDashboardWidgetEdit extends CController {
 			'templateid' => $templateid,
 			'fields' => $form_fields,
 			'view_mode' => $this->getInput('view_mode', ZBX_WIDGET_VIEW_MODE_NORMAL),
-			'is_new' => $this->hasInput('is_new'),
+			'unique_id' => $this->hasInput('unique_id') ? $this->getInput('unique_id') : null,
+			'dashboard_page_unique_id' => $this->hasInput('dashboard_page_unique_id')
+				? $this->getInput('dashboard_page_unique_id')
+				: null,
 			'url' => $url,
 			'user' => [
 				'debug_mode' => $this->getDebugMode()
@@ -244,19 +247,17 @@ class CControllerDashboardWidgetEdit extends CController {
 				'output' => ['graphid', 'name'],
 				'selectHosts' => ['hostid', 'name'],
 				'selectDiscoveryRule' => ['hostid'],
-				'selectDiscoveryRulePrototype' => ['hostid'],
 				'graphids' => array_keys($ids[ZBX_WIDGET_FIELD_TYPE_GRAPH_PROTOTYPE]),
 				'preservekeys' => true
 			]);
 
 			foreach ($db_graph_prototypes as $graphid => $graph) {
 				$host_names = array_column($graph['hosts'], 'name', 'hostid');
-				$parent_lld = $graph['discoveryRule'] ?: $graph['discoveryRulePrototype'];
 
 				$captions[ZBX_WIDGET_FIELD_TYPE_GRAPH_PROTOTYPE][$graphid] = [
 					'id' => $graphid,
 					'name' => $graph['name'],
-					'prefix' => $host_names[$parent_lld['hostid']].NAME_DELIMITER
+					'prefix' => $host_names[$graph['discoveryRule']['hostid']].NAME_DELIMITER
 				];
 			}
 		}

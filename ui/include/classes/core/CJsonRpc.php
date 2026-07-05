@@ -18,6 +18,8 @@ class CJsonRpc {
 
 	const VERSION = '2.0';
 
+	public const AUTH_TYPE_FRONTEND = 0;
+	public const AUTH_TYPE_PARAM = 1;
 	public const AUTH_TYPE_HEADER = 2;
 	public const AUTH_TYPE_COOKIE = 3;
 
@@ -71,6 +73,11 @@ class CJsonRpc {
 				continue;
 			}
 
+			$auth = [
+				'type' => self::AUTH_TYPE_PARAM,
+				'auth' => $call['auth']
+			];
+
 			list($api, $method) = explode('.', $call['method']) + [1 => ''];
 
 			$header = $request->getAuthBearerValue();
@@ -80,7 +87,7 @@ class CJsonRpc {
 					'auth' => $header
 				];
 			}
-			else {
+			elseif ($call['auth'] === null) {
 				$session = new CEncryptedCookieSession();
 
 				$auth = [
@@ -112,6 +119,7 @@ class CJsonRpc {
 			'jsonrpc' =>	['type' => API_STRING_UTF8, 'flags' => API_REQUIRED, 'in' => self::VERSION],
 			'method' =>		['type' => API_STRING_UTF8, 'flags' => API_REQUIRED],
 			'params' =>		['type' => API_JSONRPC_PARAMS, 'flags' => API_REQUIRED],
+			'auth' =>		['type' => API_STRING_UTF8, 'flags' => API_NOT_EMPTY | API_ALLOW_NULL | API_DEPRECATED, 'default' => null],
 			'id' =>			['type' => API_JSONRPC_ID]
 		]];
 

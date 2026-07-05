@@ -108,7 +108,7 @@ if ($page['type'] == PAGE_TYPE_HTML) {
 	if (isset($ZBX_SERVER_NAME) && $ZBX_SERVER_NAME !== '') {
 		$page_title = $ZBX_SERVER_NAME.NAME_DELIMITER;
 	}
-	$page_title .= isset($page['title']) ? $page['title'] : _('Treya Wireless');
+	$page_title .= isset($page['title']) ? $page['title'] : _('Zabbix');
 
 	if (defined('ZBX_PAGE_DO_JS_REFRESH') && CWebUser::getRefresh() != 0) {
 		$page_title .= ' ['._s('refreshed every %1$s sec.', CWebUser::getRefresh()).']';

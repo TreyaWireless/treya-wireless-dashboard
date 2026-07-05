@@ -163,13 +163,14 @@ class CDRule extends CApiService {
 
 		if ($result) {
 			$result = $this->addRelatedObjects($options, $result);
-
-			if (!$options['preservekeys']) {
-				$result = array_values($result);
-			}
 		}
 
-		return $result;
+// removing keys (hash -> array)
+		if (!$options['preservekeys']) {
+			$result = zbx_cleanHashes($result);
+		}
+
+	return $result;
 	}
 
 	/**
@@ -216,7 +217,7 @@ class CDRule extends CApiService {
 					_s('Incorrect value for field "%1$s": %2$s.', 'iprange', _('cannot be empty'))
 				);
 			}
-			elseif ($ip_range_parser->parse($drule['iprange']) != CParser::PARSE_SUCCESS) {
+			elseif (!$ip_range_parser->parse($drule['iprange'])) {
 				self::exception(ZBX_API_ERROR_PARAMETERS,
 					_s('Incorrect value for field "%1$s": %2$s.', 'iprange', $ip_range_parser->getError())
 				);
@@ -381,7 +382,7 @@ class CDRule extends CApiService {
 						_s('Incorrect value for field "%1$s": %2$s.', 'iprange', _('cannot be empty'))
 					);
 				}
-				elseif ($ip_range_parser->parse($drule['iprange']) != CParser::PARSE_SUCCESS) {
+				elseif (!$ip_range_parser->parse($drule['iprange'])) {
 					self::exception(ZBX_API_ERROR_PARAMETERS,
 						_s('Incorrect value for field "%1$s": %2$s.', 'iprange', $ip_range_parser->getError())
 					);
@@ -523,12 +524,8 @@ class CDRule extends CApiService {
 				$uniq++;
 			}
 
-			if (array_key_exists('ports', $dcheck)) {
-				$port_range_parser = new CPortRangeParser();
-
-				if ($port_range_parser->parse($dcheck['ports']) != CParser::PARSE_SUCCESS) {
-					self::exception(ZBX_API_ERROR_PARAMETERS, _s('Incorrect port range.'));
-				}
+			if (array_key_exists('ports', $dcheck) && !validate_port_list($dcheck['ports'])) {
+				self::exception(ZBX_API_ERROR_PARAMETERS, _s('Incorrect port range.'));
 			}
 
 			foreach ($source_values as $field => $values) {

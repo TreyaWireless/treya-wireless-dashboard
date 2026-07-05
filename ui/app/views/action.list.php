@@ -119,13 +119,6 @@ if ($data['actions']) {
 				->addClass('js-enable-action')
 				->setAttribute('data-actionid', $action['actionid']);
 
-		$action_url = (new CUrl('zabbix.php'))
-			->setArgument('action', 'popup')
-			->setArgument('popup', 'action.edit')
-			->setArgument('actionid', $action['actionid'])
-			->setArgument('eventsource', $data['eventsource'])
-			->getUrl();
-
 		$warning = '';
 
 		if ($action['has_missing_conditions'] || $action['has_missing_operations']) {
@@ -142,7 +135,9 @@ if ($data['actions']) {
 		$action_list->addRow([
 			new CCheckBox('actionids['.$action['actionid'].']', $action['actionid']),
 			(new CCol(
-				new CLink($action['name'], $action_url)
+				(new CLink($action['name']))
+					->addClass('js-action-edit')
+					->setAttribute('data-actionid', $action['actionid'])
 			))->addClass(ZBX_STYLE_WORDBREAK),
 			(new CCol($conditions))->addClass(ZBX_STYLE_WORDBREAK),
 			(new CCol($operations))->addClass(ZBX_STYLE_WORDBREAK),

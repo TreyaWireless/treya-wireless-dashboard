@@ -14,7 +14,6 @@
 **/
 
 
-
 class CRegexValidator extends CValidator {
 
 	/**

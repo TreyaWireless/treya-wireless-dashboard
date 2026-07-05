@@ -171,14 +171,9 @@ $overviewFormList->addRow(_('Monitoring'),
 
 // configuration
 if ($data['allowed_ui_conf_hosts'] && $data['rwHost']) {
-	$host_url = (new CUrl('zabbix.php'))
-		->setArgument('action', 'popup')
-		->setArgument('popup', 'host.edit')
-		->setArgument('hostid', $data['host']['hostid'])
-		->getUrl();
-
-	$hostLink = new CLink(_('Host'), $host_url);
-
+	$hostLink = (new CLink(_('Host')))
+		->setAttribute('data-hostid', $data['host']['hostid'])
+		->onClick('view.editHost({hostid: this.dataset.hostid});');
 	$itemsLink = new CLink(_('Items'),
 		(new CUrl('zabbix.php'))
 			->setArgument('action', 'item.list')
@@ -194,8 +189,7 @@ if ($data['allowed_ui_conf_hosts'] && $data['rwHost']) {
 			->setArgument('context', 'host')
 	);
 	$graphsLink = new CLink(_('Graphs'),
-		(new CUrl('zabbix.php'))
-			->setArgument('action', 'graph.list')
+		(new CUrl('graphs.php'))
 			->setArgument('filter_set', '1')
 			->setArgument('filter_hostids', [$data['host']['hostid']])
 			->setArgument('context', 'host')
@@ -228,7 +222,7 @@ $overviewFormList->addRow(_('Configuration'),
 		(new CSpan([$itemsLink, CViewHelper::showNum($data['host']['items'])])),
 		(new CSpan([$triggersLink, CViewHelper::showNum($data['host']['triggers'])])),
 		(new CSpan([$graphsLink, CViewHelper::showNum($data['host']['graphs'])])),
-		(new CSpan([$discoveryLink, CViewHelper::showNum($data['host']['discoveryRules'])])),
+		(new CSpan([$discoveryLink, CViewHelper::showNum($data['host']['discoveries'])])),
 		(new CSpan([$webLink, CViewHelper::showNum($data['host']['httpTests'])]))
 	])
 );
@@ -263,10 +257,6 @@ $hostInventoriesTab->addTab('detailsTab', _('Details'), $detailsFormList);
 
 // append tabs and form
 $hostInventoriesTab->setFooter(makeFormFooter(null, [new CButtonCancel()]));
-
-(new CScriptTag('view.init();'))
-	->setOnDocumentReady()
-	->show();
 
 (new CHtmlPage())
 	->setTitle(_('Host inventory'))

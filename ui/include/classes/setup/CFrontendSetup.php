@@ -28,7 +28,6 @@ class CFrontendSetup {
 	const MIN_PHP_MAX_INPUT_TIME = 300;
 	const MIN_PHP_GD_VERSION = '2.0';
 	const MIN_PHP_LIBXML_VERSION = '2.6.15';
-	const MIN_PHP_CURL_VERSION = '7.19.4';
 	const REQUIRED_PHP_ARG_SEPARATOR_OUTPUT = '&';
 
 	/**
@@ -250,7 +249,7 @@ class CFrontendSetup {
 			'current' => empty($current) ? _('off') : new CSpan($current),
 			'required' => null,
 			'result' => $current ? self::CHECK_OK : self::CHECK_FATAL,
-			'error' => _('At least one of MySQL or PostgreSQL should be supported.')
+			'error' => _('At least one of MySQL, PostgreSQL or Oracle should be supported.')
 		];
 	}
 
@@ -271,6 +270,12 @@ class CFrontendSetup {
 				'pg_free_result', 'pg_last_error', 'pg_parameter_status', 'pg_query', 'pg_unescape_bytea',
 				'pg_field_type'])) {
 			$allowed_db[ZBX_DB_POSTGRESQL] = 'PostgreSQL';
+		}
+
+		if (zbx_is_callable(['oci_bind_by_name', 'oci_close', 'oci_commit', 'oci_connect', 'oci_error', 'oci_execute',
+				'oci_fetch_assoc', 'oci_field_type', 'oci_free_statement', 'oci_new_descriptor', 'oci_parse',
+				'oci_rollback'])) {
+			$allowed_db[ZBX_DB_ORACLE] = 'Oracle';
 		}
 
 		return $allowed_db;
@@ -685,7 +690,7 @@ class CFrontendSetup {
 			'required' => $this->default_lang,
 			'result' => $result ? self::CHECK_OK : self::CHECK_FATAL,
 			'error' => 'Locale for language "'.$this->default_lang.'" is not found on the web server. Tried to set: '.
-				implode(', ', $locale_variants).'. Unable to translate interface.'
+				implode(', ', $locale_variants).'. Unable to translate Zabbix interface.'
 		];
 	}
 
@@ -719,18 +724,14 @@ class CFrontendSetup {
 	 * @return array
 	 */
 	public function checkPhpCurlModule() {
-		$enabled = function_exists('curl_init') && function_exists('curl_errno') && function_exists('curl_error')
-			&& function_exists('curl_exec') && function_exists('curl_setopt') && function_exists('curl_setopt_array')
-			&& function_exists('curl_version');
-		$current_version = $enabled ? curl_version()['version'] : '';
-		$enabled = $enabled && version_compare($current_version, self::MIN_PHP_CURL_VERSION, '>=');
+		$current = function_exists('curl_init');
 
 		return [
 			'name' => _('PHP curl'),
-			'current' => $current_version,
-			'required' => self::MIN_PHP_CURL_VERSION,
-			'result' => $enabled ? self::CHECK_OK : self::CHECK_WARNING,
-			'error' => _('PHP curl extension is missing or outdated.')
+			'current' => $current ? _('on') : _('off'),
+			'required' => null,
+			'result' => $current ? self::CHECK_OK : self::CHECK_WARNING,
+			'error' => _('PHP curl extension missing.')
 		];
 	}
 }

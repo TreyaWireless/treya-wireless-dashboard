@@ -19,6 +19,7 @@
  * @var array $data
  */
 
+$this->addJsFile('class.form.fieldset.collapsible.js');
 $this->includeJsFile('administration.authentication.edit.js.php');
 
 $form = (new CForm())
@@ -175,7 +176,7 @@ $ldap_tab = (new CFormGrid())
 							new CColHeader(_('Host')),
 							(new CColHeader(_('User groups')))->addClass(ZBX_STYLE_NOWRAP),
 							_('Default'),
-							_('Action')
+							''
 						]))->addClass(ZBX_STYLE_GREY)
 					)
 					->addItem(
@@ -204,7 +205,7 @@ $ldap_tab = (new CFormGrid())
 		new CLabel(_('Provisioning period'), 'jit_provision_interval'),
 		new CFormField(
 			(new CTextBox('jit_provision_interval', $data['jit_provision_interval'], false,
-					CSettingsSchema::getFieldLength('jit_provision_interval')))
+					DB::getFieldLength('config', 'jit_provision_interval')))
 				->setWidth(ZBX_TEXTAREA_4DIGITS_WIDTH)
 				->setEnabled($ldap_auth_enabled && $data['ldap_jit_status'] == JIT_PROVISIONING_ENABLED)
 		)
@@ -470,10 +471,7 @@ $saml_tab = (new CFormGrid())
 					->addClass($saml_auth_enabled ? null : ZBX_STYLE_DISABLED)
 					->setHeader(
 						(new CRowHeader([
-							_('Name'),
-							_('Media type'),
-							_('Attribute'),
-							(new CColHeader(_('Action')))->setWidth('12%')
+							_('Name '), _('Media type'), _('Attribute'), ''
 						]))->addClass(ZBX_STYLE_GREY)
 					)
 					->addItem(
@@ -585,7 +583,7 @@ if ($data['is_http_auth_allowed']) {
 			new CLabel(_('Remove domain name'), 'http_strip_domains'),
 			new CFormField(
 				(new CTextBox('http_strip_domains', $data['http_strip_domains'], false,
-					CSettingsSchema::getFieldLength('http_strip_domains')
+					DB::getFieldLength('config', 'http_strip_domains')
 				))
 					->setEnabled($data['http_auth_enabled'])
 					->setWidth(ZBX_TEXTAREA_STANDARD_WIDTH)

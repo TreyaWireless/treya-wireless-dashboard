@@ -441,7 +441,9 @@ jQuery(function($) {
 		style.sheet.insertRule('.debug-output { display: ' + (visible ? 'block' : 'none') + '; }', 0);
 
 		if (preserve_state !== true) {
-			document.dispatchEvent(new CustomEvent('debug.click', {detail: {visible}}));
+			$.publish('debug.click', {
+				visible: visible
+			});
 		}
 
 		return false;

@@ -43,7 +43,7 @@ class CControllerHostEdit extends CController {
 			'status'				=> 'db hosts.status|in '.implode(',', [HOST_STATUS_MONITORED,
 											HOST_STATUS_NOT_MONITORED
 										]),
-			'monitored_by'			=> 'db hosts.monitored_by|in '.implode(',', [ZBX_MONITORED_BY_SERVER, ZBX_MONITORED_BY_PROXY, ZBX_MONITORED_BY_PROXY_GROUP, ZBX_MONITORED_BY_API]),
+			'monitored_by'			=> 'db hosts.monitored_by|in '.implode(',', [ZBX_MONITORED_BY_SERVER, ZBX_MONITORED_BY_PROXY, ZBX_MONITORED_BY_PROXY_GROUP]),
 			'proxyid'				=> 'db hosts.proxyid',
 			'proxy_groupid'			=> 'db hosts.proxy_groupid',
 			'interfaces'			=> 'array',
@@ -62,16 +62,18 @@ class CControllerHostEdit extends CController {
 			'ipmi_username'			=> 'db hosts.ipmi_username',
 			'ipmi_password'			=> 'db hosts.ipmi_password',
 			'show_inherited_macros' => 'in 0,1',
-			'tls_in_none' 			=> 'in 0,1',
-			'tls_in_psk' 			=> 'in 0,1',
-			'tls_in_cert' 			=> 'in 0,1',
+			'tls_connect'			=> 'db hosts.tls_connect|in '.implode(',', [HOST_ENCRYPTION_NONE,
+											HOST_ENCRYPTION_PSK, HOST_ENCRYPTION_CERTIFICATE
+										]),
+			'tls_accept'			=> 'db hosts.tls_accept|ge 0|le '.
+										(0 | HOST_ENCRYPTION_NONE | HOST_ENCRYPTION_PSK | HOST_ENCRYPTION_CERTIFICATE),
 			'tls_subject'			=> 'db hosts.tls_subject',
 			'tls_issuer'			=> 'db hosts.tls_issuer',
 			'tls_psk_identity'		=> 'db hosts.tls_psk_identity',
 			'tls_psk'				=> 'db hosts.tls_psk',
 			'inventory_mode'		=> 'db host_inventory.inventory_mode|in '.implode(',', [HOST_INVENTORY_DISABLED,
-										HOST_INVENTORY_MANUAL, HOST_INVENTORY_AUTOMATIC
-									]),
+											HOST_INVENTORY_MANUAL, HOST_INVENTORY_AUTOMATIC
+										]),
 			'host_inventory'		=> 'array',
 			'macros'				=> 'array',
 			'valuemaps'				=> 'array'
@@ -135,9 +137,9 @@ class CControllerHostEdit extends CController {
 						'ipmi_password', 'tls_connect', 'tls_accept', 'tls_issuer', 'tls_subject', 'flags',
 						'inventory_mode'
 					],
-					'selectDiscoveryRule' => ['itemid', 'name'],
+					'selectDiscoveryRule' => ['itemid', 'name', 'parent_hostid'],
 					'selectHostGroups' => ['groupid'],
-					'selectDiscoveryData' => ['parent_hostid', 'disable_source'],
+					'selectHostDiscovery' => ['parent_hostid', 'disable_source'],
 					'selectInterfaces' => ['interfaceid', 'type', 'main', 'available', 'error', 'details', 'ip', 'dns',
 						'port', 'useip'
 					],
@@ -341,12 +343,6 @@ class CControllerHostEdit extends CController {
 				'editable' => true
 			]);
 
-		$data['js_validation_rules'] = $data['host']['hostid'] === null
-			? CControllerHostCreate::getValidationRules()
-			: CControllerHostUpdate::getValidationRules();
-
-		$data['js_validation_rules'] = (new CFormValidator($data['js_validation_rules']))->getRules();
-
 		$response = new CControllerResponseData($data);
 		$response->setTitle(_('Configuration of host'));
 		$this->setResponse($response);
@@ -486,27 +482,10 @@ class CControllerHostEdit extends CController {
 			$inputs['name'] = $this->getInput('visiblename', '');
 			$inputs['inventory'] = $this->getInput('host_inventory', []);
 
-			$this->getInputs($inputs, [
-				'host', 'monitored_by', 'proxyid', 'proxy_groupid', 'description', 'status',
-				'ipmi_authtype', 'ipmi_privilege', 'ipmi_username', 'ipmi_password', 'tls_connect', 'tls_subject',
-				'tls_issuer', 'tls_psk_identity', 'tls_psk', 'tags', 'inventory_mode', 'host_inventory'
+			$this->getInputs($inputs, ['host', 'monitored_by', 'proxyid', 'proxy_groupid', 'description', 'status',
+				'ipmi_authtype', 'ipmi_privilege', 'ipmi_username', 'ipmi_password', 'tls_connect', 'tls_accept',
+				'tls_subject', 'tls_issuer', 'tls_psk_identity', 'tls_psk', 'tags', 'inventory_mode', 'host_inventory'
 			]);
-
-			$inputs['tls_accept'] = 0x00;
-			if ($this->getInput('tls_in_none', 0)) {
-				$inputs['tls_accept'] |= HOST_ENCRYPTION_NONE;
-			}
-			if ($this->getInput('tls_in_psk', 0)) {
-				$inputs['tls_accept'] |= HOST_ENCRYPTION_PSK;
-			}
-			if ($this->getInput('tls_in_cert', 0)) {
-				$inputs['tls_accept'] |= HOST_ENCRYPTION_CERTIFICATE;
-			}
-
-			if (!($inputs['tls_accept'] & HOST_ENCRYPTION_PSK)
-					&& !($inputs['tls_accept'] & HOST_ENCRYPTION_CERTIFICATE)) {
-				$inputs['tls_accept'] = HOST_ENCRYPTION_NONE;
-			}
 
 			$field_add_templates = $this->getInput('add_templates', []);
 			$field_templates = $this->getInput('templates', []);
@@ -538,9 +517,13 @@ class CControllerHostEdit extends CController {
 				return $valuemap;
 			}, $this->getInput('valuemaps', []));
 
+			$main_interfaces = $this->getInput('mainInterfaces', []);
 			$inputs['interfaces'] = $this->getInput('interfaces', []);
 
 			foreach ($inputs['interfaces'] as &$interface) {
+				$interface['main'] = (in_array($interface['interfaceid'], $main_interfaces))
+					? INTERFACE_PRIMARY
+					: INTERFACE_SECONDARY;
 				unset($interface['interfaceid'], $interface['items']);
 			}
 			unset($interface);

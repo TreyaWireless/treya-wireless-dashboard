@@ -141,6 +141,7 @@ class CControllerDashboardView extends CController {
 			'can_view_reports' => $this->checkAccess(CRoleHelper::UI_REPORTS_SCHEDULED_REPORTS),
 			'can_create_reports' => $this->checkAccess(CRoleHelper::ACTIONS_MANAGE_SCHEDULED_REPORTS),
 			'has_related_reports' => $stats['has_related_reports'],
+			'broadcast_requirements' => $stats['broadcast_requirements'],
 			'dashboard_host' => $dashboard_host,
 			'dashboard_time_period' => $dashboard_time_period,
 			'clone' => $this->hasInput('clone'),
@@ -161,6 +162,7 @@ class CControllerDashboardView extends CController {
 
 		$stats = [
 			'has_related_reports' => false,
+			'broadcast_requirements' => [],
 			'configuration_hash' => null
 		];
 
@@ -223,6 +225,8 @@ class CControllerDashboardView extends CController {
 						'userGroups' => $db_dashboards[0]['userGroups']
 					]
 				];
+
+				$stats['broadcast_requirements'] = CDashboardHelper::getBroadcastRequirements($pages_prepared);
 			}
 			else {
 				$error = _('No permissions to referred object or it does not exist!');
@@ -277,6 +281,8 @@ class CControllerDashboardView extends CController {
 						'filter' => ['dashboardid' => $dashboard['dashboardid']],
 						'limit' => 1
 					]);
+
+					$stats['broadcast_requirements'] = CDashboardHelper::getBroadcastRequirements($pages_prepared);
 
 					CProfile::update('web.dashboard.dashboardid', $dashboardid, PROFILE_TYPE_ID);
 				}

@@ -49,5 +49,5 @@ if (!$data['fields']['itemid']->isTemplateDashboard()) {
 		: null
 	)
 	->includeJsFile('widget.edit.js.php')
-	->initFormJs('widget_form.init();')
+	->addJavaScript('widget_graph_form.init();')
 	->show();

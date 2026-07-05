@@ -21,6 +21,7 @@ require_once dirname(__FILE__).'/include/forms.inc.php';
 
 $page['title'] = _('Configuration of discovery rules');
 $page['file'] = 'host_discovery.php';
+$page['scripts'] = ['multilineinput.js', 'items.js'];
 
 require_once dirname(__FILE__).'/include/page_header.php';
 
@@ -51,7 +52,6 @@ $fields = [
 									'(isset({add}) || isset({update})) && isset({type})'.
 										' && {type} != '.ITEM_TYPE_TRAPPER.' && {type} != '.ITEM_TYPE_SNMPTRAP.
 										' && {type} != '.ITEM_TYPE_DEPENDENT.
-										' && {type} != '.ITEM_TYPE_NESTED.
 										' && !({type} == '.ITEM_TYPE_ZABBIX_ACTIVE.
 											' && isset({key}) && strncmp({key}, "mqtt.get", 8) === 0)',
 									_('Update interval')
@@ -63,7 +63,7 @@ $fields = [
 										ITEM_TYPE_ZABBIX_ACTIVE, ITEM_TYPE_EXTERNAL, ITEM_TYPE_DB_MONITOR,
 										ITEM_TYPE_IPMI, ITEM_TYPE_SSH, ITEM_TYPE_TELNET, ITEM_TYPE_JMX,
 										ITEM_TYPE_DEPENDENT, ITEM_TYPE_HTTPAGENT, ITEM_TYPE_SNMP, ITEM_TYPE_SCRIPT,
-										ITEM_TYPE_BROWSER, ITEM_TYPE_NESTED
+										ITEM_TYPE_BROWSER
 									]),
 									'isset({add}) || isset({update})'
 								],
@@ -234,14 +234,14 @@ $fields = [
 	'filter_rst' =>						[T_ZBX_STR, O_OPT, null,	null,		null],
 	'filter_groupids' =>				[T_ZBX_INT, O_OPT, P_ONLY_ARRAY,	DB_ID,	null],
 	'filter_hostids' =>					[T_ZBX_INT, O_OPT, P_ONLY_ARRAY,	DB_ID,	null],
-	'filter_name' =>					[T_ZBX_STR, O_OPT, P_NO_TRIM,		null,	null],
+	'filter_name' =>					[T_ZBX_STR, O_OPT, P_NO_TRIM,	null,		null],
 	'filter_key' =>						[T_ZBX_STR, O_OPT, null,	null,		null],
 	'filter_type' =>					[T_ZBX_INT, O_OPT, null,
 											IN([-1, ITEM_TYPE_ZABBIX, ITEM_TYPE_TRAPPER, ITEM_TYPE_SIMPLE,
 												ITEM_TYPE_INTERNAL, ITEM_TYPE_ZABBIX_ACTIVE, ITEM_TYPE_EXTERNAL,
 												ITEM_TYPE_DB_MONITOR, ITEM_TYPE_IPMI, ITEM_TYPE_SSH, ITEM_TYPE_TELNET,
 												ITEM_TYPE_JMX, ITEM_TYPE_DEPENDENT, ITEM_TYPE_HTTPAGENT, ITEM_TYPE_SNMP,
-												ITEM_TYPE_SCRIPT, ITEM_TYPE_BROWSER, ITEM_TYPE_NESTED
+												ITEM_TYPE_SCRIPT, ITEM_TYPE_BROWSER
 											]),
 											null
 										],
@@ -286,7 +286,7 @@ $itemid = getRequest('itemid');
 if ($itemid) {
 	$items = API::DiscoveryRule()->get([
 		'output' => ['itemid'],
-		'selectHosts' => ['hostid', 'name', 'monitored_by', 'proxyid', 'assigned_proxyid', 'status', 'flags'],
+		'selectHosts' => ['hostid', 'name', 'monitored_by', 'proxyid', 'assigned_proxyid', 'status'],
 		'itemids' => $itemid,
 		'editable' => true
 	]);
@@ -302,7 +302,7 @@ else {
 
 	if ($hostid) {
 		$hosts = API::Host()->get([
-			'output' => ['hostid', 'name', 'monitored_by', 'proxyid', 'assigned_proxyid', 'status', 'flags'],
+			'output' => ['hostid', 'name', 'monitored_by', 'proxyid', 'assigned_proxyid', 'status'],
 			'hostids' => $hostid,
 			'templated_hosts' => true,
 			'editable' => true
@@ -450,7 +450,7 @@ elseif (hasRequest('add') || hasRequest('update')) {
 			$options = $overrides ? ['selectOverrides' => ['step']] : [];
 
 			$db_item = API::DiscoveryRule()->get([
-				'output' => ['itemid', 'templateid', 'flags'],
+				'output' => ['itemid', 'templateid'],
 				'itemids' => $itemid
 			] + $options)[0];
 		}
@@ -479,7 +479,7 @@ elseif (hasRequest('add') || hasRequest('update')) {
 				'formula' => getRequest('formula', DB::getDefault('items', 'formula')),
 				'conditions' => getRequest('conditions', [])
 			]),
-			'overrides' => prepareLldOverrides($overrides),
+			'overrides' => prepareLldOverrides($overrides, $db_item),
 			'lifetime_type' => getRequest('lifetime_type', DB::getDefault('items', 'lifetime_type')),
 			'lifetime' => getRequest('lifetime', DB::getDefault('items', 'lifetime')),
 			'enabled_lifetime_type' => getRequest('enabled_lifetime_type',
@@ -610,6 +610,7 @@ elseif (hasRequest('add') || hasRequest('update')) {
 
 			if (hasRequest('update')) {
 				$item = getSanitizedItemFields($input + $db_item + [
+						'flags' => ZBX_FLAG_DISCOVERY_RULE,
 						'hosts' => $hosts
 					]);
 
@@ -725,8 +726,6 @@ if (hasRequest('form')) {
 			'selectLLDMacroPaths' => ['lld_macro', 'path'],
 			'selectPreprocessing' => ['type', 'params', 'error_handler', 'error_handler_params'],
 			'selectOverrides' => ['name', 'step', 'stop', 'filter', 'operations'],
-			'selectDiscoveryRule' => ['itemid', 'name'],
-			'selectDiscoveryData' => ['parent_itemid', 'disable_source'],
 			'itemids' => $itemid
 		]);
 		$item = $items[0];
@@ -761,10 +760,6 @@ if (hasRequest('form')) {
 
 	$data = getItemFormData($item);
 
-	if (getRequest('form') === 'add' && $host['flags'] & ZBX_FLAG_DISCOVERY_CREATED) {
-		unset($data['types'][ITEM_TYPE_NESTED]);
-	}
-
 	$data['evaltype'] = getRequest('evaltype', CONDITION_EVAL_TYPE_AND_OR);
 	$data['formula'] = getRequest('formula');
 	$data['conditions'] = getRequest('conditions', []);
@@ -775,11 +770,6 @@ if (hasRequest('form')) {
 	$data['preprocessing_types'] = CDiscoveryRule::SUPPORTED_PREPROCESSING_TYPES;
 	$data['display_interfaces'] = in_array($host['status'], [HOST_STATUS_MONITORED, HOST_STATUS_NOT_MONITORED]);
 	$data['backurl'] = getRequest('backurl');
-	$data['discovered_lld'] = false;
-
-	if ($data['backurl'] && !CHtmlUrlValidator::validateSameSite($data['backurl'])) {
-		throw new CAccessDeniedException();
-	}
 
 	$default_timeout = DB::getDefault('items', 'timeout');
 	$data['custom_timeout'] = (int) getRequest('custom_timeout', $data['timeout'] !== $default_timeout);
@@ -851,24 +841,6 @@ if (hasRequest('form')) {
 		$data['overrides'] = $item['overrides'];
 		// Sort overrides to be listed in step order.
 		CArrayHelper::sort($data['overrides'], ['step']);
-
-		$data['discovered_lld'] = (bool) ($item['flags'] & ZBX_FLAG_DISCOVERY_CREATED);
-
-		if ($item['flags'] & ZBX_FLAG_DISCOVERY_CREATED) {
-			$data['discoveryRule'] = $item['discoveryRule'];
-			$data['discoveryData'] = $item['discoveryData'];
-
-			$db_parent = API::DiscoveryRulePrototype()->get([
-				'itemids' => $item['discoveryData']['parent_itemid'],
-				'selectDiscoveryRule' => ['itemid'],
-				'selectDiscoveryRulePrototype' => ['itemid'],
-				'nopermissions' => true
-			]);
-			$db_parent = reset($db_parent);
-
-			$parent_lld = $db_parent['discoveryRule'] ?: $db_parent['discoveryRulePrototype'];
-			$data['discoveryData']['lldruleid'] = $parent_lld['itemid'];
-		}
 	}
 	// clone form
 	elseif (hasRequest('clone')) {
@@ -913,14 +885,11 @@ else {
 	// Select LLD rules.
 	$options = [
 		'output' => API_OUTPUT_EXTEND,
-		'selectHosts' => ['hostid', 'name', 'status'],
+		'selectHosts' => ['hostid', 'name', 'status', 'flags'],
 		'selectItems' => API_OUTPUT_COUNT,
 		'selectGraphs' => API_OUTPUT_COUNT,
 		'selectTriggers' => API_OUTPUT_COUNT,
 		'selectHostPrototypes' => API_OUTPUT_COUNT,
-		'selectDiscoveryRulePrototypes' => API_OUTPUT_COUNT,
-		'selectDiscoveryRule' => ['itemid', 'name'],
-		'selectDiscoveryData' => ['status', 'ts_delete', 'ts_disable', 'disable_source'],
 		'editable' => true,
 		'templated' => ($data['context'] === 'template'),
 		'filter' => [],
@@ -1017,31 +986,6 @@ else {
 	}
 
 	$data['discoveries'] = expandItemNamesWithMasterItems($data['discoveries'], 'items');
-
-	$lld_parentids = [];
-
-	foreach ($data['discoveries'] as $discovery) {
-		if ($discovery['discoveryRule']) {
-			$lld_parentids[$discovery['discoveryRule']['itemid']] = true;
-		}
-	}
-
-	if ($lld_parentids) {
-		$editable_lld_parents = API::DiscoveryRule()->get([
-			'output' => [],
-			'itemids' => array_keys($lld_parentids),
-			'editable' => true,
-			'preservekeys' => true
-		]);
-
-		foreach ($data['discoveries'] as &$discovery) {
-			if ($discovery['discoveryRule']) {
-				$discovery['is_discovery_rule_editable'] =
-					array_key_exists($discovery['discoveryRule']['itemid'], $editable_lld_parents);
-			}
-		}
-		unset($discovery);
-	}
 
 	// pager
 	if (hasRequest('page')) {

@@ -18,7 +18,6 @@ namespace Widgets\SvgGraph\Includes;
 
 use API,
 	CArrayHelper,
-	CColorPicker,
 	CGraphHelper,
 	CHousekeepingHelper,
 	CItemHelper,
@@ -187,23 +186,19 @@ class CSvgGraphHelper {
 			}
 
 			if ($templateid === '') {
-				if ($data_set['override_hostid']) {
-					$options['hostids'] = $data_set['override_hostid'];
-				}
-				else {
-					$hosts = API::Host()->get([
-						'output' => [],
-						'search' => [
-							'name' => self::processPattern($data_set['hosts'])
-						],
-						'searchWildcardsEnabled' => true,
-						'searchByAny' => true,
-						'preservekeys' => true
-					]);
+				// Find hosts.
+				$hosts = API::Host()->get([
+					'output' => [],
+					'search' => [
+						'name' => self::processPattern($data_set['hosts'])
+					],
+					'searchWildcardsEnabled' => true,
+					'searchByAny' => true,
+					'preservekeys' => true
+				]);
 
-					if ($hosts) {
-						$options['hostids'] = array_keys($hosts);
-					}
+				if ($hosts) {
+					$options['hostids'] = array_keys($hosts);
 				}
 			}
 			else {
@@ -233,9 +228,7 @@ class CSvgGraphHelper {
 				? (int)timeUnitToSeconds($data_set['timeshift'])
 				: 0;
 
-			$colors = array_key_exists('color', $data_set)
-				? CColorPicker::getColorVariations($data_set['color'], count($items))
-				: CColorPicker::getPaletteColors($data_set['color_palette'], count($items));
+			$colors = getColorVariations('#' . $data_set['color'], count($items));
 
 			foreach ($items as $item) {
 				$data_set['color'] = array_shift($colors);
@@ -262,18 +255,7 @@ class CSvgGraphHelper {
 				break;
 			}
 
-			$dataset_override_hostid = null;
-
-			if ($templateid === '') {
-				if ($data_set['override_hostid']) {
-					$dataset_override_hostid = $data_set['override_hostid'][0];
-				}
-			}
-			elseif ($override_hostid !== '') {
-				$dataset_override_hostid = $override_hostid;
-			}
-
-			if ($dataset_override_hostid !== null) {
+			if ($templateid !== '' && $override_hostid !== '') {
 				$tmp_items = API::Item()->get([
 					'output' => ['key_'],
 					'itemids' => $data_set['itemids'],
@@ -292,24 +274,25 @@ class CSvgGraphHelper {
 
 					$items = API::Item()->get([
 						'output' => ['itemid', 'key_'],
-						'hostids' => [$dataset_override_hostid],
+						'hostids' => [$override_hostid],
 						'webitems' => true,
 						'filter' => [
 							'key_' => array_keys($keys_index)
 						]
 					]);
 
-					if (!$items) {
-						continue;
+					if ($items) {
+						$data_set['itemids'] = [];
+
+						foreach ($items as $item) {
+							$data_set['itemids'][$keys_index[$item['key_']]] = $item['itemid'];
+						}
+
+						ksort($data_set['itemids']);
 					}
-
-					$data_set['itemids'] = [];
-
-					foreach ($items as $item) {
-						$data_set['itemids'][$keys_index[$item['key_']]] = $item['itemid'];
+					else {
+						$data_set['itemids'] = null;
 					}
-
-					ksort($data_set['itemids']);
 				}
 			}
 
@@ -451,10 +434,8 @@ class CSvgGraphHelper {
 
 			// Apply override options to matching metrics.
 			if ($metrics_matched) {
-				$colors = (array_key_exists('color', $override) || array_key_exists('color_palette', $override))
-					? (array_key_exists('color', $override)
-						? CColorPicker::getColorVariations($override['color'], count($metrics_matched))
-						: CColorPicker::getPaletteColors($override['color_palette'], count($metrics_matched)))
+				$colors = (array_key_exists('color', $override) && $override['color'] !== '')
+					? getColorVariations('#'.$override['color'], count($metrics_matched))
 					: null;
 
 				if (array_key_exists('transparency', $override)) {

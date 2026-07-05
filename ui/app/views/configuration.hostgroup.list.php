@@ -19,6 +19,8 @@
  * @var array $data
  */
 
+$this->addJsFile('items.js');
+$this->addJsFile('multilineinput.js');
 $this->includeJsFile('configuration.hostgroup.list.js.php');
 
 $html_page = (new CHtmlPage())
@@ -91,13 +93,13 @@ foreach ($data['groups'] as $group) {
 		}
 
 		if ($data['allowed_ui_conf_hosts']) {
-			$host_url = (new CUrl('zabbix.php'))
-				->setArgument('action', 'popup')
-				->setArgument('popup', 'host.edit')
+			$host_output = (new CLink($host['name'], (new CUrl('zabbix.php'))
+				->setArgument('action', 'host.edit')
 				->setArgument('hostid', $host['hostid'])
-				->getUrl();
-
-			$host_output = (new CLink($host['name'], $host_url))->addClass(ZBX_STYLE_LINK_ALT);
+			))
+			->setAttribute('data-hostid', $host['hostid'])
+			->onClick('view.editHost(event, this.dataset.hostid);')
+			->addClass(ZBX_STYLE_LINK_ALT);
 		}
 		else {
 			$host_output = new CSpan($host['name']);
@@ -156,27 +158,27 @@ foreach ($data['groups'] as $group) {
 		$name[] = NAME_DELIMITER;
 	}
 
-	$group_url = (new CUrl('zabbix.php'))
-		->setArgument('action', 'popup')
-		->setArgument('popup', 'hostgroup.edit')
-		->setArgument('groupid', $group['groupid'])
-		->getUrl();
-
-	$name[] = new CLink($group['name'], $group_url);
+	$name[] = (new CLink($group['name'],
+		(new CUrl('zabbix.php'))
+			->setArgument('action', 'hostgroup.edit')
+			->setArgument('groupid', $group['groupid'])
+	))
+		->addClass('js-edit-hostgroup')
+		->setAttribute('data-groupid', $group['groupid']);
 
 	$info_icons = [];
 
 	if ($group['flags'] == ZBX_FLAG_DISCOVERY_CREATED) {
 		$max = 0;
 
-		foreach ($group['discoveryData'] as $discovery_data) {
-			if ($discovery_data['ts_delete'] == 0) {
+		foreach ($group['groupDiscoveries'] as $group_discovery) {
+			if ($group_discovery['ts_delete'] == 0) {
 				$max = 0;
 				break;
 			}
 
-			if ($discovery_data['status'] == ZBX_LLD_STATUS_LOST) {
-				$max = max($max, (int) $discovery_data['ts_delete']);
+			if ($group_discovery['status'] == ZBX_LLD_STATUS_LOST) {
+				$max = max($max, (int) $group_discovery['ts_delete']);
 			}
 		}
 

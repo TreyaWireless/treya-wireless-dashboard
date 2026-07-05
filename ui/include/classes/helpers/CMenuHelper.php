@@ -146,8 +146,8 @@ class CMenuHelper {
 				: null,
 			CWebUser::checkAccess(CRoleHelper::UI_REPORTS_AVAILABILITY_REPORT)
 				? (new CMenuItem(_('Availability report')))
-					->setAction('availabilityreport.list')
-					->setAliases(['availabilityreport.trigger'])
+					->setUrl(new CUrl('report2.php'), 'report2.php')
+					->setAliases(['chart4.php'])
 				: null,
 			CWebUser::checkAccess(CRoleHelper::UI_REPORTS_TOP_TRIGGERS)
 				? (new CMenuItem(_('Top 100 triggers')))->setAction('toptriggers.list')
@@ -176,31 +176,31 @@ class CMenuHelper {
 		$submenu_data_collection = [
 			CWebUser::checkAccess(CRoleHelper::UI_CONFIGURATION_TEMPLATE_GROUPS)
 				? (new CMenuItem(_('Template groups')))->setAction('templategroup.list')
+					->setAliases(['templategroup.edit'])
 				: null,
 			CWebUser::checkAccess(CRoleHelper::UI_CONFIGURATION_HOST_GROUPS)
 				? (new CMenuItem(_('Host groups')))->setAction('hostgroup.list')
+					->setAliases(['hostgroup.edit'])
 				: null,
 			CWebUser::checkAccess(CRoleHelper::UI_CONFIGURATION_TEMPLATES)
 				? (new CMenuItem(_('Templates')))
 					->setAction('template.list')
 					->setAliases([
 						'template.dashboard.list', 'template.dashboard.edit', 'item.list?context=template',
-						'trigger.list?context=template', 'graph.list?context=template',
+						'trigger.list?context=template', 'graphs.php?context=template',
 						'host_discovery.php?context=template', 'item.prototype.list?context=template',
-						'trigger.prototype.list?context=template', 'graph.prototype.list?context=template',
-						'host_prototypes.php?context=template', 'httpconf.php?context=template',
-						'host_discovery_prototypes.php?context=template'
+						'trigger.prototype.list?context=template', 'host_prototypes.php?context=template',
+						'httpconf.php?context=template'
 					])
 				: null,
 			CWebUser::checkAccess(CRoleHelper::UI_CONFIGURATION_HOSTS)
 				? (new CMenuItem(_('Hosts')))
 					->setAction('host.list')
 					->setAliases([
-						'item.list?context=host', 'trigger.list?context=host', 'graph.list?context=host',
+						'item.list?context=host', 'trigger.list?context=host', 'graphs.php?context=host',
 						'host_discovery.php?context=host', 'item.prototype.list?context=host',
-						'trigger.prototype.list?context=host', 'graph.prototype.list?context=host',
-						'host_prototypes.php?context=host', 'httpconf.php?context=host',
-						'host_discovery_prototypes.php?context=host'
+						'trigger.prototype.list?context=host', 'host_prototypes.php?context=host',
+						'httpconf.php?context=host', 'host.edit'
 					])
 				: null,
 			CWebUser::checkAccess(CRoleHelper::UI_CONFIGURATION_MAINTENANCE)
@@ -478,8 +478,6 @@ class CMenuHelper {
 					->setSubMenu(new CMenu([
 						(new CMenuItem(_('Profile')))
 							->setAction('userprofile.edit'),
-						(new CMenuItem(_('Notifications')))
-							->setAction('userprofile.notification.edit'),
 						(new CMenuItem(_('API tokens')))
 							->setAction('user.token.list')
 					]))
@@ -489,13 +487,8 @@ class CMenuHelper {
 			$menu->add(
 				(new CMenuItem(_('User settings')))
 					->setIcon(ZBX_ICON_USER_SETTINGS)
+					->setAction('userprofile.edit')
 					->setTitle(getUserFullname($user))
-					->setSubMenu(new CMenu([
-						(new CMenuItem(_('Profile')))
-							->setAction('userprofile.edit'),
-						(new CMenuItem(_('Notifications')))
-							->setAction('userprofile.notification.edit')
-					]))
 			);
 		}
 

@@ -18,7 +18,7 @@ use Widgets\Honeycomb\Includes\WidgetForm;
 
 ?>
 
-window.widget_form = new class extends CWidgetForm {
+window.widget_honeycomb_form = new class {
 
 	/**
 	 * @type {HTMLFormElement}
@@ -26,7 +26,7 @@ window.widget_form = new class extends CWidgetForm {
 	#form;
 
 	init({thresholds_colors}) {
-		this.#form = this.getForm();
+		this.#form = document.getElementById('widget-dialogue-form');
 
 		colorPalette.setThemeColors(thresholds_colors);
 
@@ -52,8 +52,14 @@ window.widget_form = new class extends CWidgetForm {
 			}
 		});
 
+		for (const colorpicker of this.#form.querySelectorAll('.<?= ZBX_STYLE_COLOR_PICKER ?> input')) {
+			$(colorpicker).colorpicker({
+				appendTo: '.overlay-dialogue-body',
+				use_default: !colorpicker.name.includes('thresholds')
+			});
+		}
+
 		this.#updateForm();
-		this.ready();
 	}
 
 	#updateForm() {

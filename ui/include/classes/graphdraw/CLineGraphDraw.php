@@ -130,7 +130,7 @@ class CLineGraphDraw extends CGraphDraw {
 	 */
 	public function addItem(array $graph_item) {
 		if ($this->type == GRAPH_TYPE_STACKED) {
-			$graph_item['drawtype'] = DRAWTYPE_FILLED_REGION;
+			$graph_item['drawtype'] = GRAPH_ITEM_DRAWTYPE_FILLED_REGION;
 		}
 		$update_interval_parser = new CUpdateIntervalParser(['usermacros' => true]);
 
@@ -142,7 +142,7 @@ class CLineGraphDraw extends CGraphDraw {
 		// Set graph item safe default values.
 		$graph_item += [
 			'color' => 'Dark Green',
-			'drawtype' => DRAWTYPE_LINE,
+			'drawtype' => GRAPH_ITEM_DRAWTYPE_LINE,
 			'yaxisside' => GRAPH_YAXIS_SIDE_DEFAULT,
 			'calc_fnc' => CALC_FNC_AVG,
 			'calc_type' => GRAPH_ITEM_SIMPLE
@@ -1710,7 +1710,7 @@ class CLineGraphDraw extends CGraphDraw {
 	protected function limitToBounds(&$value1, &$value2, $min, $max, $drawtype) {
 		// fixes graph out of bounds problem
 		if ((($value1 > ($max + $min)) && ($value2 > ($max + $min))) || ($value1 < $min && $value2 < $min)) {
-			if (!in_array($drawtype, [DRAWTYPE_FILLED_REGION, DRAWTYPE_GRADIENT_LINE])) {
+			if (!in_array($drawtype, [GRAPH_ITEM_DRAWTYPE_FILLED_REGION, GRAPH_ITEM_DRAWTYPE_GRADIENT_LINE])) {
 				return false;
 			}
 		}
@@ -1857,9 +1857,9 @@ class CLineGraphDraw extends CGraphDraw {
 
 		// draw main line
 		switch ($drawtype) {
-			case DRAWTYPE_LINE:
-			case DRAWTYPE_BOLD_LINE:
-				$style = $drawtype == DRAWTYPE_BOLD_LINE ? LINE_TYPE_BOLD : LINE_TYPE_NORMAL;
+			case GRAPH_ITEM_DRAWTYPE_LINE:
+			case GRAPH_ITEM_DRAWTYPE_BOLD_LINE:
+				$style = $drawtype == GRAPH_ITEM_DRAWTYPE_BOLD_LINE ? LINE_TYPE_BOLD : LINE_TYPE_NORMAL;
 
 				if ($calc_fnc == CALC_FNC_ALL) {
 					if (PHP_VERSION_ID >= 80100) {
@@ -1880,28 +1880,28 @@ class CLineGraphDraw extends CGraphDraw {
 				zbx_imagealine($this->im, $x1, $y1, $x2, $y2, $avg_color, $style);
 				break;
 
-			case DRAWTYPE_DOT:
+			case GRAPH_ITEM_DRAWTYPE_DOT:
 				imagefilledrectangle($this->im, $x1 - 1, $y1 - 1, $x1, $y1, $avg_color);
 				break;
 
-			case DRAWTYPE_BOLD_DOT:
+			case GRAPH_ITEM_DRAWTYPE_BOLD_DOT:
 				imagefilledrectangle($this->im, $x2 - 1, $y2 - 1, $x2 + 1, $y2 + 1, $avg_color);
 				break;
 
-			case DRAWTYPE_DASHED_LINE:
+			case GRAPH_ITEM_DRAWTYPE_DASHED_LINE:
 				imagesetstyle($this->im, [$avg_color, $avg_color, IMG_COLOR_TRANSPARENT, IMG_COLOR_TRANSPARENT]);
 				zbx_imageline($this->im, $x1, $y1, $x2, $y2, IMG_COLOR_STYLED);
 				break;
 
-			case DRAWTYPE_GRADIENT_LINE:
-			case DRAWTYPE_FILLED_REGION:
+			case GRAPH_ITEM_DRAWTYPE_GRADIENT_LINE:
+			case GRAPH_ITEM_DRAWTYPE_FILLED_REGION:
 				/*
 				 * Graphs should be at least 50px in height in order to visually see the gradient. Though 51px would not
 				 * make any difference either. If graph height is too small to see gradient, use standard solid color
 				 * filling function instead.
 				 */
-				if ($drawtype == DRAWTYPE_FILLED_REGION
-						|| ($drawtype == DRAWTYPE_GRADIENT_LINE && $this->sizeY <= 50)) {
+				if ($drawtype == GRAPH_ITEM_DRAWTYPE_FILLED_REGION
+						|| ($drawtype == GRAPH_ITEM_DRAWTYPE_GRADIENT_LINE && $this->sizeY <= 50)) {
 					$a[0] = $x1;
 					$a[1] = $y1;
 					$a[2] = $x1;
@@ -2030,6 +2030,10 @@ class CLineGraphDraw extends CGraphDraw {
 			$y_offsets -= ($this->show_triggers && count($this->triggers) > 0)
 				? static::DEFAULT_TOP_BOTTOM_PADDING / 2
 				: static::DEFAULT_TOP_BOTTOM_PADDING;
+		}
+
+		if ($this->with_bottom_padding) {
+			$y_offsets += static::DEFAULT_TOP_BOTTOM_PADDING / 2;
 		}
 
 		// Actual outer dimensions, regardless $this->outer setting.
@@ -2207,7 +2211,7 @@ class CLineGraphDraw extends CGraphDraw {
 
 				if (!$draw && !$prevDraw) {
 					$draw = true;
-					$valueDrawType = DRAWTYPE_BOLD_DOT;
+					$valueDrawType = GRAPH_ITEM_DRAWTYPE_BOLD_DOT;
 				}
 				else {
 					$valueDrawType = $drawtype;

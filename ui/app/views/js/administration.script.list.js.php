@@ -24,26 +24,61 @@
 
 		init() {
 			this.#initActions();
-			this.#initPopupListeners();
 		}
 
 		#initActions() {
-			document.getElementById('js-create').addEventListener('click', () => {
-				ZABBIX.PopupManager.open('script.edit');
+			document.getElementById('js-create').addEventListener('click', () => this.#edit());
+
+			document.getElementById('js-massdelete').addEventListener('click', (e) => {
+				this.#delete(e.target, Object.keys(chkbxRange.getSelectedIds()), true)
 			});
 
-			document.getElementById('js-massdelete').addEventListener('click', e => {
-				this.#delete(e.target, Object.keys(chkbxRange.getSelectedIds()), true)
+			document.addEventListener('click', (e) => {
+				if (e.target.classList.contains('js-action-edit')) {
+					this.#editAction({actionid: e.target.dataset.actionid, eventsource: e.target.dataset.eventsource});
+				}
+
+				if (e.target.classList.contains('js-edit')) {
+					this.#edit({scriptid: e.target.dataset.scriptid});
+				}
+			})
+		}
+
+		#edit(parameters = {}) {
+			const overlay = PopUp('script.edit', parameters, {
+				dialogueid: 'script-form',
+				dialogue_class: 'modal-popup-large',
+				prevent_navigation: true
+			});
+
+			overlay.$dialogue[0].addEventListener('dialogue.submit', (e) => {
+				uncheckTableRows('script');
+				postMessageOk(e.detail.title);
+
+				if ('messages' in e.detail) {
+					postMessageDetails('success', e.detail.messages);
+				}
+
+				location.href = location.href;
 			});
 		}
 
-		#initPopupListeners() {
-			ZABBIX.EventHub.subscribe({
-				require: {
-					context: CPopupManager.EVENT_CONTEXT,
-					event: CPopupManagerEvent.EVENT_SUBMIT
-				},
-				callback: () => uncheckTableRows('script')
+		#editAction(parameters = {}) {
+			const overlay = PopUp('popup.action.edit', parameters, {
+				dialogueid: 'action-edit',
+				dialogue_class: 'modal-popup-large',
+				prevent_navigation: true
+			});
+
+			overlay.$dialogue[0].addEventListener('dialogue.submit', (e) => {
+				uncheckTableRows('script');
+				postMessageOk(e.detail.title);
+
+				if ('messages' in e.detail) {
+					postMessageDetails('success', e.detail.messages);
+				}
+
+				location.href = location.href;
 			});
 		}
 

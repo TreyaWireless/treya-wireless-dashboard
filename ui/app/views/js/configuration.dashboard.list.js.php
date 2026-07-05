@@ -24,27 +24,49 @@
 
 		init({checkbox_hash}) {
 			this.checkbox_hash = checkbox_hash;
-			this.#initPopupListeners();
 		}
 
-		#initPopupListeners() {
-			ZABBIX.EventHub.subscribe({
-				require: {
-					context: CPopupManager.EVENT_CONTEXT,
-					event: CPopupManagerEvent.EVENT_SUBMIT
-				},
-				callback: ({data, event}) => {
-					uncheckTableRows(this.checkbox_hash);
+		editTemplate(e, templateid) {
+			e.preventDefault();
+			const template_data = {templateid};
 
-					if (data.submit.success?.action === 'delete') {
-						const url = new URL('zabbix.php', location.href);
+			this.openTemplatePopup(template_data);
+		}
 
-						url.searchParams.set('action', 'template.list');
-
-						event.setRedirectUrl(url.href);
-					}
-				}
+		openTemplatePopup(template_data) {
+			const overlay =  PopUp('template.edit', template_data, {
+				dialogueid: 'templates-form',
+				dialogue_class: 'modal-popup-large',
+				prevent_navigation: true
 			});
+
+			overlay.$dialogue[0].addEventListener('dialogue.submit', (e) => this.submitTemplate(e.detail));
+		}
+
+		submitTemplate(data) {
+			let curl = null;
+
+			if ('success' in data) {
+				postMessageOk(data.success.title);
+
+				if ('messages' in data.success) {
+					postMessageDetails('success', data.success.messages);
+				}
+
+				if ('action' in data.success && data.success.action === 'delete') {
+					curl = new Curl('zabbix.php');
+					curl.setArgument('action', 'template.list');
+				}
+			}
+
+			uncheckTableRows(this.checkbox_hash);
+
+			if (curl == null) {
+				location.href = location.href;
+			}
+			else {
+				location.href = curl.getUrl();
+			}
 		}
 	}
 </script>

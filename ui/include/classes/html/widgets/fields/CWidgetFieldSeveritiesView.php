@@ -32,15 +32,4 @@ class CWidgetFieldSeveritiesView extends CWidgetFieldView {
 			->setVertical()
 			->showTitles();
 	}
-
-	public function getJavaScript(): string {
-		return '
-			CWidgetForm.addField(
-				new CWidgetFieldSeverities('.json_encode([
-					'name' => $this->field->getName(),
-					'form_name' => $this->form_name
-				]).')
-			);
-		';
-	}
 }

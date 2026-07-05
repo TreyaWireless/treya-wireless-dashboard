@@ -57,24 +57,13 @@ if ($host_prototype['hostid'] != 0) {
 
 $host_tab = new CFormList('hostlist');
 
-if ($data['is_discovered_prototype']) {
-	$discovered_url = (new CUrl('host_prototypes.php'))
-		->setArgument('form', 'update')
-		->setArgument('parent_discoveryid', $data['source_link_data']['parent_itemid'])
-		->setArgument('hostid', $host_prototype['discoveryData']['parent_hostid'])
-		->setArgument('context', $data['context'])
-		->getUrl();
-
-	$host_tab->addRow(_('Discovered by'), (new CLink($data['source_link_data']['name'], $discovered_url)));
-}
-
 if ($data['templates']) {
 	$host_tab->addRow(_('Parent discovery rules'), $data['templates']);
 }
 
 $host_tab->addRow(
 	(new CLabel(_('Host name'), 'host'))->setAsteriskMark(),
-	(new CTextBox('host', $host_prototype['host'], $data['readonly']))
+	(new CTextBox('host', $host_prototype['host'], (bool) $host_prototype['templateid']))
 		->setWidth(ZBX_TEXTAREA_STANDARD_WIDTH)
 		->setAttribute('maxlength', 128)
 		->setAriaRequired()
@@ -85,7 +74,7 @@ $name = ($host_prototype['name'] != $host_prototype['host']) ? $host_prototype['
 
 $host_tab->addRow(
 	_('Visible name'),
-	(new CTextBox('name', $name, $data['readonly']))
+	(new CTextBox('name', $name, (bool) $host_prototype['templateid']))
 		->setWidth(ZBX_TEXTAREA_STANDARD_WIDTH)
 		->setAttribute('maxlength', 128)
 );
@@ -107,13 +96,9 @@ if ($host_prototype['templateid']) {
 
 			if ($data['allowed_ui_conf_templates']
 					&& array_key_exists($template['templateid'], $host_prototype['writable_templates'])) {
-				$template_url = (new CUrl('zabbix.php'))
-					->setArgument('action', 'popup')
-					->setArgument('popup', 'template.edit')
-					->setArgument('templateid', $template['templateid'])
-					->getUrl();
-
-				$template_link = new CLink($template['name'], $template_url);
+				$template_link = (new CLink($template['name']))
+					->addClass('js-edit-linked-template')
+					->setAttribute('data-templateid', $template['templateid']);
 			}
 			else {
 				$template_link = new CSpan($template['name']);
@@ -138,13 +123,9 @@ else {
 
 			if ($data['allowed_ui_conf_templates']
 					&& array_key_exists($template['templateid'], $host_prototype['writable_templates'])) {
-				$template_url = (new CUrl('zabbix.php'))
-					->setArgument('action', 'popup')
-					->setArgument('popup', 'template.edit')
-					->setArgument('templateid', $template['templateid'])
-					->getUrl();
-
-				$template_link = new CLink($template['name'], $template_url);
+				$template_link = (new CLink($template['name']))
+					->addClass('js-edit-linked-template')
+					->setAttribute('data-templateid', $template['templateid']);
 			}
 			else {
 				$template_link = new CSpan($template['name']);
@@ -158,7 +139,6 @@ else {
 						->onClick('
 							submitFormWithParam("'.$form->getName().'", `unlink[${this.dataset.templateid}]`, 1);
 						')
-						->setEnabled(!$data['is_discovered_prototype'])
 				))->addClass(ZBX_STYLE_NOWRAP)
 			]);
 		}
@@ -170,7 +150,6 @@ else {
 		'name' => 'add_templates[]',
 		'object_name' => 'templates',
 		'data' => $host_prototype['add_templates'],
-		'readonly' => $data['is_discovered_prototype'],
 		'popup' => [
 			'parameters' => [
 				'srctbl' => 'templates',
@@ -197,7 +176,7 @@ $host_tab->addRow(
 	(new CMultiSelect([
 		'name' => 'group_links[]',
 		'object_name' => 'hostGroup',
-		'readonly' => $data['readonly'],
+		'readonly' => (bool) $host_prototype['templateid'],
 		'data' => $data['groups_ms'],
 		'popup' => [
 			'parameters' => [
@@ -226,9 +205,7 @@ $host_tab->addRow(
 					->setId('row_new_group_prototype')
 					->addItem(
 						(new CCol(
-							(new CButton('group_prototype_add', _('Add')))
-								->addClass(ZBX_STYLE_BTN_LINK)
-								->setEnabled(!$data['is_discovered_prototype'])
+							(new CButton('group_prototype_add', _('Add')))->addClass(ZBX_STYLE_BTN_LINK)
 						))->setAttribute('colspan', 5)
 					)
 			)
@@ -238,7 +215,7 @@ $host_tab->addRow(
 $group_prototype_template = (new CTemplateTag('groupPrototypeRow'))->addItem(
 	(new CRow([
 		new CCol([
-			(new CTextBox('group_prototypes[#{i}][name]', '#{name}', $data['is_discovered_prototype']))
+			(new CTextBox('group_prototypes[#{i}][name]', '#{name}'))
 				->addStyle('width: 448px')
 				->setAttribute('placeholder', '{#MACRO}'),
 			new CInput('hidden', 'group_prototypes[#{i}][group_prototypeid]', '#{group_prototypeid}')
@@ -247,22 +224,17 @@ $group_prototype_template = (new CTemplateTag('groupPrototypeRow'))->addItem(
 			(new CButtonLink(_('Remove')))
 				->setAttribute('name', 'remove')
 				->addClass('group-prototype-remove')
-				->setEnabled(!$data['is_discovered_prototype'])
 		))->addClass(ZBX_STYLE_NOWRAP)
 	]))->addClass('form_row')
 );
 
 $host_interface_template = (new CTemplateTag('host-interface-row-tmpl'))->addItem(
-	new CPartial('configuration.host.interface.row', ['is_snmp' => false])
-);
-$host_interface_snmp_template = (new CTemplateTag('host-interface-row-snmp-tmpl'))->addItem(
-	new CPartial('configuration.host.interface.row', ['is_snmp' => true])
+	new CPartial('configuration.host.interface.row')
 );
 
 $host_tab
 	->addItem($group_prototype_template)
-	->addItem($host_interface_template)
-	->addItem($host_interface_snmp_template);
+	->addItem($host_interface_template);
 
 $interface_header = renderInterfaceHeaders();
 
@@ -293,22 +265,10 @@ $host_tab->addRow(
 			->addValue(_('Inherit'), HOST_PROT_INTERFACES_INHERIT)
 			->addValue(_('Custom'), HOST_PROT_INTERFACES_CUSTOM)
 			->setModern()
-			->setReadonly($data['readonly']),
+			->setReadonly($host_prototype['templateid'] != 0),
 		(new CDiv([$interface_header, $agent_interfaces, $snmp_interfaces, $jmx_interfaces, $ipmi_interfaces]))
 			->setId('interfaces-table')
 			->addClass(ZBX_STYLE_HOST_INTERFACES),
-		(new CInput('hidden', 'main_interface_'.INTERFACE_TYPE_AGENT, 0))
-			->setAttribute('data-prevent-validation-on-change', 1)
-			->setAttribute('data-field-type', 'hidden'),
-		(new CInput('hidden', 'main_interface_'.INTERFACE_TYPE_SNMP, 0))
-			->setAttribute('data-prevent-validation-on-change', 1)
-			->setAttribute('data-field-type', 'hidden'),
-		(new CInput('hidden', 'main_interface_'.INTERFACE_TYPE_IPMI, 0))
-			->setAttribute('data-prevent-validation-on-change', 1)
-			->setAttribute('data-field-type', 'hidden'),
-		(new CInput('hidden', 'main_interface_'.INTERFACE_TYPE_JMX, 0))
-			->setAttribute('data-prevent-validation-on-change', 1)
-			->setAttribute('data-field-type', 'hidden'),
 		new CDiv(
 			(new CButton('interface-add', _('Add')))
 				->addClass(ZBX_STYLE_BTN_LINK)
@@ -323,7 +283,7 @@ $host_tab->addRow(
 					? null
 					: 'display: none'
 				)
-				->setEnabled(!$data['readonly'])
+				->setEnabled($host_prototype['templateid'] == 0)
 		)
 	]
 );
@@ -385,13 +345,11 @@ if ($parent_host['status'] != HOST_STATUS_TEMPLATE) {
 $host_tab->addRow(_('Create enabled'),
 	(new CCheckBox('status', HOST_STATUS_MONITORED))
 		->setChecked(HOST_STATUS_MONITORED == $host_prototype['status'])
-		->setReadonly($data['is_discovered_prototype'])
 );
 $host_tab->addRow(_('Discover'),
 	(new CCheckBox('discover', ZBX_PROTOTYPE_DISCOVER))
 		->setChecked($host_prototype['discover'] == ZBX_PROTOTYPE_DISCOVER)
 		->setUncheckedValue(ZBX_PROTOTYPE_NO_DISCOVER)
-		->setReadonly($data['is_discovered_prototype'])
 );
 
 $tabs->addTab('hostTab', _('Host'), $host_tab);
@@ -439,8 +397,7 @@ $tabs->addTab('tags-tab', _('Tags'),
 		'tags' => $data['tags'],
 		'readonly' => $data['readonly'],
 		'tabs_id' => 'tabs',
-		'tags_tab_id' => 'tags-tab',
-		'has_inline_validation' => false
+		'tags_tab_id' => 'tags-tab'
 	]),
 	TAB_INDICATOR_TAGS
 );
@@ -460,8 +417,7 @@ $macro_tab = (new CFormList('macrosFormList'))
 			[
 				'macros' => $data['macros'],
 				'parent_hostid' => $data['parent_host']['hostid'],
-				'readonly' => $data['templates'] || $data['is_discovered_prototype'],
-				'has_inline_validation' => false
+				'readonly' => $data['templates']
 			]
 		),
 		'macros_container'
@@ -555,7 +511,7 @@ $tabs->addTab('inventoryTab', _('Inventory'),
 				->addValue(_('Disabled'), HOST_INVENTORY_DISABLED)
 				->addValue(_('Manual'), HOST_INVENTORY_MANUAL)
 				->addValue(_('Automatic'), HOST_INVENTORY_AUTOMATIC)
-				->setReadonly($data['readonly'])
+				->setReadonly($host_prototype['templateid'] != 0)
 				->setModern()
 		),
 	TAB_INDICATOR_INVENTORY
@@ -613,14 +569,14 @@ $tabs->addTab('encryptionTab', _('Encryption'), $encryption_tab, TAB_INDICATOR_E
 
 if ($host_prototype['hostid'] != 0) {
 	$tabs->setFooter(makeFormFooter(
-		(new CSubmit('update', _('Update')))->setEnabled(!$data['is_discovered_prototype']),
+		new CSubmit('update', _('Update')),
 		[
-			(new CSubmit('clone', _('Clone')))->setEnabled(!$data['is_discovered_prototype']),
+			new CSubmit('clone', _('Clone')),
 			(new CButtonDelete(
 				_('Delete selected host prototype?'),
 				url_params(['form', 'hostid', 'parent_discoveryid', 'context']).'&'.CSRF_TOKEN_NAME.
 				'='.CCsrfTokenHelper::get('host_prototypes.php'), 'context'
-			))->setEnabled(!$host_prototype['templateid']),
+			))->setEnabled($host_prototype['templateid'] == 0),
 			new CButtonCancel(url_params(['parent_discoveryid', 'context']))
 		]
 	));

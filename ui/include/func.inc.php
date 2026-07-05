@@ -305,6 +305,40 @@ function hex2rgb($color) {
 	return [hexdec($r), hexdec($g), hexdec($b)];
 }
 
+function getColorVariations($color, $variations_requested = 1) {
+	if ($variations_requested <= 1) {
+		return [$color];
+	}
+
+	$change = hex2rgb('#ffffff'); // Color which is increased/decreased in variations.
+	$max = 50;
+
+	$color = hex2rgb($color);
+	$variations = [];
+
+	$range = range(-1 * $max, $max, $max * 2 / $variations_requested);
+
+	// Remove redundant values.
+	while (count($range) > $variations_requested) {
+		(count($range) % 2) ? array_shift($range) : array_pop($range);
+	}
+
+	// Calculate colors.
+	foreach ($range as $var) {
+		$r = $color[0] + ($change[0] / 100 * $var);
+		$g = $color[1] + ($change[1] / 100 * $var);
+		$b = $color[2] + ($change[2] / 100 * $var);
+
+		$variations[] = '#' . rgb2hex([
+			$r < 0 ? 0 : ($r > 255 ? 255 : (int) $r),
+			$g < 0 ? 0 : ($g > 255 ? 255 : (int) $g),
+			$b < 0 ? 0 : ($b > 255 ? 255 : (int) $b)
+		]);
+	}
+
+	return $variations;
+}
+
 /**
  * Convert suffixed string to decimal bytes ('10K' => 10240).
  * Note: this function must not depend on optional PHP libraries, since it is used in Zabbix setup.
@@ -394,22 +428,14 @@ function convertUnitsUptime($value) {
 /**
  * Convert time period to a human-readable format.
  * The following units will be used: years, months, days, hours, minutes, seconds and milliseconds.
- * Only the 3 most significant allowed units will be displayed: #y #m #d, #m #d #h, #d #h #mm and so on, omitting
- * empty ones.
+ * Only the 3 most significant units will be displayed: #y #m #d, #m #d #h, #d #h #mm and so on, omitting empty ones.
  *
- * @param int   $value                            Time period in seconds.
- * @param array $options
- * @param bool  $options ['ignore_milliseconds']  Without ms (1s 200 ms = 1.2s). Default: false.
- * @param bool  $options ['with_year']            Output can contain years (y) and months (M). Default: true.
+ * @param int  $value            Time period in seconds.
+ * @param bool $ignore_millisec  Without ms (1s 200 ms = 1.2s).
  *
  * @return string
  */
-function convertUnitsS($value, array $options = []) {
-	$options += [
-		'ignore_milliseconds' => false,
-		'with_year' => true
-	];
-
+function convertUnitsS($value, $ignore_millisec = false) {
 	$value = (float) $value;
 	$value_abs = abs($value);
 
@@ -418,19 +444,19 @@ function convertUnitsS($value, array $options = []) {
 
 	$value_abs_int = floor($value_abs);
 
-	if ($options['with_year'] && ($v = floor($value_abs_int / SEC_PER_YEAR)) > 0) {
+	if (($v = floor($value_abs_int / SEC_PER_YEAR)) > 0) {
 		$parts['years'] = $v;
 		$value_abs_int -= $v * SEC_PER_YEAR;
 		$start = 0;
 	}
 
 	$v = floor($value_abs_int / SEC_PER_MONTH);
-	if ($options['with_year'] && $v == 12) {
+	if ($v == 12) {
 		$parts['years'] = $start === null ? 1 : $parts['years'] + 1;
 		$start = 0;
 	}
 	elseif ($start === null || ceil(log10($parts['years'])) <= ZBX_FLOAT_DIG) {
-		if ($options['with_year'] && $v > 0) {
+		if ($v > 0) {
 			$parts['months'] = $v;
 			$value_abs_int -= $v * SEC_PER_MONTH;
 			$start = $start === null ? 1 : $start;
@@ -457,7 +483,7 @@ function convertUnitsS($value, array $options = []) {
 		}
 
 		if ($start === null || $start >= 3) {
-			if ($options['ignore_milliseconds']) {
+			if ($ignore_millisec) {
 				$v = $value_abs_int + round(fmod($value_abs, 1), ZBX_UNITS_ROUNDOFF_SUFFIXED);
 
 				if ($v > 0) {
@@ -671,7 +697,7 @@ function convertUnitsRaw(array $options): array {
 		}
 
 		return [
-			'value' => convertUnitsS($value, ['ignore_milliseconds' => $options['ignore_milliseconds']]),
+			'value' => convertUnitsS($value, $options['ignore_milliseconds']),
 			'units' => '',
 			'is_numeric' => false
 		];
@@ -756,7 +782,7 @@ function convertUnitsRaw(array $options): array {
  * Examples: '100' => '100'; '10m' => '600'; '-10m' => '-600'; '3d' => '259200'.
  *
  * @param string $time       Decimal integer with optional time suffix.
- * @param bool   $with_year  Additionally parse year and month suffixes.
+ * @param bool   $with_year  Additionally parse year suffixes.
  *
  * @return int|float|null  Decimal integer seconds or null on error. Returns a floating-point number if the resulting
  *                         value exceeds PHP_INT_MAX.
@@ -1219,6 +1245,18 @@ function zbx_objectValues($value, $field) {
 	return $result;
 }
 
+function zbx_cleanHashes(&$value) {
+	if (is_array($value)) {
+		// reset() is needed to move internal array pointer to the beginning of the array
+		reset($value);
+		if (zbx_ctype_digit(key($value))) {
+			$value = array_values($value);
+		}
+	}
+
+	return $value;
+}
+
 function zbx_toCSV($values) {
 	$csv = '';
 	$glue = '","';
@@ -1598,20 +1636,19 @@ function detect_page_type($default = PAGE_TYPE_HTML) {
  *                                            ZBX_STYLE_MSG_GOOD, ZBX_STYLE_MSG_BAD, ZBX_STYLE_MSG_WARNING.
  * @param array       $messages               An array of messages.
  * @param string      $messages[]['message']  Message text.
- * @param mixed       $title                  (optional) Message box title.
+ * @param string|null $title                  (optional) Message box title.
  * @param bool        $show_close_box         (optional) Show or hide close button in error message box.
  * @param bool        $show_details           (optional) Show or hide message details.
  *
  * @return CTag
  */
-function makeMessageBox(string $class, array $messages, mixed $title = null, bool $show_close_box = true,
+function makeMessageBox(string $class, array $messages, ?string $title = null, bool $show_close_box = true,
 		bool $show_details = false): CTag {
 
 	$aria_labels = [
 		ZBX_STYLE_MSG_GOOD => _('Success message'),
-		ZBX_STYLE_MSG_INFO => _('Info message'),
-		ZBX_STYLE_MSG_WARNING => _('Warning message'),
-		ZBX_STYLE_MSG_BAD => _('Error message')
+		ZBX_STYLE_MSG_BAD => _('Error message'),
+		ZBX_STYLE_MSG_WARNING => _('Warning message')
 	];
 
 	$message_box = (new CTag('output', true))

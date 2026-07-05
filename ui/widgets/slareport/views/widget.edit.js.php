@@ -15,13 +15,11 @@
 ?>
 
 
-window.widget_form = new class extends CWidgetForm {
+window.widget_slareport_form = new class {
 
 	init({serviceid_field_id}) {
 		this._$service = jQuery(`#${serviceid_field_id}`);
 		this._$service.multiSelect('getSelectButton').addEventListener('click', () => this.selectService());
-
-		this.ready();
 	}
 
 	selectService() {
@@ -35,7 +33,7 @@ window.widget_form = new class extends CWidgetForm {
 			title: <?= json_encode(_('Service')) ?>,
 			exclude_serviceids,
 			multiple: 0
-		}, {dialogueid: 'services'});
+		}, {dialogueid: 'services', dialogue_class: 'modal-popup-generic'});
 
 		overlay.$dialogue[0].addEventListener('dialogue.submit', (e) => {
 			const data = [];

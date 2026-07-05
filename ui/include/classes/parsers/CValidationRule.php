@@ -72,8 +72,7 @@ class CValidationRule {
 									&& !$this->parseArray($buffer, $pos, $rule)
 									&& !$this->parseFlags($buffer, $pos, $rule)
 									&& !$this->parseBool($buffer, $pos, $rule)
-									&& !$this->parseCuid($buffer, $pos, $rule)
-									&& !$this->parseSetting($buffer, $pos, $rule)) {
+									&& !$this->parseCuid($buffer, $pos, $rule)) {
 								// incorrect validation rule
 								break 3;
 							}
@@ -708,40 +707,6 @@ class CValidationRule {
 
 		$pos += 4;
 		$rules['cuid'] = true;
-
-		return true;
-	}
-
-	/**
-	 * setting <field>
-	 *
-	 * 'setting' => array(
-	 *     'field' => '<field>'
-	 * )
-	 */
-	private function parseSetting($buffer, &$pos, &$rules) {
-		$i = $pos;
-
-		if (strncmp(substr($buffer, $i), 'setting ', 8) != 0) {
-			return false;
-		}
-
-		$i += 8;
-
-		while (isset($buffer[$i]) && $buffer[$i] == ' ') {
-			$i++;
-		}
-
-		$field = '';
-
-		if (!$this->parseField($buffer, $i, $field)) {
-			return false;
-		}
-
-		$pos = $i;
-		$rules['setting'] = [
-			'field' => $field
-		];
 
 		return true;
 	}

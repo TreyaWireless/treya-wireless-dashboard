@@ -18,16 +18,6 @@ require 'include/forms.inc.php';
 
 class CControllerItemPrototypeEdit extends CControllerItemPrototype {
 
-	/**
-	 * @var array
-	 */
-	private $host;
-
-	/**
-	 * @var array
-	 */
-	private $template;
-
 	protected function init() {
 		$this->disableCsrfValidation();
 	}
@@ -37,14 +27,14 @@ class CControllerItemPrototypeEdit extends CControllerItemPrototype {
 			'clone' => 'in 1'
 		] + static::getValidationFields();
 
-		$ret = $this->validateInput($fields);
+		$ret = $this->validateInput($fields) && $this->validateReferredObjects();
 
 		if ($ret) {
 			if ($this->hasInput('clone') && !$this->hasInput('itemid')) {
 				$ret = false;
 				error(_s('Incorrect value for "%1$s" field.', 'itemid'));
 			}
-			elseif (!$this->hasInput('parent_discoveryid')) {
+			elseif (!$this->hasInput('itemid') && !$this->hasInput('parent_discoveryid')) {
 				$ret = false;
 				error(_s('Incorrect value for "%1$s" field.', 'parent_discoveryid'));
 			}
@@ -61,40 +51,6 @@ class CControllerItemPrototypeEdit extends CControllerItemPrototype {
 		}
 
 		return $ret;
-	}
-
-	protected function checkPermissions(): bool {
-		if (!CWebUser::isLoggedIn() || !$this->validateReferredObjects()) {
-			return false;
-		}
-
-		if ($this->getInput('context') === 'host') {
-			$host = API::Host()->get([
-				'output' => ['hostid', 'name', 'monitored_by', 'proxyid', 'assigned_proxyid', 'flags', 'status'],
-				'selectInterfaces' => ['interfaceid', 'ip', 'port', 'dns', 'useip', 'details', 'type', 'main'],
-				'itemids' => [$this->getInput('itemid', $this->getInput('parent_discoveryid'))]
-			]);
-
-			if (!$host) {
-				return false;
-			}
-
-			$this->host = reset($host);
-		}
-		else {
-			$template = API::Template()->get([
-				'output' => ['templateid', 'name', 'flags'],
-				'itemids' => [$this->getInput('itemid', $this->getInput('parent_discoveryid'))]
-			]);
-
-			if (!$template) {
-				return false;
-			}
-
-			$this->template = reset($template);
-		}
-
-		return parent::checkPermissions();
 	}
 
 	public function doAction() {
@@ -120,30 +76,11 @@ class CControllerItemPrototypeEdit extends CControllerItemPrototype {
 			}
 		}
 
-		if ($item['flags'] & ZBX_FLAG_DISCOVERY_CREATED) {
-			$db_parent = API::ItemPrototype()->get([
-				'itemids' => $item['discoveryData']['parent_itemid'],
-				'selectDiscoveryRule' => ['itemid'],
-				'selectDiscoveryRulePrototype' => ['itemid'],
-				'nopermissions' => true
-			]);
-			$db_parent = reset($db_parent);
-
-			$parent_lld = $db_parent['discoveryRule'] ?: $db_parent['discoveryRulePrototype'];
-			$item['discoveryData']['lldruleid'] = $parent_lld['itemid'];
-		}
-
 		$data = [
-			'js_test_validation_rules' => (new CFormValidator(
-				CControllerPopupItemTestSend::getValidationRules(allow_lld_macro: true)
-			))->getRules(),
-			'js_validation_rules' => !$this->hasInput('itemid') || $this->hasInput('clone')
-				? (new CFormValidator(CControllerItemPrototypeCreate::getValidationRules()))->getRules()
-				: (new CFormValidator(CControllerItemPrototypeUpdate::getValidationRules()))->getRules(),
 			'item' => $item,
 			'host' => $host,
 			'readonly' => (bool) $item['templateid'],
-			'types' => array_diff_key(item_type2str(), array_flip([ITEM_TYPE_HTTPTEST, ITEM_TYPE_NESTED])),
+			'types' => array_diff_key(item_type2str(), array_flip([ITEM_TYPE_HTTPTEST])),
 			'testable_item_types' => CControllerPopupItemTest::getTestableItemTypes($host['hostid']),
 			'inherited_timeouts' => $inherited_timeouts,
 			'interface_types' => itemTypeInterface(),
@@ -174,7 +111,11 @@ class CControllerItemPrototypeEdit extends CControllerItemPrototype {
 	 * @return array
 	 */
 	protected function getHost(): array {
-		$host = $this->host;
+		[$host] = API::Host()->get([
+			'output' => ['hostid', 'name', 'monitored_by', 'proxyid', 'assigned_proxyid', 'flags', 'status'],
+			'selectInterfaces' => ['interfaceid', 'ip', 'port', 'dns', 'useip', 'details', 'type', 'main'],
+			'itemids' => [$this->getInput('itemid', $this->getInput('parent_discoveryid'))]
+		]);
 
 		if ($host['monitored_by'] == ZBX_MONITORED_BY_PROXY_GROUP) {
 			$host['proxyid'] = $host['assigned_proxyid'];
@@ -197,7 +138,10 @@ class CControllerItemPrototypeEdit extends CControllerItemPrototype {
 	 * @return array
 	 */
 	protected function getTemplate(): array {
-		$template = $this->template;
+		[$template] = API::Template()->get([
+			'output' => ['templateid', 'name', 'flags'],
+			'itemids' => [$this->getInput('itemid', $this->getInput('parent_discoveryid'))]
+		]);
 		$template += [
 			'hostid' => $template['templateid'],
 			'proxyid' => 0,
@@ -287,9 +231,7 @@ class CControllerItemPrototypeEdit extends CControllerItemPrototype {
 					'request_method', 'output_format', 'ssl_cert_file', 'ssl_key_file', 'ssl_key_password', 'verify_peer',
 					'verify_host', 'allow_traps', 'discover'
 				],
-				'selectDiscoveryRule' => ['itemid', 'name', 'templateid'],
-				'selectDiscoveryRulePrototype' => ['itemid', 'name', 'templateid'],
-				'selectDiscoveryData' => ['parent_itemid', 'disable_source'],
+				'selectDiscoveryRule' => ['itemid', 'templateid'],
 				'selectPreprocessing' => ['type', 'params', 'error_handler', 'error_handler_params'],
 				'selectTags' => ['tag', 'value'],
 				'itemids' => $this->getInput('itemid')

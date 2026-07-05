@@ -23,26 +23,47 @@
 	const view = new class {
 
 		init() {
-			document.addEventListener('click', e => {
-				if (e.target.classList.contains('js-enable-module')) {
-					this.#enable(e.target, [e.target.dataset.moduleid]);
+			document.addEventListener('click', (e) => {
+				if (e.target.classList.contains('js-edit-module')) {
+					this._edit({moduleid: e.target.dataset.moduleid});
+				}
+				else if (e.target.classList.contains('js-enable-module')) {
+					this._enable(e.target, [e.target.dataset.moduleid], false);
 				}
 				else if (e.target.classList.contains('js-massenable-module')) {
-					this.#enable(e.target, Object.keys(chkbxRange.getSelectedIds()), true);
+					this._enable(e.target, Object.keys(chkbxRange.getSelectedIds()));
 				}
 				else if (e.target.classList.contains('js-disable-module')) {
-					this.#disable(e.target, [e.target.dataset.moduleid]);
+					this._disable(e.target, [e.target.dataset.moduleid], false);
 				}
 				else if (e.target.classList.contains('js-massdisable-module')) {
-					this.#disable(e.target, Object.keys(chkbxRange.getSelectedIds()), true);
+					this._disable(e.target, Object.keys(chkbxRange.getSelectedIds()));
 				}
 			});
-
-			this.#initPopupListeners();
 		}
 
-		#enable(target, moduleids, massenable = false) {
-			if (massenable) {
+		_edit(parameters = {}) {
+			const overlay = PopUp('module.edit', parameters, {
+				dialogueid: 'module-edit',
+				dialogue_class: 'modal-popup-medium',
+				prevent_navigation: true
+			});
+
+			overlay.$dialogue[0].addEventListener('dialogue.submit', (e) => {
+				postMessageOk(e.detail.title);
+
+				if ('messages' in e.detail) {
+					postMessageDetails('success', e.detail.messages);
+				}
+
+				uncheckTableRows('modules');
+
+				location.href = location.href;
+			});
+		}
+
+		_enable(target, moduleids, mass_update = true) {
+			if (mass_update) {
 				const confirmation = moduleids.length > 1
 					? <?= json_encode(_('Enable selected modules?')) ?>
 					: <?= json_encode(_('Enable selected module?')) ?>;
@@ -55,11 +76,11 @@
 			const curl = new Curl('zabbix.php');
 			curl.setArgument('action', 'module.enable');
 
-			this.#post(target, moduleids, curl);
+			this._post(target, moduleids, curl);
 		}
 
-		#disable(target, moduleids, massdisable = false) {
-			if (massdisable) {
+		_disable(target, moduleids, mass_update = true) {
+			if (mass_update) {
 				const confirmation = moduleids.length > 1
 					? <?= json_encode(_('Disable selected modules?')) ?>
 					: <?= json_encode(_('Disable selected module?')) ?>;
@@ -72,10 +93,10 @@
 			const curl = new Curl('zabbix.php');
 			curl.setArgument('action', 'module.disable');
 
-			this.#post(target, moduleids, curl);
+			this._post(target, moduleids, curl);
 		}
 
-		#post(target, moduleids, curl) {
+		_post(target, moduleids, curl) {
 			curl.setArgument(CSRF_TOKEN_NAME, <?= json_encode(CCsrfTokenHelper::get('module')) ?>);
 
 			target.classList.add('is-loading');
@@ -119,16 +140,5 @@
 					target.classList.remove('is-loading');
 				});
 		}
-
-		#initPopupListeners() {
-			ZABBIX.EventHub.subscribe({
-				require: {
-					context: CPopupManager.EVENT_CONTEXT,
-					event: CPopupManagerEvent.EVENT_SUBMIT
-				},
-				callback: () => uncheckTableRows('modules')
-			});
-		}
-
 	};
 </script>

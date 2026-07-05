@@ -44,8 +44,6 @@
 			this.refresh_simple_url = url.getUrl();
 
 			this.initTabFilter(filter_options);
-			this.initEvents();
-			this.initPopupListeners();
 
 			this.host_view_form = $('form[name=host_view]');
 			this.running = true;
@@ -61,48 +59,6 @@
 			this.filter = new CTabFilter($('#monitoring_hosts_filter')[0], filter_options);
 			this.filter.on(TABFILTER_EVENT_URLSET, () => {
 				this.reloadPartialAndTabCounters();
-			});
-		},
-
-		initEvents() {
-			document.querySelector('.js-create-host')?.addEventListener('click', () => {
-				ZABBIX.PopupManager.open('host.edit', {groupids: this.applied_filter_groupids});
-			});
-		},
-
-		initPopupListeners() {
-			ZABBIX.EventHub.subscribe({
-				require: {
-					context: CPopupManager.EVENT_CONTEXT,
-					event: CPopupManagerEvent.EVENT_OPEN
-				},
-				callback: () => this.unscheduleRefresh()
-			});
-
-			ZABBIX.EventHub.subscribe({
-				require: {
-					context: CPopupManager.EVENT_CONTEXT,
-					event: CPopupManagerEvent.EVENT_CANCEL
-				},
-				callback: () => this.scheduleRefresh()
-			});
-
-			ZABBIX.EventHub.subscribe({
-				require: {
-					context: CPopupManager.EVENT_CONTEXT,
-					event: CPopupManagerEvent.EVENT_SUBMIT
-				},
-				callback: ({data, event}) => {
-					event.preventDefault();
-
-					if ('success' in data.submit) {
-						this._addPopupMessage(
-							makeMessageBox('good', data.submit.success.messages, data.submit.success.title)
-						);
-					}
-
-					this.reloadPartialAndTabCounters();
-				}
 			});
 		},
 
@@ -307,6 +263,66 @@
 
 			if (this.deferred) {
 				this.deferred.abort();
+			}
+		},
+
+		createHost() {
+			const host_data = this.applied_filter_groupids
+				? {groupids: this.applied_filter_groupids}
+				: {};
+
+			this.openHostPopup(host_data);
+		},
+
+		editHost(hostid) {
+			this.openHostPopup({hostid});
+		},
+
+		openHostPopup(host_data) {
+			this._removePopupMessage();
+
+			const original_url = location.href;
+			const overlay = PopUp('popup.host.edit', host_data, {
+				dialogueid: 'host_edit',
+				dialogue_class: 'modal-popup-large',
+				prevent_navigation: true
+			});
+
+			this.unscheduleRefresh();
+
+			overlay.$dialogue[0].addEventListener('dialogue.submit', this.events.elementSuccess, {once: true});
+			overlay.$dialogue[0].addEventListener('dialogue.close', () => {
+				history.replaceState({}, '', original_url);
+				this.scheduleRefresh();
+			}, {once: true});
+		},
+
+		editTemplate(parameters) {
+			const overlay = PopUp('template.edit', parameters, {
+				dialogueid: 'templates-form',
+				dialogue_class: 'modal-popup-large',
+				prevent_navigation: true
+			});
+
+			overlay.$dialogue[0].addEventListener('dialogue.submit', this.events.elementSuccess, {once: true});
+		},
+
+		events: {
+			elementSuccess(e) {
+				const data = e.detail;
+
+				if ('success' in data) {
+					const title = data.success.title;
+					let messages = [];
+
+					if ('messages' in data.success) {
+						messages = data.success.messages;
+					}
+
+					view._addPopupMessage(makeMessageBox('good', messages, title));
+				}
+
+				view.reloadPartialAndTabCounters();
 			}
 		}
 	};

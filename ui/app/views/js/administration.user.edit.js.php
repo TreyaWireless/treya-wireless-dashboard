@@ -21,31 +21,29 @@
 
 <script type="text/javascript">
 	const view = new class {
+
 		init({userid}) {
 			this.userid = userid;
 
 			document.getElementById('user-form').addEventListener('submit', (e) => {
-				document.querySelectorAll('#username, #name, #surname, #autologout, #refresh, #url').forEach((elem) => {
-					elem.value = elem.value.trim();
-				});
-
-				if (!this.#confirmSubmit()) {
+				if (!this._userFormSubmit()) {
 					e.preventDefault();
 				}
 			});
 
 			const roleid_elem = document.getElementById('roleid');
-			new MutationObserver(() => {
+			new MutationObserver((mutations) => {
 				if (roleid_elem.querySelectorAll('[name="roleid"]').length > 0) {
 					document.getElementById('user-form').submit();
 				}
 			}).observe(roleid_elem, {childList: true});
-
-			this.#changeVisibilityAutoLoginLogout();
-			this.#autologoutHandler();
 		}
 
-		#confirmSubmit() {
+		_userFormSubmit() {
+			document.querySelectorAll('#username, #name, #surname, #autologout, #refresh, #url').forEach((elem) => {
+				elem.value = elem.value.trim();
+			});
+
 			const elem_password1 = document.getElementById('password1');
 			const elem_password2 = document.getElementById('password2');
 
@@ -63,62 +61,6 @@
 			}
 
 			return true;
-		}
-
-		#changeVisibilityAutoLoginLogout() {
-			const autologin_cbx = document.querySelector('#autologin');
-			const autologout_cbx = document.querySelector('#autologout_visible');
-
-			if (autologin_cbx === null || autologout_cbx === null) {
-				return;
-			}
-
-			autologin_cbx.addEventListener('click', (e) => {
-				if (e.target.checked) {
-					autologout_cbx.checked = false;
-				}
-				this.#autologoutHandler();
-			});
-
-			autologout_cbx.addEventListener('click', (e) => {
-				if (e.target.checked) {
-					autologin_cbx.checked = false;
-				}
-				this.#autologoutHandler();
-			});
-		}
-
-		#autologoutHandler() {
-			const autologout = document.querySelector('#autologout');
-
-			if (autologout === null) {
-				return;
-			}
-
-			const autologout_visible = document.querySelector('#autologout_visible');
-			const disabled = !autologout_visible.checked;
-			const hidden = autologout.parentElement.
-				querySelector(`input[type=hidden][name=${autologout.getAttribute('name')}]`);
-
-			if (disabled) {
-				autologout.setAttribute('disabled', '')
-			}
-			else {
-				autologout.removeAttribute('disabled')
-			}
-
-			if (!hidden) {
-				const hidden_input = document.createElement('input');
-
-				hidden_input.type = 'hidden';
-				hidden_input.name = autologout.getAttribute('name');
-				hidden_input.value = '0';
-
-				autologout.parentElement.insertBefore(hidden_input, autologout);
-			}
-			else if (!disabled) {
-				hidden.remove();
-			}
 		}
 	}
 </script>

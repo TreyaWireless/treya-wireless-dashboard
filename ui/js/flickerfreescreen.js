@@ -285,7 +285,7 @@
 		},
 
 		refreshMap: function(id) {
-			const screen = this.screens[id];
+			var screen = this.screens[id];
 
 			if (screen.isRefreshing) {
 				this.calculateReRefresh(id);
@@ -297,21 +297,19 @@
 
 				this.setElementProgressState(id, true);
 
-				const url = new Curl(screen.data.options.refresh);
-
+				var url = new Curl(screen.data.options.refresh);
 				url.setArgument('curtime', new CDate().getTime());
 
 				$.ajax({
 					'url': url.getUrl()
 				})
-				.fail(() => {
+				.fail(function() {
 					screen.error++;
 					window.flickerfreeScreen.calculateReRefresh(id);
 				})
-				.done((data) => {
+				.done(function(data) {
 					data.show_timestamp = screen.data.options.show_timestamp;
 					screen.isRefreshing = false;
-					data.caller = 'refreshMap';
 					screen.data.update(data);
 					$(screen.data.container).attr('aria-label', data.aria_label);
 					screen.timestamp = screen.timestampActual;

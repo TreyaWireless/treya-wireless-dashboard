@@ -14,8 +14,6 @@
 **/
 
 
-use Widgets\TrigOver\Includes\WidgetForm;
-
 /**
  * Trigger overview widget view.
  *
@@ -27,7 +25,7 @@ if ($data['error'] !== null) {
 	$table = (new CTableInfo())->setNoDataMessage($data['error']);
 }
 else {
-	$table = $data['layout'] == WidgetForm::LAYOUT_VERTICAL
+	$table = $data['style'] == STYLE_TOP
 		? (new CPartial('table.top', $data))->getOutput()
 		: (new CPartial('table.left', $data))->getOutput();
 }

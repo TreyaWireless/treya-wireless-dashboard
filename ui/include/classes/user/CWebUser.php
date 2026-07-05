@@ -53,7 +53,7 @@ class CWebUser {
 			}
 
 			API::getWrapper()->auth = [
-				'type' => CJsonRpc::AUTH_TYPE_COOKIE,
+				'type' => CJsonRpc::AUTH_TYPE_FRONTEND,
 				'auth' => self::$data['sessionid']
 			];
 

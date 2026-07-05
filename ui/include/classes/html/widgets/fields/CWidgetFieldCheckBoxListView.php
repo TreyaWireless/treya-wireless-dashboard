@@ -54,12 +54,8 @@ class CWidgetFieldCheckBoxListView extends CWidgetFieldView {
 
 	public function getJavaScript(): string {
 		return '
-			CWidgetForm.addField(
-				new CWidgetFieldCheckboxList('.json_encode([
-					'name' => $this->field->getName(),
-					'form_name' => $this->form_name
-				]).')
-			);
+			document.forms["'.$this->form_name.'"].fields["'.$this->field->getName().'"] =
+				new CWidgetFieldCheckboxList('.json_encode($this->field->getName()).');
 		';
 	}
 }

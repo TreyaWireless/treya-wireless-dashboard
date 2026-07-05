@@ -412,19 +412,18 @@ function submitPopup(overlay) {
 
 	if (warning_message !== '') {
 		overlayDialogue({
-			title: <?= json_encode(_('Warning')) ?>,
-			content: $('<span>').text(warning_message),
-			buttons: [
+			'title': <?= json_encode(_('Warning')) ?>,
+			'type': 'popup',
+			'class': 'position-middle',
+			'content': $('<span>').text(warning_message),
+			'buttons': [
 				{
-					title: <?= json_encode(_('Ok')) ?>,
-					focused: true,
-					action: () => {}
+					'title': <?= json_encode(_('Ok')) ?>,
+					'focused': true,
+					'action': () => {}
 				}
 			]
-		}, {
-			position: Overlay.prototype.POSITION_CENTER,
-			trigger_element: overlay.$btn_submit
-		});
+		}, overlay.$btn_submit);
 
 		overlay.unsetLoading();
 		return false;

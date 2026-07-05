@@ -52,6 +52,12 @@ class CWidgetGeoMap extends CWidget {
 		this._severity_levels = new Map();
 	}
 
+	onResize() {
+		if (this._map !== null) {
+			this._map.invalidateSize();
+		}
+	}
+
 	promiseReady() {
 		if (this._map === null){
 			return super.promiseReady();
@@ -161,45 +167,16 @@ class CWidgetGeoMap extends CWidget {
 
 		this._home_coords = config.home_coords;
 
-		// Initialize map and load base layers.
-		const googleNormal = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-			maxZoom: 20,
-			attribution: '© Google Maps'
-		});
-		const googleSatellite = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-			maxZoom: 20,
-			attribution: '© Google Maps'
-		});
-		const openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-			maxZoom: 19,
-			attribution: '© OpenStreetMap contributors'
-		});
-
-		// Determine default layer
-		let defaultLayer = googleNormal;
-		if (config.tile_url && (config.tile_url.includes('lyrs=y') || config.tile_url.includes('satellite'))) {
-			defaultLayer = googleSatellite;
-		} else if (config.tile_url && config.tile_url.includes('openstreetmap')) {
-			defaultLayer = openStreetMap;
-		} else if (config.tile_url) {
-			defaultLayer = L.tileLayer(config.tile_url, {
-				tap: false,
-				minZoom: 0,
-				maxZoom: parseInt(config.max_zoom, 10),
-				attribution: config.attribution
-			});
-		}
-
+		// Initialize map and load tile layer.
 		this._map = L.map(this._unique_id).setView(latLng, config.center.zoom);
-		defaultLayer.addTo(this._map);
-
-		const baseMaps = {
-			"Normal Map": googleNormal,
-			"Satellite Map": googleSatellite,
-			"OpenStreetMap": openStreetMap
-		};
-
-		L.control.layers(baseMaps, null, {position: 'topright'}).addTo(this._map);
+		L.tileLayer(config.tile_url, {
+			tap: false,
+			minZoom: 0,
+			maxZoom: parseInt(config.max_zoom, 10),
+			minNativeZoom: 1,
+			maxNativeZoom: parseInt(config.max_zoom, 10),
+			attribution: config.attribution
+		}).addTo(this._map);
 
 		this.initSeverities(config.severities);
 

@@ -39,7 +39,7 @@ class CWidgetGraphPrototype extends CWidgetIterator {
 	}
 
 	onFeedback({type, value}) {
-		if (type === CWidgetsData.DATA_TYPE_TIME_PERIOD && this.getFieldsReferredData().has('time_period')) {
+		if (type === CWidgetsData.DATA_TYPE_TIME_PERIOD) {
 			this.feedback({time_period: value});
 
 			return true;

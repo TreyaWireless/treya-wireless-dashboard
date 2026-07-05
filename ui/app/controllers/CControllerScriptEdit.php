@@ -158,7 +158,7 @@ class CControllerScriptEdit extends CController {
 
 		// Get host group.
 		if ($data['groupid'] == 0) {
-			$data['hostgroup'] = [];
+			$data['hostgroup'] = null;
 		}
 		else {
 			$hostgroups = API::HostGroup()->get([

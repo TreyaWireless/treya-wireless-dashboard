@@ -31,7 +31,7 @@ $parameters_table = (new CTable())
 	->setHeader([
 		(new CColHeader(_('Name')))->setWidth('50%'),
 		(new CColHeader(_('Value')))->setWidth('50%'),
-		''
+		_('Action')
 	])
 	->setAttribute('style', 'width: 100%;')
 	->addItem(
@@ -467,8 +467,7 @@ $output = [
 	'doc_url' => CDocHelper::getUrl(CDocHelper::ALERTS_SCRIPT_EDIT),
 	'body' => $form->toString(),
 	'buttons' => $buttons,
-	'script_inline' => getPagePostJs().$this->readJsFile('administration.script.edit.js.php'),
-	'dialogue_class' => 'modal-popup-large'
+	'script_inline' => getPagePostJs().$this->readJsFile('administration.script.edit.js.php')
 ];
 
 if ($data['user']['debug_mode'] == GROUP_DEBUG_MODE_ENABLED) {

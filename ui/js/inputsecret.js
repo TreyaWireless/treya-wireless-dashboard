@@ -19,7 +19,7 @@
 (function($) {
 	'use strict';
 
-	function enableHandle(_, on_activate = false) {
+	function enableHandle() {
 		var $btn_change = $(this),
 			$input = $btn_change.siblings('input[type=password]'),
 			$btn_undo = $btn_change
@@ -29,15 +29,8 @@
 		$input
 			.prop('disabled', false)
 			.attr('placeholder', t('value'))
-			.val('');
-
-		if (!on_activate) {
-			$input[0].dispatchEvent(new Event('input', {bubbles: true}));
-
-			setTimeout(() => {
-				$input.focus();
-			});
-		}
+			.val('')
+			.focus();
 
 		$btn_change.prop('disabled', true);
 		$btn_undo.show();
@@ -51,11 +44,6 @@
 				$('.btn-change', $(this))
 					.off('click', enableHandle)
 					.on('click', enableHandle);
-			});
-		},
-		activateInput() {
-			return this.each(function() {
-				enableHandle.call($('.btn-change', $(this)), null, true);
 			});
 		}
 	};

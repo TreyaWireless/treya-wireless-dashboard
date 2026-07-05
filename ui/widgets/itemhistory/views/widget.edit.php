@@ -56,7 +56,7 @@ use Widgets\ItemHistory\Includes\CWidgetFieldColumnsListView;
 			)
 	)
 	->includeJsFile('widget.edit.js.php')
-	->initFormJs('widget_form.init('.json_encode([
+	->addJavaScript('widget_itemhistory_form.init('.json_encode([
 			'templateid' => $data['templateid']
 		], JSON_THROW_ON_ERROR).');')
 	->show();

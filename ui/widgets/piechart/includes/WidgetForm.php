@@ -189,7 +189,7 @@ class WidgetForm extends CWidgetForm {
 				(new CWidgetFieldCheckBox('value_bold', _('Bold')))
 			)
 			->addField(
-				(new CWidgetFieldColor('value_color', _('Color')))->allowInherited()
+				new CWidgetFieldColor('value_color', _('Color'))
 			);
 	}
 

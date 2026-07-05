@@ -20,6 +20,12 @@
  */
 
 $this->addJsFile('layout.mode.js');
+$this->addJsFile('class.tagfilteritem.js');
+$this->addJsFile('class.tabfilter.js');
+$this->addJsFile('class.tabfilteritem.js');
+$this->addJsFile('class.expandable.subfilter.js');
+$this->addJsFile('items.js');
+$this->addJsFile('multilineinput.js');
 
 $this->includeJsFile('monitoring.latest.view.js.php');
 
@@ -82,7 +88,6 @@ $html_page->show();
 		'refresh_data' => $data['refresh_data'],
 		'refresh_interval' => $data['refresh_interval'],
 		'checkbox_object' => 'itemids',
-		'filter_set' => $data['mandatory_filter_set'] || $data['subfilter_set'],
 		'layout_mode' => $web_layout_mode
 	]).');
 '))

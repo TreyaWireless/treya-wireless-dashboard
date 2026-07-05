@@ -45,7 +45,7 @@ class WidgetView extends CControllerDashboardWidgetView {
 			$data += [
 				'error' => null,
 				'initial_load' => (bool) $this->getInput('initial_load', 0),
-				'layout' => $this->fields_values['layout'],
+				'style' => $this->fields_values['style'],
 				'is_template_dashboard' => $this->isTemplateDashboard()
 			];
 

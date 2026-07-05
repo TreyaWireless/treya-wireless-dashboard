@@ -274,7 +274,7 @@ window.webscenario_step_edit_popup = new class {
 	#showErrorDialog(message, trigger_element) {
 		overlayDialogue({
 			title: <?= json_encode(_('Error')) ?>,
-			class: 'modal-popup',
+			class: 'modal-popup position-middle',
 			content: jQuery('<span>').html(message),
 			buttons: [{
 				title: <?= json_encode(_('Ok')) ?>,
@@ -282,10 +282,7 @@ window.webscenario_step_edit_popup = new class {
 				focused: true,
 				action: function() {}
 			}]
-		}, {
-			position: Overlay.prototype.POSITION_CENTER,
-			trigger_element: jQuery(trigger_element)
-		});
+		}, jQuery(trigger_element));
 	}
 
 	#updateForm() {

@@ -296,8 +296,7 @@ $output = [
 	'body' => $form->toString(),
 	'buttons' => $buttons,
 	'script_inline' => getPagePostJs().
-		$this->readJsFile('configuration.discovery.edit.js.php'),
-	'dialogue_class' => 'modal-popup-large'
+		$this->readJsFile('configuration.discovery.edit.js.php')
 ];
 
 if ($data['user']['debug_mode'] == GROUP_DEBUG_MODE_ENABLED) {

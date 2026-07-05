@@ -24,6 +24,7 @@ class CConfigFile {
 
 	private static $supported_db_types = [
 		ZBX_DB_MYSQL => true,
+		ZBX_DB_ORACLE => true,
 		ZBX_DB_POSTGRESQL => true
 	];
 
@@ -192,32 +193,6 @@ class CConfigFile {
 			$this->config['ALLOW_HTTP_AUTH'] = $ALLOW_HTTP_AUTH;
 		}
 
-		if (isset($ZBX_SERVER_TLS) && is_array($ZBX_SERVER_TLS)) {
-			if (array_key_exists('ACTIVE', $ZBX_SERVER_TLS)) {
-				$this->config['ZBX_SERVER_TLS']['ACTIVE'] = $ZBX_SERVER_TLS['ACTIVE'];
-			}
-
-			if (array_key_exists('CA_FILE', $ZBX_SERVER_TLS)) {
-				$this->config['ZBX_SERVER_TLS']['CA_FILE'] = $ZBX_SERVER_TLS['CA_FILE'];
-			}
-
-			if (array_key_exists('KEY_FILE', $ZBX_SERVER_TLS)) {
-				$this->config['ZBX_SERVER_TLS']['KEY_FILE'] = $ZBX_SERVER_TLS['KEY_FILE'];
-			}
-
-			if (array_key_exists('CERT_FILE', $ZBX_SERVER_TLS)) {
-				$this->config['ZBX_SERVER_TLS']['CERT_FILE'] = $ZBX_SERVER_TLS['CERT_FILE'];
-			}
-
-			if (array_key_exists('CERTIFICATE_ISSUER', $ZBX_SERVER_TLS)) {
-				$this->config['ZBX_SERVER_TLS']['CERTIFICATE_ISSUER'] = $ZBX_SERVER_TLS['CERTIFICATE_ISSUER'];
-			}
-
-			if (array_key_exists('CERTIFICATE_SUBJECT', $ZBX_SERVER_TLS)) {
-				$this->config['ZBX_SERVER_TLS']['CERTIFICATE_SUBJECT'] = $ZBX_SERVER_TLS['CERTIFICATE_SUBJECT'];
-			}
-		}
-
 		$this->makeGlobal();
 
 		return $this->config;
@@ -225,7 +200,7 @@ class CConfigFile {
 
 	public function makeGlobal() {
 		global $DB, $ZBX_SERVER, $ZBX_SERVER_PORT, $ZBX_SERVER_NAME, $IMAGE_FORMAT_DEFAULT, $HISTORY, $SSO,
-			$ALLOW_HTTP_AUTH, $ZBX_SERVER_TLS;
+			$ALLOW_HTTP_AUTH;
 
 		$DB = $this->config['DB'];
 		$ZBX_SERVER = $this->config['ZBX_SERVER'];
@@ -235,7 +210,6 @@ class CConfigFile {
 		$HISTORY = $this->config['HISTORY'];
 		$SSO = $this->config['SSO'];
 		$ALLOW_HTTP_AUTH = $this->config['ALLOW_HTTP_AUTH'];
-		$ZBX_SERVER_TLS = $this->config['ZBX_SERVER_TLS'];
 	}
 
 	public function save() {
@@ -277,7 +251,7 @@ class CConfigFile {
 	public function getString() {
 		return
 '<?php
-// Treya Wireless GUI configuration file.
+// Zabbix GUI configuration file.
 
 $DB[\'TYPE\']			= \''.addcslashes($this->config['DB']['TYPE'], "'\\").'\';
 $DB[\'SERVER\']			= \''.addcslashes($this->config['DB']['SERVER'], "'\\").'\';
@@ -308,7 +282,7 @@ $DB[\'VAULT_KEY_FILE\']		= \''.addcslashes($this->config['DB']['VAULT_KEY_FILE']
 // Uncomment to bypass local caching of credentials.
 // $DB[\'VAULT_CACHE\']		= true;
 
-// Uncomment and set to desired values to override Treya Wireless hostname/IP and port.
+// Uncomment and set to desired values to override Zabbix hostname/IP and port.
 // $ZBX_SERVER			= \'\';
 // $ZBX_SERVER_PORT		= \'\';
 
@@ -334,13 +308,6 @@ $IMAGE_FORMAT_DEFAULT	= IMAGE_FORMAT_PNG;
 
 // If set to false, support for HTTP authentication will be disabled.
 // $ALLOW_HTTP_AUTH = true;
-
-$ZBX_SERVER_TLS[\'ACTIVE\'] = '.($this->config['ZBX_SERVER_TLS']['ACTIVE'] ? 'true' : 'false').';
-$ZBX_SERVER_TLS[\'CA_FILE\'] = \''.addcslashes($this->config['ZBX_SERVER_TLS']['CA_FILE'], "'\\").'\';
-$ZBX_SERVER_TLS[\'KEY_FILE\'] = \''.addcslashes($this->config['ZBX_SERVER_TLS']['KEY_FILE'], "'\\").'\';
-$ZBX_SERVER_TLS[\'CERT_FILE\'] = \''.addcslashes($this->config['ZBX_SERVER_TLS']['CERT_FILE'], "'\\").'\';
-$ZBX_SERVER_TLS[\'CERTIFICATE_ISSUER\']  = \''.addcslashes($this->config['ZBX_SERVER_TLS']['CERTIFICATE_ISSUER'], "'\\").'\';
-$ZBX_SERVER_TLS[\'CERTIFICATE_SUBJECT\'] = \''.addcslashes($this->config['ZBX_SERVER_TLS']['CERTIFICATE_SUBJECT'], "'\\").'\';
 ';
 	}
 
@@ -375,13 +342,5 @@ $ZBX_SERVER_TLS[\'CERTIFICATE_SUBJECT\'] = \''.addcslashes($this->config['ZBX_SE
 		$this->config['HISTORY'] = null;
 		$this->config['SSO'] = null;
 		$this->config['ALLOW_HTTP_AUTH'] = true;
-		$this->config['ZBX_SERVER_TLS'] = [
-			'ACTIVE' => false,
-			'CA_FILE' => '',
-			'KEY_FILE' => '',
-			'CERT_FILE' => '',
-			'CERTIFICATE_ISSUER' => '',
-			'CERTIFICATE_SUBJECT' => ''
-		];
 	}
 }

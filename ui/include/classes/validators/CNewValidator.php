@@ -235,25 +235,6 @@ class CNewValidator {
 					}
 					break;
 
-				case 'setting':
-					$field_schema = ['type' => CSettingsSchema::getDbType($params['field'])];
-
-					if ($field_schema['type'] == DB::FIELD_TYPE_CHAR) {
-						$field_schema['length'] = CSettingsSchema::getFieldLength($params['field']);
-					}
-
-					if ((!is_string($value) && !is_numeric($value))
-							|| !$this->check_db_value($field_schema, $value, $flags)) {
-						$this->addError($fatal,
-							is_scalar($value)
-								? _s('Incorrect value "%1$s" for "%2$s" field.', $value, $field)
-								: _s('Incorrect value for "%1$s" field.', $field)
-						);
-
-						return false;
-					}
-					break;
-
 				case 'range_time':
 					if ($this->range_time_parser === null) {
 						$this->range_time_parser = new CRangeTimeParser();
@@ -449,7 +430,7 @@ class CNewValidator {
 			return (mb_strlen($value) <= $field_schema['length']);
 		}
 
-		if ($field_schema['type'] & DB::FIELD_TYPE_TEXT) {
+		if ($field_schema['type'] & (DB::FIELD_TYPE_NCLOB | DB::FIELD_TYPE_TEXT)) {
 			if ($flags & P_CRLF) {
 				$value = CRLFtoLF($value);
 			}

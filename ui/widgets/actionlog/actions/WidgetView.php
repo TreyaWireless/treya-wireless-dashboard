@@ -111,9 +111,7 @@ class WidgetView extends CControllerDashboardWidgetView {
 				'userids' => $userids ?: null,
 				'actionids' => $actionids ?: null,
 				'mediatypeids' => $mediatypeids ?: null,
-				'filter' => [
-					'status' => $data['statuses'] ?: null
-				],
+				'filter' => ['status' => $data['statuses']],
 				'search' => [
 					'subject' => $search,
 					'message' => $search

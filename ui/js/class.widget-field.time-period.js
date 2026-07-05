@@ -13,7 +13,7 @@
 **/
 
 
-class CWidgetFieldTimePeriod extends CWidgetField {
+class CWidgetFieldTimePeriod {
 
 	static DATA_SOURCE_DEFAULT = 0;
 	static DATA_SOURCE_WIDGET = 1;
@@ -39,7 +39,7 @@ class CWidgetFieldTimePeriod extends CWidgetField {
 	/**
 	 * @type {string}
 	 */
-	#selector;
+	#field_name;
 
 	/**
 	 * @type {Object}
@@ -79,18 +79,14 @@ class CWidgetFieldTimePeriod extends CWidgetField {
 	#is_hidden = false;
 
 	constructor({
-		name,
-		form_name,
-		selector,
-		value = {from: '', to: ''},
+		field_name,
+		field_value = {from: '', to: ''},
 		in_type,
 		widget_accepted = false,
 		dashboard_accepted = false,
 		data_source = CWidgetFieldTimePeriod.DATA_SOURCE_DEFAULT
 	}) {
-		super({name, form_name});
-
-		this.#selector = selector;
+		this.#field_name = field_name;
 		this.#in_type = in_type;
 		this.#data_source = data_source;
 		this.#widget_accepted = widget_accepted;
@@ -99,7 +95,7 @@ class CWidgetFieldTimePeriod extends CWidgetField {
 		this.#initField();
 		this.#registerEvents();
 
-		this.value = value;
+		this.value = field_value;
 	}
 
 	get value() {
@@ -154,10 +150,10 @@ class CWidgetFieldTimePeriod extends CWidgetField {
 
 	#initField() {
 		if (this.#widget_accepted) {
-			const $multiselect = jQuery(`#${this.#selector}_reference`);
+			const $multiselect = jQuery(`#${this.#field_name}_reference`);
 
 			$multiselect[0].dataset.params = JSON.stringify({
-				name: `${this.getName()}[${CWidgetBase.FOREIGN_REFERENCE_KEY}]`,
+				name: `${this.#field_name}[${CWidgetBase.FOREIGN_REFERENCE_KEY}]`,
 				selectedLimit: 1,
 				custom_select: true
 			});
@@ -180,50 +176,37 @@ class CWidgetFieldTimePeriod extends CWidgetField {
 				});
 		}
 
-		this.#date_from_input = document.getElementById(`${this.#selector}_from`);
-		this.#date_to_input = document.getElementById(`${this.#selector}_to`);
+		this.#date_from_input = document.getElementById(`${this.#field_name}_from`);
+		this.#date_to_input = document.getElementById(`${this.#field_name}_to`);
 	}
 
 	#registerEvents() {
-		for (const radio of this.getForm().querySelectorAll(`[name="${this.getName()}[data_source]"]`)) {
+		for (const radio of document.querySelectorAll(`[name="${this.#field_name}[data_source]"]`)) {
 			radio.addEventListener('change', (e) => {
 				this.#data_source = e.target.value;
 				this.#updateField();
-
-				this.dispatchUpdateEvent();
 			});
 		}
-
-		if (this.#reference_multiselect !== null) {
-			this.#reference_multiselect.on('change', () => this.dispatchUpdateEvent());
-		}
-
-		this.#date_from_input.addEventListener('input', () => this.dispatchUpdateEvent());
-		this.#date_to_input.addEventListener('input', () => this.dispatchUpdateEvent());
-
-		// jQuery events can only be caught by jQuery.
-		jQuery(this.#date_from_input).on('change', () => this.dispatchUpdateEvent());
-		jQuery(this.#date_to_input).on('change', () => this.dispatchUpdateEvent());
 	}
 
 	#updateField() {
-		for (const element of this.getForm().querySelectorAll(`.js-${this.#selector}-data-source`)) {
+		for (const element of document.querySelectorAll(`.js-${this.#field_name}-data-source`)) {
 			element.style.display = this.#is_hidden ? 'none' : '';
 		}
 
-		for (const element of this.getForm().querySelectorAll(`[name="${this.getName()}[data_source]"]`)) {
+		for (const element of document.querySelectorAll(`[name="${this.#field_name}[data_source]"]`)) {
 			element.checked = element.value == this.#data_source;
 			element.disabled = this.#is_hidden || this.#is_disabled;
 		}
 
-		const reference_dashboard = document.getElementById(`${this.#selector}_reference_dashboard`);
+		const reference_dashboard = document.getElementById(`${this.#field_name}_reference_dashboard`);
 
 		if (reference_dashboard !== null) {
 			reference_dashboard.disabled = this.#is_hidden || this.#is_disabled
 				|| this.#data_source != CWidgetFieldTimePeriod.DATA_SOURCE_DASHBOARD;
 		}
 
-		for (const element of this.getForm().querySelectorAll(`.js-${this.#selector}-reference`)) {
+		for (const element of document.querySelectorAll(`.js-${this.#field_name}-reference`)) {
 			element.style.display = this.#is_hidden || this.#data_source != CWidgetFieldTimePeriod.DATA_SOURCE_WIDGET
 				? 'none'
 				: '';
@@ -240,10 +223,10 @@ class CWidgetFieldTimePeriod extends CWidgetField {
 		}
 
 		const date_picker_element_ids = [
-			`${this.#selector}_from`,
-			`${this.#selector}_from_calendar`,
-			`${this.#selector}_to`,
-			`${this.#selector}_to_calendar`
+			`${this.#field_name}_from`,
+			`${this.#field_name}_from_calendar`,
+			`${this.#field_name}_to`,
+			`${this.#field_name}_to_calendar`
 		];
 
 		for (const element_id of date_picker_element_ids) {
@@ -255,9 +238,9 @@ class CWidgetFieldTimePeriod extends CWidgetField {
 			}
 		}
 
-		const date_picker_form_rows = `.js-${this.#selector}-from, .js-${this.#selector}-to`;
+		const date_picker_form_rows = `.js-${this.#field_name}-from, .js-${this.#field_name}-to`;
 
-		for (const element of this.getForm().querySelectorAll(date_picker_form_rows)) {
+		for (const element of document.querySelectorAll(date_picker_form_rows)) {
 			element.style.display = this.#is_hidden || this.#data_source != CWidgetFieldTimePeriod.DATA_SOURCE_DEFAULT
 				? 'none'
 				: '';
@@ -299,7 +282,7 @@ class CWidgetFieldTimePeriod extends CWidgetField {
 	#getWidgets() {
 		const widgets = ZABBIX.Dashboard.getReferableWidgets({
 			type: this.#in_type,
-			widget_context: ZABBIX.Dashboard.getWidgetEditingContext()
+			widget_context: ZABBIX.Dashboard.getEditingWidgetContext()
 		});
 
 		widgets.sort((a, b) => a.getHeaderName().localeCompare(b.getHeaderName()));

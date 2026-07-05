@@ -36,7 +36,6 @@ use Zabbix\Widgets\Fields\{
 	CWidgetFieldSelect,
 	CWidgetFieldTextArea,
 	CWidgetFieldTextBox,
-	CWidgetFieldSparkline,
 	CWidgetFieldThresholds,
 	CWidgetFieldTimePeriod
 };
@@ -60,18 +59,6 @@ class WidgetForm extends CWidgetForm {
 	public const ITEM_VALUE_DATA_SOURCE_AUTO = 0;
 	public const ITEM_VALUE_DATA_SOURCE_HISTORY = 1;
 	public const ITEM_VALUE_DATA_SOURCE_TRENDS = 2;
-
-	public const SPARKLINE_DEFAULT = [
-		'width'		=> 1,
-		'fill'		=> 3,
-		'color'		=> '42A5F5',
-		'time_period' => [
-			'data_source' => CWidgetFieldTimePeriod::DATA_SOURCE_DEFAULT,
-			'from' => 'now-1h',
-			'to' => 'now'
-		],
-		'history'	=> CWidgetFieldSparkline::DATA_SOURCE_AUTO
-	];
 
 	private bool $is_binary_units = false;
 
@@ -104,22 +91,13 @@ class WidgetForm extends CWidgetForm {
 	}
 
 	public function validate(bool $strict = false): array {
-		$show = $this->getFieldValue('show');
-		$sparkline_enabled = in_array(Widget::SHOW_SPARKLINE, $show);
-		$errors = [];
-
-		foreach ($this->fields as $name => $field) {
-			if (!$sparkline_enabled && $name === 'sparkline') {
-				$field->setValue(CWidgetFieldSparkline::DEFAULT_VALUE);
-			}
-			else {
-				$errors = array_merge($errors, $field->validate($strict));
-			}
-		}
+		$errors = parent::validate($strict);
 
 		if ($errors) {
 			return $errors;
 		}
+
+		$show = $this->getFieldValue('show');
 
 		if (!$show) {
 			$errors[] = _s('Invalid parameter "%1$s": %2$s.', _('Show'), _('at least one option must be selected'));
@@ -162,19 +140,6 @@ class WidgetForm extends CWidgetForm {
 		return $errors;
 	}
 
-	protected function normalizeValues(array $values): array {
-		$values = parent::normalizeValues($values);
-
-		if (array_key_exists('show', $values) && is_array($values['show'])
-				&& in_array(Widget::SHOW_SPARKLINE, $values['show'])) {
-			$values['sparkline'] = array_key_exists('sparkline', $values)
-				? array_replace(WidgetForm::SPARKLINE_DEFAULT, $values['sparkline'])
-				: WidgetForm::SPARKLINE_DEFAULT;
-		}
-
-		return $values;
-	}
-
 	public function addFields(): self {
 		return $this
 			->addField(
@@ -187,8 +152,7 @@ class WidgetForm extends CWidgetForm {
 					Widget::SHOW_DESCRIPTION => _('Description'),
 					Widget::SHOW_VALUE => _('Value'),
 					Widget::SHOW_TIME => _('Time'),
-					Widget::SHOW_CHANGE_INDICATOR => _('Change indicator'),
-					Widget::SHOW_SPARKLINE => _('Sparkline')
+					Widget::SHOW_CHANGE_INDICATOR => _('Change indicator')
 				]))
 					->setDefault([Widget::SHOW_DESCRIPTION, Widget::SHOW_VALUE, Widget::SHOW_TIME,
 						Widget::SHOW_CHANGE_INDICATOR
@@ -225,7 +189,7 @@ class WidgetForm extends CWidgetForm {
 				new CWidgetFieldCheckBox('desc_bold', _('Bold'))
 			)
 			->addField(
-				(new CWidgetFieldColor('desc_color', _('Color')))->allowInherited()
+				new CWidgetFieldColor('desc_color', _('Color'))
 			)
 			->addField(
 				(new CWidgetFieldIntegerBox('decimal_places', _('Decimal places'), 0, 10))
@@ -258,7 +222,7 @@ class WidgetForm extends CWidgetForm {
 				(new CWidgetFieldCheckBox('value_bold', _('Bold')))->setDefault(1)
 			)
 			->addField(
-				(new CWidgetFieldColor('value_color', _('Color')))->allowInherited()
+				new CWidgetFieldColor('value_color', _('Color'))
 			)
 			->addField(
 				(new CWidgetFieldCheckBox('units_show', _('Units')))->setDefault(1)
@@ -282,7 +246,7 @@ class WidgetForm extends CWidgetForm {
 				(new CWidgetFieldCheckBox('units_bold', _('Bold')))->setDefault(1)
 			)
 			->addField(
-				(new CWidgetFieldColor('units_color', _('Color')))->allowInherited()
+				new CWidgetFieldColor('units_color', _('Color'))
 			)
 			->addField(
 				(new CWidgetFieldRadioButtonList('time_h_pos', _('Horizontal position'), [
@@ -306,22 +270,19 @@ class WidgetForm extends CWidgetForm {
 				new CWidgetFieldCheckBox('time_bold', _('Bold'))
 			)
 			->addField(
-				(new CWidgetFieldColor('time_color', _('Color')))->allowInherited()
+				new CWidgetFieldColor('time_color', _('Color'))
 			)
 			->addField(
-				(new CWidgetFieldColor('up_color', _('Change indicator')))->allowInherited()
+				new CWidgetFieldColor('up_color', _('Change indicator'))
 			)
 			->addField(
-				(new CWidgetFieldColor('down_color', _('Change indicator')))->allowInherited()
+				new CWidgetFieldColor('down_color', _('Change indicator'))
 			)
 			->addField(
-				(new CWidgetFieldColor('updown_color', _('Change indicator')))->allowInherited()
+				new CWidgetFieldColor('updown_color', _('Change indicator'))
 			)
 			->addField(
-				(new CWidgetFieldSparkline('sparkline', _('Sparkline')))->setDefault(self::SPARKLINE_DEFAULT)
-			)
-			->addField(
-				(new CWidgetFieldColor('bg_color', _('Background color')))->allowInherited()
+				new CWidgetFieldColor('bg_color', _('Background color'))
 			)
 			->addField(
 				(new CWidgetFieldSelect('aggregate_function', _('Aggregation function'), [

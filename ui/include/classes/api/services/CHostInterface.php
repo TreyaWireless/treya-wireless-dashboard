@@ -187,10 +187,11 @@ class CHostInterface extends CApiService {
 		if ($result) {
 			$result = $this->addRelatedObjects($options, $result);
 			$result = $this->unsetExtraFields($result, ['hostid'], $options['output']);
+		}
 
-			if (!$options['preservekeys']) {
-				$result = array_values($result);
-			}
+		// removing keys (hash -> array)
+		if (!$options['preservekeys']) {
+			$result = zbx_cleanHashes($result);
 		}
 
 		// Moving additional fields to separate object.
@@ -822,12 +823,10 @@ class CHostInterface extends CApiService {
 	 * @param array $interface
 	 */
 	protected function checkPort(array $interface) {
-		$port_parser = new CPortParser(['usermacros' => true]);
-
 		if (!isset($interface['port']) || zbx_empty($interface['port'])) {
 			self::exception(ZBX_API_ERROR_PARAMETERS, _('Port cannot be empty for host interface.'));
 		}
-		elseif ($port_parser->parse($interface['port']) != CParser::PARSE_SUCCESS) {
+		elseif (!validatePortNumberOrMacro($interface['port'])) {
 			self::exception(ZBX_API_ERROR_PARAMETERS,
 				_s('Incorrect interface port "%1$s" provided.', $interface['port'])
 			);

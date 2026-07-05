@@ -62,14 +62,14 @@ $html_page = (new CHtmlPage())
 		->addVar('action', 'discovery.list')
 	);
 
-$discovery_form = (new CForm())->setName('druleForm');
+$discoveryForm = (new CForm())->setName('druleForm');
 
 // create table
-$discovery_table = (new CTableInfo())
+$discoveryTable = (new CTableInfo())
 	->setHeader([
 		(new CColHeader(
 			(new CCheckBox('all_drules'))
-				->onClick("checkAll('".$discovery_form->getName()."', 'all_drules', 'druleids');")
+				->onClick("checkAll('".$discoveryForm->getName()."', 'all_drules', 'druleids');")
 		))->addClass(ZBX_STYLE_CELL_WIDTH),
 		make_sorting_header(_('Name'), 'name', $data['sort'], $data['sortorder'], (new CUrl('zabbix.php'))
 			->setArgument('action', 'discovery.list')
@@ -102,15 +102,13 @@ foreach ($data['drules'] as $drule) {
 		$drule_icons[] = makeErrorIcon($drule['error']);
 	}
 
-	$drule_url = (new CUrl('zabbix.php'))
-		->setArgument('action', 'popup')
-		->setArgument('popup', 'discovery.edit')
-		->setArgument('druleid', $drule['druleid'])
-		->getUrl();
-
-	$discovery_table->addRow([
+	$discoveryTable->addRow([
 		new CCheckBox('druleids['.$drule['druleid'].']', $drule['druleid']),
-		(new CCol(new CLink($drule['name'], $drule_url)))->addClass(ZBX_STYLE_WORDBREAK),
+		(new CCol(
+			(new CLink($drule['name']))
+				->addClass('js-discovery-edit')
+				->setAttribute('data-druleid', $drule['druleid'])
+		))->addClass(ZBX_STYLE_WORDBREAK),
 		$drule['iprange'],
 		(new CCol($drule['proxy']))->addClass(ZBX_STYLE_WORDBREAK),
 		$drule['delay'],
@@ -120,8 +118,8 @@ foreach ($data['drules'] as $drule) {
 	]);
 }
 
-$discovery_form->addItem([
-	$discovery_table,
+$discoveryForm->addItem([
+	$discoveryTable,
 	new CActionButtonList('action', 'druleids', [
 		'discovery.enable' => [
 			'content' => (new CSimpleButton(_('Enable')))
@@ -145,7 +143,7 @@ $discovery_form->addItem([
 ]);
 
 $html_page
-	->addItem($discovery_form)
+	->addItem($discoveryForm)
 	->show();
 
 (new CScriptTag('view.init();'))

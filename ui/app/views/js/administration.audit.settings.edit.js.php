@@ -37,44 +37,43 @@
 
 		$("#resetDefaults").click(function() {
 			overlayDialogue({
-				title: <?= json_encode(_('Reset confirmation')) ?>,
-				content: $('<span>').text(<?= json_encode(_('Reset all fields to default values?')) ?>),
-				buttons: [
+				'title': <?= json_encode(_('Reset confirmation')) ?>,
+				'class': 'position-middle',
+				'content': $('<span>').text(<?= json_encode(_('Reset all fields to default values?')) ?>),
+				'buttons': [
 					{
-						title: <?= json_encode(_('Cancel')) ?>,
-						cancel: true,
-						class: '<?= ZBX_STYLE_BTN_ALT ?>',
-						action: function() {}
+						'title': <?= json_encode(_('Cancel')) ?>,
+						'cancel': true,
+						'class': '<?= ZBX_STYLE_BTN_ALT ?>',
+						'action': function() {}
 					},
 					{
-						title: <?= json_encode(_('Reset defaults')) ?>,
-						focused: true,
-						action: function() {
+						'title': <?= json_encode(_('Reset defaults')) ?>,
+						'focused': true,
+						'action': function() {
 							$('main')
 								.prev('.msg-bad')
 								.remove();
 
 							$('#auditlog_enabled')
 								.prop('checked',
-									<?= json_encode((bool) CSettingsSchema::getDefault('auditlog_enabled')) ?>
+									<?= (DB::getDefault('config', 'auditlog_enabled') == 1) ? 'true' : 'false' ?>
 								)
 								.change();
 							$('#auditlog_mode').prop('checked',
-								<?= json_encode((bool) CSettingsSchema::getDefault('auditlog_mode')) ?>
+								<?= DB::getDefault('config', 'auditlog_mode') == 1 ? 'true' : 'false' ?>
 							);
+
 							$('#hk_audit_mode')
 								.prop('checked',
-									<?= json_encode((bool) CSettingsSchema::getDefault('hk_audit_mode')) ?>
+									<?= (DB::getDefault('config', 'hk_audit_mode') == 1) ? 'true' : 'false' ?>
 								)
 								.change();
-							$('#hk_audit').val("<?= CSettingsSchema::getDefault('hk_audit') ?>");
+							$('#hk_audit').val("<?= DB::getDefault('config', 'hk_audit') ?>");
 						}
 					}
 				]
-			}, {
-				position: Overlay.prototype.POSITION_CENTER,
-				trigger_element: this
-			});
+			}, this);
 		});
 	});
 </script>

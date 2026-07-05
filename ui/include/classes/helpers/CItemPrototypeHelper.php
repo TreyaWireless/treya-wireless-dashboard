@@ -41,9 +41,7 @@ class CItemPrototypeHelper extends CItemGeneralHelper {
 			ZBX_FLAG_DISCOVERY_PROTOTYPE,
 			CWebUser::checkAccess(CRoleHelper::UI_CONFIGURATION_TEMPLATES)
 		);
-		$item['parent_discoveryid'] = $item['discoveryRule']
-			? $item['discoveryRule']['itemid']
-			: $item['discoveryRulePrototype']['itemid'];
+		$item['parent_discoveryid'] = $item['discoveryRule']['itemid'];
 		$update_interval_parser = new CUpdateIntervalParser([
 			'usermacros' => true,
 			'lldmacros' => true
@@ -111,16 +109,14 @@ class CItemPrototypeHelper extends CItemGeneralHelper {
 			}
 		}
 
-		$dst_master_itemids = self::getDestinationMasterItems($src_items, $dst_hosts, ZBX_FLAG_DISCOVERY_PROTOTYPE);
+		$dst_master_itemids = self::getDestinationMasterItems($src_items, $dst_hosts);
 
 		do {
 			$dst_items = [];
 
 			foreach ($dst_hosts as $dst_hostid => $dst_host) {
 				foreach ($src_items as $src_item) {
-					$dst_item = array_diff_key($src_item,
-						array_flip(['itemid', 'hosts', 'discoveryRule', 'discoveryRulePrototype'])
-					);
+					$dst_item = array_diff_key($src_item, array_flip(['itemid', 'hosts', 'discoveryRule']));
 
 					if (array_key_exists($src_item['itemid'], $dst_valuemapids)) {
 						$dst_item['valuemapid'] = $dst_valuemapids[$src_item['itemid']][$dst_hostid];
@@ -134,11 +130,9 @@ class CItemPrototypeHelper extends CItemGeneralHelper {
 						$dst_item['master_itemid'] = $dst_master_itemids[$src_item['itemid']][$dst_hostid];
 					}
 
-					$parent_lld = $src_item['discoveryRule'] ?: $src_item['discoveryRulePrototype'];
-
 					$dst_items[] = [
 						'hostid' => $dst_hostid,
-						'ruleid' => $dst_ruleids[$parent_lld['itemid']][$dst_hostid]
+						'ruleid' => $dst_ruleids[$src_item['discoveryRule']['itemid']][$dst_hostid]
 					] + getSanitizedItemFields([
 						'templateid' => 0,
 						'flags' => ZBX_FLAG_DISCOVERY_PROTOTYPE,
@@ -219,10 +213,6 @@ class CItemPrototypeHelper extends CItemGeneralHelper {
 			'selectTags' => ['tag', 'value'],
 			'selectHosts' => ['status'],
 			'selectDiscoveryRule' => ['itemid'],
-			'selectDiscoveryRulePrototype' => ['itemid'],
-			'filter' => [
-				'flags' => [ZBX_FLAG_DISCOVERY_PROTOTYPE]
-			],
 			'preservekeys' => true
 		] + $src_options);
 	}

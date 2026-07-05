@@ -26,7 +26,7 @@ $info_table = (new CTableInfo())
 	->setHeadingColumn(0)
 	->addClass(ZBX_STYLE_LIST_TABLE_STICKY_HEADER)
 	->addRow([
-		_('Treya Wireless server is running'),
+		_('Zabbix server is running'),
 		(new CSpan($status['is_running'] ? _('Yes') : _('No')))
 			->addClass($status['is_running'] ? ZBX_STYLE_COLOR_POSITIVE : ZBX_STYLE_COLOR_NEGATIVE),
 		$data['system_info']['server_details']
@@ -39,17 +39,17 @@ $frontend_version_details = '';
 $last_checked =  '';
 $latest_release = '';
 $release_notes = '';
- 
+
 if ($data['system_info']['is_software_update_check_enabled']) {
 	$check_data = $data['system_info']['software_update_check_data'];
- 
+
 	if (array_key_exists('end_of_full_support', $check_data) && $check_data['end_of_full_support']) {
 		$version_details = [makeWarningIcon(_('Please upgrade to latest major release.')), ' ', _('Outdated')];
- 
+
 		if ($status['has_status']) {
 			$server_version_details = $version_details;
 		}
- 
+
 		$frontend_version_details = $version_details;
 	}
 	elseif (array_key_exists('latest_release', $check_data)) {
@@ -58,15 +58,15 @@ if ($data['system_info']['is_software_update_check_enabled']) {
 				? (new CSpan(_('New update available')))->addClass(ZBX_STYLE_COLOR_WARNING)
 				: (new CSpan(_('Up to date')))->addClass(ZBX_STYLE_COLOR_POSITIVE);
 		}
- 
+
 		$frontend_version_details = version_compare($frontend_version, $check_data['latest_release'], '<')
 			? (new CSpan(_('New update available')))->addClass(ZBX_STYLE_COLOR_WARNING)
 			: (new CSpan(_('Up to date')))->addClass(ZBX_STYLE_COLOR_POSITIVE);
 	}
- 
+
 	if ($data['show_software_update_check_details'] && array_key_exists('lastcheck', $check_data)) {
 		$last_checked = (new DateTime('@'.$check_data['lastcheck']))->format(ZBX_DATE);
- 
+
 		if (array_key_exists('latest_release', $check_data)) {
 			$latest_release = $check_data['latest_release'];
 			$release_notes = (new CLink(_('Release notes'),
@@ -77,17 +77,17 @@ if ($data['system_info']['is_software_update_check_enabled']) {
 		}
 	}
 }
- 
+
 if ($data['user_type'] == USER_TYPE_SUPER_ADMIN) {
 	$info_table->addRow([
-		_('Treya Wireless server version'),
+		_('Zabbix server version'),
 		$server_version,
 		$server_version_details
 	]);
 }
- 
+
 $info_table->addRow([
-	_('Treya Wireless frontend version'),
+	_('Zabbix frontend version'),
 	$frontend_version,
 	$frontend_version_details
 ]);
@@ -195,7 +195,7 @@ if ($data['user_type'] == USER_TYPE_SUPER_ADMIN) {
 
 	if (!$data['system_info']['is_global_scripts_enabled']) {
 		$info_table->addRow([
-			_('Global scripts on Treya Wireless server'),
+			_('Global scripts on Zabbix server'),
 			(new CSpan(_('Disabled'))),
 			''
 		]);
@@ -276,6 +276,18 @@ if ($data['user_type'] == USER_TYPE_SUPER_ADMIN) {
 			(new CRow([$dbversion['database'], $dbversion['current_version'], $error]))
 				->addClass(ZBX_STYLE_COLOR_NEGATIVE)
 		);
+	}
+
+	foreach ($data['system_info']['dbversion_status'] as $dbversion ) {
+		if ($dbversion['database'] === 'Oracle') {
+			$db_error = _(
+				'Warning! Support for Oracle DB is deprecated since Zabbix 7.0 and will be removed in future versions.'
+			);
+
+			$info_table->addRow(
+				(new CRow([$dbversion['database'], '', $db_error]))->addClass(ZBX_STYLE_COLOR_NEGATIVE)
+			);
+		}
 	}
 
 	if (array_key_exists(CHousekeepingHelper::OVERRIDE_NEEDED_HISTORY, $data['system_info'])) {

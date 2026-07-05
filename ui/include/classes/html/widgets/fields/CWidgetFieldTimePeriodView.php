@@ -40,7 +40,6 @@ class CWidgetFieldTimePeriodView extends CWidgetFieldView {
 		$source_selector_values = [];
 
 		$field_name = $this->field->getName();
-		$field_selector = zbx_formatDomId($field_name);
 		$style_class = $this->getClass() !== null ? $this->getClass().' ' : '';
 
 		if ($this->field->isDashboardAccepted()) {
@@ -69,7 +68,7 @@ class CWidgetFieldTimePeriodView extends CWidgetFieldView {
 				->setEnabled(!$this->isDisabled());
 
 			$view_collection[] = [
-				'label' => $this->getLabel()->addClass('js-'.$field_selector.'-data-source'),
+				'label' => $this->getLabel()->addClass('js-'.$field_name.'-data-source'),
 				'view' => $source_selector,
 				'class' => $style_class.'js-'.$field_name.'-data-source'
 			];
@@ -81,7 +80,7 @@ class CWidgetFieldTimePeriodView extends CWidgetFieldView {
 				'view' => (new CInput('hidden', $field_name.'['.CWidgetField::FOREIGN_REFERENCE_KEY.']',
 					CWidgetField::createTypedReference(CWidgetField::REFERENCE_DASHBOARD, $this->field->getInType())
 				))
-					->setId($field_selector.'_reference_dashboard')
+					->setId($field_name.'_reference_dashboard')
 					->setEnabled(!$this->isDisabled()),
 				'class' => ZBX_STYLE_DISPLAY_NONE
 			];
@@ -89,18 +88,18 @@ class CWidgetFieldTimePeriodView extends CWidgetFieldView {
 
 		if ($this->field->isWidgetAccepted()) {
 			$view_collection[] = [
-				'label' => (new CLabel(_('Widget'), $field_selector.'_reference_ms'))
+				'label' => (new CLabel(_('Widget'), $field_name.'_reference_ms'))
 					->addClass($this->getLabelClass())
-					->addClass('js-'.$field_selector.'-reference')
+					->addClass('js-'.$field_name.'-reference')
 					->setAsteriskMark(),
-				'view' => (new CMultiSelect([
+				'view' =>  (new CMultiSelect([
 					'name' => $field_name.'['.CWidgetField::FOREIGN_REFERENCE_KEY.']',
 					'add_post_js' => false
 				]))
-					->setId($field_selector.'_reference')
+					->setId($field_name.'_reference')
 					->setWidth(ZBX_TEXTAREA_STANDARD_WIDTH)
 					->setAriaRequired(),
-				'class' => $style_class.'js-'.$field_selector.'-reference'
+				'class' => $style_class.'js-'.$field_name.'-reference'
 			];
 		}
 
@@ -123,20 +122,20 @@ class CWidgetFieldTimePeriodView extends CWidgetFieldView {
 
 		array_push($view_collection,
 			[
-				'label' => (new CLabel($this->field->getFromLabel(), $field_selector.'_from'))
+				'label' => (new CLabel($this->field->getFromLabel(), $field_name.'_from'))
 					->addClass($this->getLabelClass())
-					->addClass('js-'.$field_selector.'-from')
+					->addClass('js-'.$field_name.'-from')
 					->setAsteriskMark($this->isRequired()),
 				'view' => $date_selector_from,
-				'class' => $style_class.'js-'.$field_selector.'-from'
+				'class' => $style_class.'js-'.$field_name.'-from'
 			],
 			[
-				'label' => (new CLabel($this->field->getToLabel(), $field_selector.'_to'))
+				'label' => (new CLabel($this->field->getToLabel(), $field_name.'_to'))
 					->addClass($this->getLabelClass())
-					->addClass('js-'.$field_selector.'-to')
+					->addClass('js-'.$field_name.'-to')
 					->setAsteriskMark($this->isRequired()),
 				'view' => $date_selector_to,
-				'class' => $style_class.'js-'.$field_selector.'-to'
+				'class' => $style_class.'js-'.$field_name.'-to'
 			]
 		);
 
@@ -145,18 +144,15 @@ class CWidgetFieldTimePeriodView extends CWidgetFieldView {
 
 	public function getJavaScript(): string {
 		return '
-			CWidgetForm.addField(
+			document.forms["'.$this->form_name.'"].fields["'.$this->field->getName().'"] =
 				new CWidgetFieldTimePeriod('.json_encode([
-					'name' => $this->field->getName(),
-					'form_name' => $this->form_name,
-					'selector' => zbx_formatDomId($this->field->getName()),
-					'value' => $this->field->getValue(),
+					'field_name' => $this->field->getName(),
+					'field_value' => $this->field->getValue(),
 					'in_type' => $this->field->getInType(),
 					'widget_accepted' => $this->field->isWidgetAccepted(),
 					'dashboard_accepted' => $this->field->isDashboardAccepted(),
 					'data_source' => $this->field->getDataSource()
-				]).')
-			);
+				]).');
 		';
 	}
 

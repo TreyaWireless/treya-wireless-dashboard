@@ -72,7 +72,7 @@ $parameters += $data['templateid'] === ''
 $item_select = (new CMultiSelect([
 	'name' => 'itemid',
 	'object_name' => 'items',
-	'data' => $data['ms_item'] ? [$data['ms_item']] : [],
+	'data' => $data['ms_item'] ? [$data['ms_item']] : '',
 	'multiple' => false,
 	'popup' => [
 		'parameters' => $parameters
@@ -90,18 +90,14 @@ $form_grid->addItem([
 // Base color.
 $form_grid->addItem([
 	new CLabel(_('Base color'), 'lbl_base_color'),
-	new CFormField(
-		(new CColorPicker('base_color'))
-			->setColor($data['base_color'])
-			->allowEmpty()
-	)
+	new CFormField(new CColor('base_color', $data['base_color']))
 ]);
 
 // Highlights table
 $highlight_header_row = [
 	'',
-	_('Regular expression'),
-	(new CColHeader(''))->setWidth('100%')
+	(new CColHeader(_('Regular expression')))->setWidth('100%'),
+	_('Action')
 ];
 
 $highlights = (new CDiv(
@@ -121,9 +117,7 @@ $highlights = (new CDiv(
 $highlights->addItem(
 	(new CTemplateTag('highlights-row-tmpl'))
 		->addItem((new CRow([
-			(new CColorPicker('highlights[#{rowNum}][color]'))
-				->setColor('#{color}')
-				->allowEmpty(),
+			(new CColor('highlights[#{rowNum}][color]', '#{color}'))->appendColorPickerJs(false),
 			(new CTextBox('highlights[#{rowNum}][pattern]', '#{pattern}', false))
 				->setWidth(ZBX_TEXTAREA_MEDIUM_WIDTH)
 				->setAriaRequired(),
@@ -184,8 +178,8 @@ $form_grid->addItem([
 // Thresholds table.
 $threshold_header_row = [
 	'',
-	_('Threshold'),
-	(new CColHeader(''))->setWidth('100%')
+	(new CColHeader(_('Threshold')))->setWidth('100%'),
+	_('Action')
 ];
 
 $thresholds = (new CDiv(
@@ -205,9 +199,7 @@ $thresholds = (new CDiv(
 $thresholds->addItem(
 	(new CTemplateTag('thresholds-row-tmpl'))
 		->addItem((new CRow([
-			(new CColorPicker('thresholds[#{rowNum}][color]'))
-				->setColor('#{color}')
-				->allowEmpty(),
+			(new CColor('thresholds[#{rowNum}][color]', '#{color}'))->appendColorPickerJs(false),
 			(new CTextBox('thresholds[#{rowNum}][threshold]', '#{threshold}', false))
 				->setWidth(ZBX_TEXTAREA_SMALL_WIDTH)
 				->setAriaRequired(),

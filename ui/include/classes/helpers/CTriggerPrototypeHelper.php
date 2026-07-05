@@ -43,8 +43,7 @@ class CTriggerPrototypeHelper extends CTriggerGeneralHelper {
 					unset($src_triggers[$src_trigger['triggerid']]);
 				}
 				else {
-					$parent_lld = $src_trigger['discoveryRule'] ?: $src_trigger['discoveryRulePrototype'];
-					$src_host = $src_trigger['hosts'][$parent_lld['hostid']];
+					$src_host = $src_trigger['hosts'][$src_trigger['discoveryRule']['hostid']];
 
 					$src_hosts[$master_trigger['triggerid']][$src_trigger['triggerid']] = $src_host;
 				}
@@ -68,12 +67,9 @@ class CTriggerPrototypeHelper extends CTriggerGeneralHelper {
 
 			foreach ($dst_hosts as $dst_hostid => $dst_host) {
 				foreach ($src_triggers as $src_trigger) {
-					$dst_trigger = array_diff_key($src_trigger,
-						array_flip(['triggerid', 'hosts', 'discoveryRule', 'discoveryRulePrototype'])
-					);
+					$dst_trigger = array_diff_key($src_trigger, array_flip(['triggerid', 'hosts', 'discoveryRule']));
 
-					$parent_lld = $src_trigger['discoveryRule'] ?: $src_trigger['discoveryRulePrototype'];
-					$src_host = $src_trigger['hosts'][$parent_lld['hostid']];
+					$src_host = $src_trigger['hosts'][$src_trigger['discoveryRule']['hostid']];
 
 					$dst_trigger['expression'] = self::getExpressionWithReplacedHost(
 						$src_trigger['expression'], $src_host['host'], $dst_host['host']
@@ -115,28 +111,32 @@ class CTriggerPrototypeHelper extends CTriggerGeneralHelper {
 
 						if (array_key_exists($src_trigger['triggerid'], $src_master_dep_triggers)) {
 							$dst_master_triggerids[$src_trigger['triggerid']][$dst_hostid] = $dst_triggerid;
+						}
+					}
+				}
 
-							foreach ($src_master_dep_triggers[$src_trigger['triggerid']] as $src_dep_triggerid => $f) {
-								unset($src_master_dep_triggers[$src_trigger['triggerid']][$src_dep_triggerid]);
+				foreach ($src_triggers as $src_trigger) {
+					if (array_key_exists($src_trigger['triggerid'], $src_master_dep_triggers)) {
+						foreach ($src_master_dep_triggers[$src_trigger['triggerid']] as $src_dep_triggerid => $f) {
+							unset($src_master_dep_triggers[$src_trigger['triggerid']][$src_dep_triggerid]);
 
-								if (!$src_master_dep_triggers[$src_trigger['triggerid']]) {
-									unset($src_master_dep_triggers[$src_trigger['triggerid']]);
-								}
-
-								foreach ($src_dep_triggers[$src_dep_triggerid]['dependencies'] as $master_trigger) {
-									if (bccomp($master_trigger['triggerid'], $src_trigger['triggerid']) == 0) {
-										continue;
-									}
-
-									if (array_key_exists($master_trigger['triggerid'], $src_master_dep_triggers)
-											&& array_key_exists($src_dep_triggerid, $src_master_dep_triggers[$master_trigger['triggerid']])) {
-										continue 3;
-									}
-								}
-
-								$_src_triggers[] = $src_dep_triggers[$src_dep_triggerid];
-								unset($src_dep_triggers[$src_dep_triggerid]);
+							if (!$src_master_dep_triggers[$src_trigger['triggerid']]) {
+								unset($src_master_dep_triggers[$src_trigger['triggerid']]);
 							}
+
+							foreach ($src_dep_triggers[$src_dep_triggerid]['dependencies'] as $master_trigger) {
+								if (bccomp($master_trigger['triggerid'], $src_trigger['triggerid']) == 0) {
+									continue;
+								}
+
+								if (array_key_exists($master_trigger['triggerid'], $src_master_dep_triggers)
+										&& array_key_exists($src_dep_triggerid, $src_master_dep_triggers[$master_trigger['triggerid']])) {
+									continue 2;
+								}
+							}
+
+							$_src_triggers[] = $src_dep_triggers[$src_dep_triggerid];
+							unset($src_dep_triggers[$src_dep_triggerid]);
 						}
 					}
 				}
@@ -163,10 +163,6 @@ class CTriggerPrototypeHelper extends CTriggerGeneralHelper {
 			'selectTags' => ['tag', 'value'],
 			'selectHosts' => ['hostid', 'host'],
 			'selectDiscoveryRule' => ['itemid', 'hostid'],
-			'selectDiscoveryRulePrototype' => ['itemid', 'hostid'],
-			'filter' => [
-				'flags' => [ZBX_FLAG_DISCOVERY_PROTOTYPE]
-			],
 			'preservekeys' => true
 		] + $src_options);
 

@@ -18,7 +18,7 @@ use Widgets\Gauge\Widget;
 
 ?>
 
-window.widget_form = new class extends CWidgetForm {
+window.widget_gauge_form = new class {
 
 	/**
 	 * @type {HTMLFormElement}
@@ -26,7 +26,7 @@ window.widget_form = new class extends CWidgetForm {
 	#form;
 
 	init({thresholds_colors}) {
-		this.#form = this.getForm();
+		this.#form = document.getElementById('widget-dialogue-form');
 
 		this.#form.addEventListener('change', () => this.#updateForm());
 
@@ -40,10 +40,16 @@ window.widget_form = new class extends CWidgetForm {
 			}
 		});
 
+		for (const colorpicker of this.#form.querySelectorAll('.<?= ZBX_STYLE_COLOR_PICKER ?> input')) {
+			$(colorpicker).colorpicker({
+				appendTo: '.overlay-dialogue-body',
+				use_default: !colorpicker.name.includes('thresholds')
+			});
+		}
+
 		colorPalette.setThemeColors(thresholds_colors);
 
 		this.#updateForm();
-		this.ready();
 	}
 
 	#updateForm() {
@@ -80,9 +86,8 @@ window.widget_form = new class extends CWidgetForm {
 			}
 		}
 
-		for (const element of this.#form.querySelectorAll(`#units, #units_pos, #units_size, #units_bold,
-			.${ZBX_STYLE_COLOR_PICKER}[color-field-name="units_color"]`
-		)) {
+		for (const element of
+			document.querySelectorAll('#units, #units_pos, #units_size, #units_bold, #units_color')) {
 			element.disabled = !value_show.checked || !units_show.checked;
 		}
 
@@ -96,8 +101,8 @@ window.widget_form = new class extends CWidgetForm {
 			element.style.display = needle_show.checked ? '' : 'none';
 		}
 
-		this.#form.querySelector(`.${ZBX_STYLE_COLOR_PICKER}[color-field-name="needle_color"]`).disabled =
-			!needle_show.checked || ((!th_show_arc.checked || th_show_arc.disabled) && !value_arc_show.checked);
+		document.getElementById('needle_color').disabled = !needle_show.checked
+			|| ((!th_show_arc.checked || th_show_arc.disabled) && !value_arc_show.checked);
 
 		for (const element of this.#form.querySelectorAll('.fields-group-scale')) {
 			element.style.display = !scale_show.checked ? 'none' : '';

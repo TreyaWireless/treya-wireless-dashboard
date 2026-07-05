@@ -28,7 +28,7 @@ class CPatternSelect extends CMultiSelect {
 		$data_params = $this->getAttribute('data-params');
 		$params = json_decode($data_params, true);
 
-		if (array_key_exists('data', $params)) {
+		if (array_key_exists('data', $params) && $params['data']) {
 			foreach ($params['data'] as &$item) {
 				$item = [
 					'name' => $item,

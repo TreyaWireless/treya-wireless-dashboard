@@ -21,7 +21,8 @@
  * @param {number|null} item_type          Current item type.
  */
 function organizeInterfaces(interface_ids_by_types, item_interface_types, item_type) {
-	const  INTERFACE_TYPE_OPT = -2,
+	const  INTERFACE_TYPE_ANY = -1,
+		INTERFACE_TYPE_OPT = -2,
 		$interface_select = $('#interface-select'),
 		interface_select_node = $interface_select.get(0);
 
@@ -59,13 +60,12 @@ function organizeInterfaces(interface_ids_by_types, item_interface_types, item_t
 	if (typeof interface_type === 'undefined') {
 		interface_select_node.disabled = true;
 		$interface_select.hide();
-
-		$('#interface_not_defined')
-			.html(t('Item type does not use interface'))
+		$('#interface_not_defined').
+			html(t('Item type does not use interface'))
 			.show();
 	}
 	// If any interface type allowed, enable all options.
-	else if (select_options.length && interface_type == INTERFACE_TYPE_OPT) {
+	else if (select_options.length && (interface_type == INTERFACE_TYPE_ANY || interface_type == INTERFACE_TYPE_OPT)) {
 		interface_select_node.disabled = false;
 		select_options.map(opt => opt.disabled = false);
 		$interface_select.show();

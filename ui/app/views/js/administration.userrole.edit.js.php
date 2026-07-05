@@ -127,9 +127,7 @@
 				CRoleHelper::ACTIONS_EXECUTE_SCRIPTS => USER_TYPE_ZABBIX_USER,
 				CRoleHelper::ACTIONS_MANAGE_API_TOKENS => USER_TYPE_ZABBIX_USER,
 				CRoleHelper::ACTIONS_MANAGE_SCHEDULED_REPORTS => USER_TYPE_ZABBIX_ADMIN,
-				CRoleHelper::ACTIONS_MANAGE_SLA => USER_TYPE_ZABBIX_ADMIN,
-				CRoleHelper::ACTIONS_EDIT_OWN_MEDIA => USER_TYPE_ZABBIX_USER,
-				CRoleHelper::ACTIONS_EDIT_USER_MEDIA => USER_TYPE_SUPER_ADMIN
+				CRoleHelper::ACTIONS_MANAGE_SLA => USER_TYPE_ZABBIX_ADMIN
 			], JSON_FORCE_OBJECT) ?>;
 
 			for (const [id, value] of Object.entries(access_min)) {
@@ -229,7 +227,7 @@
 			const overlay = PopUp('popup.services', {
 				title: <?= json_encode(_('Add services')) ?>,
 				exclude_serviceids
-			}, {dialogueid: 'services'});
+			}, {dialogueid: 'services', dialogue_class: 'modal-popup-generic'});
 
 			overlay.$dialogue[0].addEventListener('dialogue.submit', (e) => {
 				const data = [];

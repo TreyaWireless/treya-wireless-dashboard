@@ -187,7 +187,7 @@
 				this.#addEventListeners();
 			}
 
-			this.#initPopupListeners();
+			this.#registerEvents();
 		}
 
 		#activateHostDashboardNavigation() {
@@ -342,58 +342,73 @@
 			}
 		}
 
-		executeNow(target, data) {
-			const curl = new Curl('zabbix.php');
+		editItem(target, data) {
+			const overlay = PopUp('item.edit', data, {
+				dialogueid: 'item-edit',
+				dialogue_class: 'modal-popup-large',
+				trigger_element: target
+			});
 
-			curl.setArgument('action', 'item.execute');
-
-			data[CSRF_TOKEN_NAME] = <?= json_encode(CCsrfTokenHelper::get('item')) ?>;
-
-			return fetch(curl.getUrl(), {
-				method: 'POST',
-				headers: {'Content-Type': 'application/json'},
-				body: JSON.stringify(data)
-			})
-				.then(response => response.json())
-				.then(response => {
-					clearMessages();
-					if (response.error) {
-						addMessage(makeMessageBox('bad', response.error.messages, response.error.title))
-					}
-					else {
-						addMessage(makeMessageBox('good', [], response.success.title))
-					}
-				})
-				.catch(() => {
-					clearMessages();
-					addMessage(makeMessageBox('bad', [<?= json_encode(_('Unexpected server error.')) ?>]));
-				});
+			overlay.$dialogue[0].addEventListener('dialogue.submit', this.events.elementSuccess, {once: true});
 		}
 
-		#initPopupListeners() {
-			ZABBIX.EventHub.subscribe({
-				require: {
-					context: CPopupManager.EVENT_CONTEXT,
-					event: CPopupManagerEvent.EVENT_SUBMIT
-				},
-				callback: ({data, event}) => {
-					if ('error' in data.submit) {
-						if ('title' in data.submit.error) {
-							postMessageError(data.submit.error.title);
+		editHost(hostid) {
+			const host_data = {hostid};
+
+			this.#openHostPopup(host_data);
+		}
+
+		editTrigger(trigger_data) {
+			const overlay = PopUp('trigger.edit', trigger_data, {
+				dialogueid: 'trigger-edit',
+				dialogue_class: 'modal-popup-large',
+				prevent_navigation: true
+			});
+
+			overlay.$dialogue[0].addEventListener('dialogue.submit', this.events.elementSuccess, {once: true});
+		}
+
+		#openHostPopup(host_data) {
+			const original_url = location.href;
+			const overlay = PopUp('popup.host.edit', host_data, {
+				dialogueid: 'host_edit',
+				dialogue_class: 'modal-popup-large',
+				prevent_navigation: true
+			});
+
+			overlay.$dialogue[0].addEventListener('dialogue.submit', this.events.elementSuccess, {once: true});
+			overlay.$dialogue[0].addEventListener('dialogue.close', () => history.replaceState({}, '', original_url));
+		}
+
+		#registerEvents() {
+			this.events = {
+				elementSuccess(e) {
+					let curl = null;
+					const data = e.detail;
+
+					if ('success' in data) {
+						postMessageOk(data.success.title);
+
+						if ('messages' in data.success) {
+							postMessageDetails('success', data.success.messages);
 						}
 
-						postMessageDetails('error', data.submit.error.messages);
+						if ('action' in data.success && data.success.action === 'delete') {
+							curl = new Curl('zabbix.php');
+							curl.setArgument('action', 'host.view');
+						}
+					}
+					else {
+						postMessageError(data.error.title);
+
+						if ('messages' in data.error) {
+							postMessageDetails('error', data.error.messages);
+						}
 					}
 
-					if (data.submit.success?.action === 'delete') {
-						const url = new URL('zabbix.php', location.href);
-
-						url.searchParams.set('action', 'host.view');
-
-						event.setRedirectUrl(url.href);
-					}
+					location.href = curl === null ? location.href : curl.getUrl();
 				}
-			});
+			};
 		}
 	}
 </script>

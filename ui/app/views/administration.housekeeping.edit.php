@@ -44,7 +44,7 @@ $house_keeper_tab = (new CFormList())
 	->addRow(
 		(new CLabel(_('Trigger data storage period'), 'hk_events_trigger'))->setAsteriskMark(),
 		(new CTextBox('hk_events_trigger', $data['hk_events_trigger'], false,
-			CSettingsSchema::getFieldLength('hk_events_trigger')
+			DB::getFieldLength('config', 'hk_events_trigger')
 		))
 			->setWidth(ZBX_TEXTAREA_TINY_WIDTH)
 			->setEnabled($data['hk_events_mode'] == 1)
@@ -53,7 +53,7 @@ $house_keeper_tab = (new CFormList())
 	->addRow(
 		(new CLabel(_('Service data storage period'), 'hk_events_service'))->setAsteriskMark(),
 		(new CTextBox('hk_events_service', $data['hk_events_service'], false,
-			CSettingsSchema::getFieldLength('hk_events_service')
+			DB::getFieldLength('config', 'hk_events_service')
 		))
 			->setWidth(ZBX_TEXTAREA_TINY_WIDTH)
 			->setEnabled($data['hk_events_mode'] == 1)
@@ -62,7 +62,7 @@ $house_keeper_tab = (new CFormList())
 	->addRow(
 		(new CLabel(_('Internal data storage period'), 'hk_events_internal'))->setAsteriskMark(),
 		(new CTextBox('hk_events_internal', $data['hk_events_internal'], false,
-			CSettingsSchema::getFieldLength('hk_events_internal')
+			DB::getFieldLength('config', 'hk_events_internal')
 		))
 			->setWidth(ZBX_TEXTAREA_TINY_WIDTH)
 			->setEnabled($data['hk_events_mode'] == 1)
@@ -72,7 +72,7 @@ $house_keeper_tab = (new CFormList())
 		(new CLabel(_('Network discovery data storage period'), 'hk_events_discovery'))
 			->setAsteriskMark(),
 		(new CTextBox('hk_events_discovery', $data['hk_events_discovery'], false,
-			CSettingsSchema::getFieldLength('hk_events_discovery')
+			DB::getFieldLength('config', 'hk_events_discovery')
 		))
 			->setWidth(ZBX_TEXTAREA_TINY_WIDTH)
 			->setEnabled($data['hk_events_mode'] == 1)
@@ -82,7 +82,7 @@ $house_keeper_tab = (new CFormList())
 		(new CLabel(_('Autoregistration data storage period'), 'hk_events_autoreg'))
 			->setAsteriskMark(),
 		(new CTextBox('hk_events_autoreg', $data['hk_events_autoreg'], false,
-			CSettingsSchema::getFieldLength('hk_events_autoreg')
+			DB::getFieldLength('config', 'hk_events_autoreg')
 		))
 			->setWidth(ZBX_TEXTAREA_TINY_WIDTH)
 			->setEnabled($data['hk_events_mode'] == 1)
@@ -96,7 +96,7 @@ $house_keeper_tab = (new CFormList())
 	->addRow(
 		(new CLabel(_('Data storage period'), 'hk_services'))
 			->setAsteriskMark(),
-		(new CTextBox('hk_services', $data['hk_services'], false, CSettingsSchema::getFieldLength('hk_services')))
+		(new CTextBox('hk_services', $data['hk_services'], false, DB::getFieldLength('config', 'hk_services')))
 			->setWidth(ZBX_TEXTAREA_TINY_WIDTH)
 			->setEnabled($data['hk_services_mode'] == 1)
 			->setAriaRequired()
@@ -109,7 +109,7 @@ $house_keeper_tab = (new CFormList())
 	->addRow(
 		(new CLabel(_('Data storage period'), 'hk_sessions'))
 			->setAsteriskMark(),
-		(new CTextBox('hk_sessions', $data['hk_sessions'], false, CSettingsSchema::getFieldLength('hk_sessions')))
+		(new CTextBox('hk_sessions', $data['hk_sessions'], false, DB::getFieldLength('config', 'hk_sessions')))
 			->setWidth(ZBX_TEXTAREA_TINY_WIDTH)
 			->setEnabled($data['hk_sessions_mode'] == 1)
 			->setAriaRequired()
@@ -135,7 +135,7 @@ $house_keeper_tab = (new CFormList())
 	->addRow(
 		(new CLabel(_('Data storage period'), 'hk_history'))
 			->setAsteriskMark(),
-		(new CTextBox('hk_history', $data['hk_history'], false, CSettingsSchema::getFieldLength('hk_history')))
+		(new CTextBox('hk_history', $data['hk_history'], false, DB::getFieldLength('config', 'hk_history')))
 			->setWidth(ZBX_TEXTAREA_TINY_WIDTH)
 			->setEnabled($data['hk_history_global'] == 1)
 			->setAriaRequired()
@@ -159,7 +159,7 @@ $house_keeper_tab = (new CFormList())
 	->addRow(
 		(new CLabel(_('Data storage period'), 'hk_trends'))
 			->setAsteriskMark(),
-		(new CTextBox('hk_trends', $data['hk_trends'], false, CSettingsSchema::getFieldLength('hk_trends')))
+		(new CTextBox('hk_trends', $data['hk_trends'], false, DB::getFieldLength('config', 'hk_trends')))
 			->setWidth(ZBX_TEXTAREA_TINY_WIDTH)
 			->setEnabled($data['hk_trends_global'] == 1)
 			->setAriaRequired()
@@ -227,7 +227,7 @@ $house_keeper_tab = (new CFormList())
 				(new CLabel(_('Compress records older than'), 'compress_older'))
 					->setAsteriskMark(),
 				(new CTextBox('compress_older', $data['compress_older'], false,
-					CSettingsSchema::getFieldLength('compress_older')
+					DB::getFieldLength('config', 'compress_older')
 				))
 					->setWidth(ZBX_TEXTAREA_TINY_WIDTH)
 					->setEnabled($data['compression_status'] == 1 && $data['compression_availability'])

@@ -295,13 +295,14 @@ abstract class CHostGeneral extends CHostBase {
 	private static function createHostHgSets(array $hgsets): void {
 		$ins_host_hgsets = [];
 
-		$options = [
-			'output' => ['hgsetid', 'hash'],
-			'filter' => ['hash' => array_keys($hgsets)]
-		];
-		$result = DBselect(DB::makeSql('hgset', $options));
+		$resource = DBselect(
+			'SELECT hs.hash,MIN(hs.hgsetid) AS hgsetid'.
+			' FROM hgset hs'.
+			' WHERE '.dbConditionString('hs.hash', array_keys($hgsets)).
+			' GROUP BY hs.hash'
+		);
 
-		while ($row = DBfetch($result)) {
+		while ($row = DBfetch($resource)) {
 			foreach ($hgsets[$row['hash']]['hostids'] as $hostid) {
 				$ins_host_hgsets[] = [
 					'hostid' => $hostid,
@@ -331,64 +332,33 @@ abstract class CHostGeneral extends CHostBase {
 	private static function updateHostHgSets(array $hgsets): void {
 		$upd_host_hgsets = [];
 
-		$db_hgsetids = array_flip(self::getDbHgSetIds($hgsets));
+		$resource = DBselect(
+			'SELECT hs.hash,MIN(hs.hgsetid) AS hgsetid'.
+			' FROM hgset hs'.
+			' WHERE '.dbConditionString('hs.hash', array_keys($hgsets)).
+			' GROUP BY hs.hash'
+		);
 
-		$empty_hgset_hash = hash('sha256', '');
-
-		if (array_key_exists($empty_hgset_hash, $hgsets)) {
-			DB::delete('host_hgset', ['hostid' => $hgsets[$empty_hgset_hash]['hostids']]);
-			unset($hgsets[$empty_hgset_hash]);
+		while ($row = DBfetch($resource)) {
+			$upd_host_hgsets[] = [
+				'values' => ['hgsetid' => $row['hgsetid']],
+				'where' => ['hostid' => $hgsets[$row['hash']]['hostids']]
+			];
+			unset($hgsets[$row['hash']]);
 		}
 
 		if ($hgsets) {
-			$options = [
-				'output' => ['hgsetid', 'hash'],
-				'filter' => ['hash' => array_keys($hgsets)]
-			];
-			$result = DBselect(DB::makeSql('hgset', $options));
+			self::createHgSets($hgsets);
 
-			while ($row = DBfetch($result)) {
+			foreach ($hgsets as $hgset) {
 				$upd_host_hgsets[] = [
-					'values' => ['hgsetid' => $row['hgsetid']],
-					'where' => ['hostid' => $hgsets[$row['hash']]['hostids']]
+					'values' => ['hgsetid' => $hgset['hgsetid']],
+					'where' => ['hostid' => $hgset['hostids']]
 				];
-
-				if (array_key_exists($row['hgsetid'], $db_hgsetids)) {
-					unset($db_hgsetids[$row['hgsetid']]);
-				}
-
-				unset($hgsets[$row['hash']]);
 			}
-
-			if ($hgsets) {
-				self::createHgSets($hgsets);
-
-				foreach ($hgsets as $hgset) {
-					$upd_host_hgsets[] = [
-						'values' => ['hgsetid' => $hgset['hgsetid']],
-						'where' => ['hostid' => $hgset['hostids']]
-					];
-				}
-			}
-
-			DB::update('host_hgset', $upd_host_hgsets);
 		}
 
-		self::deleteUnusedHgSets(array_keys($db_hgsetids));
-	}
-
-	private static function getDbHgSetIds(array $hgsets): array {
-		$hostids = [];
-
-		foreach ($hgsets as $hgset) {
-			$hostids = array_merge($hostids, $hgset['hostids']);
-		}
-
-		return DBfetchColumn(DBselect(
-			'SELECT DISTINCT hh.hgsetid'.
-			' FROM host_hgset hh'.
-			' WHERE '.dbConditionId('hh.hostid', $hostids)
-		), 'hgsetid');
+		DB::update('host_hgset', $upd_host_hgsets);
 	}
 
 	private static function createHgSets(array &$hgsets): void {
@@ -467,20 +437,6 @@ abstract class CHostGeneral extends CHostBase {
 
 		if ($ins_permissions) {
 			DB::insert('permission', $ins_permissions, false);
-		}
-	}
-
-	private static function deleteUnusedHgSets(array $db_hgsetids): void {
-		$del_hgsetids = DBfetchColumn(DBselect(
-			'SELECT h.hgsetid'.
-			' FROM hgset h'.
-			' LEFT JOIN host_hgset hh ON h.hgsetid=hh.hgsetid'.
-			' WHERE '.dbConditionId('h.hgsetid', $db_hgsetids).
-				' AND hh.hostid IS NULL'
-		), 'hgsetid');
-
-		if ($del_hgsetids) {
-			DB::delete('hgset', ['hgsetid' => $del_hgsetids]);
 		}
 	}
 
@@ -597,9 +553,9 @@ abstract class CHostGeneral extends CHostBase {
 	 */
 	protected static function unlinkTemplatesObjects(array $templateids, ?array $hostids = null,
 			bool $clear = false): void {
-		$flags = $clear
-			? [ZBX_FLAG_DISCOVERY_NORMAL]
-			: [ZBX_FLAG_DISCOVERY_NORMAL, ZBX_FLAG_DISCOVERY_PROTOTYPE];
+		$flags = ($clear)
+			? [ZBX_FLAG_DISCOVERY_NORMAL, ZBX_FLAG_DISCOVERY_RULE]
+			: [ZBX_FLAG_DISCOVERY_NORMAL, ZBX_FLAG_DISCOVERY_RULE, ZBX_FLAG_DISCOVERY_PROTOTYPE];
 
 		// triggers
 		$db_triggers = DBselect(
@@ -784,17 +740,23 @@ abstract class CHostGeneral extends CHostBase {
 	 * @param array $hostids
 	 */
 	private static function linkTemplatesObjects(array $templateids, array $hostids): void {
+		// TODO: Modify parameters of syncTemplates methods when complete audit log will be implementing for hosts.
+		$link_request = [
+			'templateids' => $templateids,
+			'hostids' => $hostids
+		];
+
 		foreach ($templateids as $templateid) {
 			// Fist link web items, so that later regular items can use web item as their master item.
 			Manager::HttpTest()->link($templateid, $hostids);
 		}
 
 		CItem::linkTemplateObjects($templateids, $hostids);
-		API::Trigger()->linkTemplateObjects($templateids, $hostids);
-		API::Graph()->linkTemplateObjects($templateids, $hostids);
+		API::Trigger()->syncTemplates($link_request);
+		API::Graph()->syncTemplates($link_request);
 		CDiscoveryRule::linkTemplateObjects($templateids, $hostids);
 
-		CTriggerGeneral::syncTemplateDependencies($templateids, $hostids);
+		CTriggerGeneral::syncTemplateDependencies($link_request['templateids'], $link_request['hostids']);
 	}
 
 	protected function addRelatedObjects(array $options, array $result) {
@@ -943,6 +905,40 @@ abstract class CHostGeneral extends CHostBase {
 				$items = zbx_toHash($items, 'hostid');
 				foreach ($result as $hostid => $host) {
 					$result[$hostid]['items'] = array_key_exists($hostid, $items) ? $items[$hostid]['rowscount'] : '0';
+				}
+			}
+		}
+
+		if ($options['selectDiscoveries'] !== null) {
+			if ($options['selectDiscoveries'] != API_OUTPUT_COUNT) {
+				$items = API::DiscoveryRule()->get([
+					'output' => $this->outputExtend($options['selectDiscoveries'], ['hostid', 'itemid']),
+					'hostids' => $hostids,
+					'nopermissions' => true,
+					'preservekeys' => true
+				]);
+
+				if (!is_null($options['limitSelects'])) {
+					order_result($items, 'name');
+				}
+
+				$relationMap = $this->createRelationMap($items, 'hostid', 'itemid');
+
+				$items = $this->unsetExtraFields($items, ['hostid', 'itemid'], $options['selectDiscoveries']);
+				$result = $relationMap->mapMany($result, $items, 'discoveries', $options['limitSelects']);
+			}
+			else {
+				$items = API::DiscoveryRule()->get([
+					'hostids' => $hostids,
+					'nopermissions' => true,
+					'countOutput' => true,
+					'groupCount' => true
+				]);
+				$items = zbx_toHash($items, 'hostid');
+				foreach ($result as $hostid => $host) {
+					$result[$hostid]['discoveries'] = array_key_exists($hostid, $items)
+						? $items[$hostid]['rowscount']
+						: '0';
 				}
 			}
 		}
@@ -1117,126 +1113,6 @@ abstract class CHostGeneral extends CHostBase {
 		return $result;
 	}
 
-	protected static function addRelatedChildDiscoveries(array $options, array &$result): void {
-		if ($options['selectDiscoveries'] === null) {
-			return;
-		}
-
-		if ($options['selectDiscoveries'] === API_OUTPUT_COUNT) {
-			foreach ($result as &$host) {
-				$host['discoveries'] = '0';
-			}
-			unset($host);
-
-			$items = API::DiscoveryRule()->get([
-				'countOutput' => true,
-				'groupCount' => true,
-				'hostids' => array_keys($result),
-				'nopermissions' => true
-			]);
-
-			foreach ($items as $item) {
-				$result[$item['hostid']]['discoveries'] = $item['rowscount'];
-			}
-
-			return;
-		}
-
-		foreach ($result as &$host) {
-			$host['discoveries'] = [];
-		}
-		unset($host);
-
-		$internal_fields = ['hostid'];
-
-		if ($options['limitSelects'] !== null) {
-			$internal_fields[] = 'name';
-		}
-
-		$items = API::DiscoveryRule()->get([
-			'output' => array_unique(array_merge($options['selectDiscoveries'], $internal_fields)),
-			'hostids' => array_keys($result),
-			'nopermissions' => true
-		]);
-
-		if ($options['limitSelects'] !== null) {
-			CArrayHelper::sort($items, ['name']);
-		}
-
-		$fields_to_unset = array_flip(array_diff($internal_fields, $options['selectDiscoveries']));
-
-		foreach ($items as $item) {
-			if ($options['limitSelects'] !== null
-					&& count($result[$item['hostid']]['discoveries']) == $options['limitSelects']) {
-				continue;
-			}
-
-			$result[$item['hostid']]['discoveries'][] = $fields_to_unset
-				? array_diff_key($item, $fields_to_unset)
-				: $item;
-		}
-	}
-
-	protected static function addRelatedChildDiscoveryRules(array $options, array &$result): void {
-		if ($options['selectDiscoveryRules'] === null) {
-			return;
-		}
-
-		if ($options['selectDiscoveryRules'] === API_OUTPUT_COUNT) {
-			foreach ($result as &$host) {
-				$host['discoveryRules'] = '0';
-			}
-			unset($host);
-
-			$items = API::DiscoveryRule()->get([
-				'countOutput' => true,
-				'groupCount' => true,
-				'hostids' => array_keys($result),
-				'nopermissions' => true
-			]);
-
-			foreach ($items as $item) {
-				$result[$item['hostid']]['discoveryRules'] = $item['rowscount'];
-			}
-
-			return;
-		}
-
-		foreach ($result as &$host) {
-			$host['discoveryRules'] = [];
-		}
-		unset($host);
-
-		$internal_fields = ['hostid'];
-
-		if ($options['limitSelects'] !== null) {
-			$internal_fields[] = 'name';
-		}
-
-		$items = API::DiscoveryRule()->get([
-			'output' => array_unique(array_merge($options['selectDiscoveryRules'], $internal_fields)),
-			'hostids' => array_keys($result),
-			'nopermissions' => true
-		]);
-
-		if ($options['limitSelects'] !== null) {
-			CArrayHelper::sort($items, ['name']);
-		}
-
-		$fields_to_unset = array_flip(array_diff($internal_fields, $options['selectDiscoveryRules']));
-
-		foreach ($items as $item) {
-			if ($options['limitSelects'] !== null
-					&& count($result[$item['hostid']]['discoveryRules']) == $options['limitSelects']) {
-				continue;
-			}
-
-			$result[$item['hostid']]['discoveryRules'][] = $fields_to_unset
-				? array_diff_key($item, $fields_to_unset)
-				: $item;
-		}
-	}
-
 	protected static function addGroupsByData(array $data, array &$hosts): void {
 		if (!array_key_exists('groups', $data) && (!array_key_exists('groupids', $data) || !$data['groupids'])) {
 			return;
@@ -1298,6 +1174,17 @@ abstract class CHostGeneral extends CHostBase {
 			$host['templates_clear'] = $data['templates_clear'];
 		}
 		unset($host);
+	}
+
+	/**
+	 * Add the existing host or template groups, templates, tags, macros.
+	 *
+	 * @param array $hosts
+	 * @param array $db_hosts
+	 */
+	protected function addAffectedObjects(array $hosts, array &$db_hosts): void {
+		$this->addAffectedGroups($hosts, $db_hosts);
+		parent::addAffectedObjects($hosts, $db_hosts);
 	}
 
 	/**
@@ -1470,18 +1357,5 @@ abstract class CHostGeneral extends CHostBase {
 			}
 		}
 		unset($host);
-	}
-
-	protected static function deleteHgSets(array $db_hosts): void {
-		$hgsets = [];
-		$hgset_hash = self::getHgSetHash([]);
-
-		foreach ($db_hosts as $hostid => $foo) {
-			$hgsets[$hgset_hash]['hash'] = $hgset_hash;
-			$hgsets[$hgset_hash]['groupids'] = [];
-			$hgsets[$hgset_hash]['hostids'][] = $hostid;
-		}
-
-		self::updateHostHgSets($hgsets);
 	}
 }

@@ -19,6 +19,9 @@
  * @var array $data
  */
 
+$this->addJsFile('multilineinput.js');
+$this->addJsFile('items.js');
+$this->addJsFile('class.tagfilteritem.js');
 $this->includeJsFile('item.list.js.php', $data);
 
 $filter = new CPartial('item.list.filter', [
@@ -89,51 +92,38 @@ foreach ($data['items'] as $item) {
 			$name[] = $item['master_item']['name'];
 		}
 		else {
-			$name[] = (new CLink($item['master_item']['name'],
-				(new CUrl('zabbix.php'))
-					->setArgument('action', 'popup')
-					->setArgument('popup', 'item.edit')
-					->setArgument('context', $data['context'])
-					->setArgument('itemid', $item['master_item']['itemid'])
-					->getUrl()
-			))
+			$name[] = (new CLink($item['master_item']['name']))
 				->addClass(ZBX_STYLE_LINK_ALT)
-				->addClass(ZBX_STYLE_TEAL);
+				->addClass(ZBX_STYLE_TEAL)
+				->addClass('js-update-item')
+				->setAttribute('data-itemid', $item['master_item']['itemid'])
+				->setAttribute('data-context', $data['context']);
 		}
 
 		$name[] = NAME_DELIMITER;
 	}
 
-	$name[] = new CLink($item['name'],
-		(new CUrl('zabbix.php'))
-			->setArgument('action', 'popup')
-			->setArgument('popup', 'item.edit')
-			->setArgument('context', $data['context'])
-			->setArgument('itemid', $item['itemid'])
-			->getUrl()
-	);
+	$name[] = (new CLink($item['name']))
+		->addClass('js-update-item')
+		->setAttribute('data-itemid', $item['itemid'])
+		->setAttribute('data-context', $data['context']);
 
 	// Trigger information
 	$hint_table = (new CTableInfo())->setHeader([_('Severity'), _('Name'), _('Expression'), _('Status')]);
 
 	foreach ($item['triggers'] as $trigger) {
 		$trigger = $data['triggers'][$trigger['triggerid']];
-
-		$trigger_url = (new CUrl('zabbix.php'))
-			->setArgument('action', 'popup')
-			->setArgument('popup', 'trigger.edit')
-			->setArgument('triggerid', $trigger['triggerid'])
-			->setArgument('hostid', array_column($trigger['hosts'], 'hostid')[0])
-			->setArgument('context', $data['context'])
-			->getUrl();
-
 		$hint_table->addRow([
 			CSeverityHelper::makeSeverityCell((int) $trigger['priority']),
 			[
 				makeTriggerTemplatePrefix($trigger['triggerid'], $data['trigger_parent_templates'],
 					ZBX_FLAG_DISCOVERY_NORMAL, $data['allowed_ui_conf_templates']
 				),
-				new CLink($trigger['description'], $trigger_url)
+				(new CLink($trigger['description']))
+					->addClass('js-trigger-edit')
+					->setAttribute('data-hostid', key($trigger['hosts']))
+					->setAttribute('data-triggerid', $trigger['triggerid'])
+					->setAttribute('data-context', $data['context'])
 			],
 			(new CDiv(
 				$trigger['recovery_mode'] == ZBX_RECOVERY_MODE_RECOVERY_EXPRESSION
@@ -163,8 +153,8 @@ foreach ($data['items'] as $item) {
 		$item['trends'] = '';
 	}
 
-	$disable_source = $item['status'] == ITEM_STATUS_DISABLED && $item['discoveryData']
-		? $item['discoveryData']['disable_source']
+	$disable_source = $item['status'] == ITEM_STATUS_DISABLED && $item['itemDiscovery']
+		? $item['itemDiscovery']['disable_source']
 		: '';
 
 	// Info
@@ -178,9 +168,9 @@ foreach ($data['items'] as $item) {
 		}
 
 
-		if ($item['flags'] == ZBX_FLAG_DISCOVERY_CREATED && $item['discoveryData']['status'] == ZBX_LLD_STATUS_LOST) {
-			$info_cell[] = getLldLostEntityIndicator(time(), $item['discoveryData']['ts_delete'],
-				$item['discoveryData']['ts_disable'], $disable_source, $item['status'] == ITEM_STATUS_DISABLED,
+		if ($item['flags'] == ZBX_FLAG_DISCOVERY_CREATED && $item['itemDiscovery']['status'] == ZBX_LLD_STATUS_LOST) {
+			$info_cell[] = getLldLostEntityIndicator(time(), $item['itemDiscovery']['ts_delete'],
+				$item['itemDiscovery']['ts_disable'], $disable_source, $item['status'] == ITEM_STATUS_DISABLED,
 				_('item')
 			);
 		}
@@ -199,14 +189,10 @@ foreach ($data['items'] as $item) {
 
 	$disabled_by_lld = $disable_source == ZBX_DISABLE_SOURCE_LLD;
 
-	$host_url = (new CUrl('zabbix.php'))
-		->setArgument('action', 'popup')
-		->setArgument('popup', $data['context'] === 'host' ? 'host.edit' : 'template.edit')
-		->setArgument($data['context'] === 'host' ? 'hostid' : 'templateid', $item['hosts'][0]['hostid'])
-		->getUrl();
-
 	$host = $data['hostid'] == 0
-		? new CLink($item['hosts'][0]['name'], $host_url)
+		? (new CLink($item['hosts'][0]['name']))
+			->setAttribute('data-hostid', $item['hosts'][0]['hostid'])
+			->addClass('js-edit-'.$data['context'])
 		: null;
 
 	$row = [
@@ -311,7 +297,10 @@ $form->addItem(new CActionButtonList('action', 'itemids', $buttons,
 			(new CList())
 				->addItem(
 					$data['hostid'] != 0
-						? (new CSimpleButton(_('Create item')))->addClass('js-create-item')
+						? (new CSimpleButton(_('Create item')))
+								->setAttribute('data-hostid', $data['hostid'])
+								->setAttribute('data-context', $data['context'])
+								->addClass('js-create-item')
 						: (new CSimpleButton(
 							$data['context'] === 'host'
 								? _('Create item (select host first)')
@@ -344,7 +333,7 @@ $confirm_messages = [
 		'confirm_messages' => $confirm_messages,
 		'field_switches' => CItemData::filterSwitchingConfiguration(),
 		'form_name' => $form->getName(),
-		'hostid' => $data['hostid'],
+		'hostids' => $data['filter_data']['filter_hostids'],
 		'token' => [CSRF_TOKEN_NAME => CCsrfTokenHelper::get('item')],
 		'filter_values' => $data['filter_values']
 	]).');

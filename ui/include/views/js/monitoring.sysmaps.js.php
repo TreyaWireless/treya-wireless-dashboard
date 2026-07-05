@@ -155,20 +155,12 @@ function createFontSelect(string $name): CSelect {
 								MAP_LABEL_LOC_TOP => _('Top')
 							]))
 					)
-					->addRow(_('Show label'),
-						(new CRadioButtonList('show_label', MAP_SHOW_LABEL_DEFAULT))
-							->addValue(_('Default'), MAP_SHOW_LABEL_DEFAULT)
-							->addValue(_('Always'), MAP_SHOW_LABEL_ALWAYS)
-							->addValue(_('Auto hide'), MAP_SHOW_LABEL_AUTO_HIDE)
-							->setModern(true)
-					)
 					->addRow((new CLabel(_('Host group'), 'elementNameHostGroup_ms'))->setAsteriskMark(),
 						(new CMultiSelect([
 							'name' => 'elementNameHostGroup',
 							'object_name' => 'hostGroup',
 							'multiple' => false
-						]))
-							->setWidth(ZBX_TEXTAREA_STANDARD_WIDTH)
+						]))->setWidth(ZBX_TEXTAREA_STANDARD_WIDTH)
 							->setAriaRequired(),
 						'hostGroupSelectRow'
 					)
@@ -177,8 +169,7 @@ function createFontSelect(string $name): CSelect {
 							'name' => 'elementNameHost',
 							'object_name' => 'hosts',
 							'multiple' => false
-						]))
-							->setWidth(ZBX_TEXTAREA_STANDARD_WIDTH)
+						]))->setWidth(ZBX_TEXTAREA_STANDARD_WIDTH)
 							->setAriaRequired(),
 						'hostSelectRow'
 					)
@@ -310,7 +301,7 @@ function createFontSelect(string $name): CSelect {
 					->addRow(_('URLs'),
 						(new CDiv([
 							(new CTable())
-								->setHeader([_('Name'), _('URL'), ''])
+								->setHeader([_('Name'), _('URL'), _('Action')])
 								->setId('urlContainer')
 								->setAttribute('style', 'width: 100%;'),
 							(new CButtonLink(_('Add')))->setId('newSelementUrl')
@@ -363,9 +354,9 @@ function createFontSelect(string $name): CSelect {
 				(new CFormList())
 					->addRow(_('Shape'), [
 						(new CRadioButtonList('type', SYSMAP_SHAPE_TYPE_RECTANGLE))
-							->addValue(_('Rectangle'), SYSMAP_SHAPE_TYPE_RECTANGLE)
-							->addValue(_('Ellipse'), SYSMAP_SHAPE_TYPE_ELLIPSE)
-							->addValue(_('Line'), SYSMAP_SHAPE_TYPE_LINE)
+							->addValue(_('Rectangle'), SYSMAP_SHAPE_TYPE_RECTANGLE, null, 'jQuery.colorpicker("hide")')
+							->addValue(_('Ellipse'), SYSMAP_SHAPE_TYPE_ELLIPSE, null, 'jQuery.colorpicker("hide")')
+							->addValue(_('Line'), SYSMAP_SHAPE_TYPE_LINE, null, 'jQuery.colorpicker("hide")')
 							->setModern(true),
 						new CVar('', '', 'last_shape_type')
 					])
@@ -387,7 +378,7 @@ function createFontSelect(string $name): CSelect {
 							(new CDiv())->addClass(ZBX_STYLE_FORM_INPUT_MARGIN),
 							_('Color'),
 							(new CDiv())->addClass(ZBX_STYLE_FORM_INPUT_MARGIN),
-							(new CColorPicker('font_color'))->allowEmpty(),
+							(new CColor('font_color', '#{color}'))->appendColorPickerJs(false),
 							BR(),
 							_('Horizontal align'),
 							(new CDiv())->addClass(ZBX_STYLE_FORM_INPUT_MARGIN),
@@ -408,7 +399,7 @@ function createFontSelect(string $name): CSelect {
 						(new CDiv([
 							_('Color'),
 							(new CDiv())->addClass(ZBX_STYLE_FORM_INPUT_MARGIN),
-							(new CColorPicker('background_color'))->allowEmpty()
+							(new CColor('background_color', '#{color}'))->appendColorPickerJs(false)
 						]))->addClass(ZBX_STYLE_TABLE_FORMS_SEPARATOR),
 						'shape-background-row'
 					)
@@ -420,17 +411,15 @@ function createFontSelect(string $name): CSelect {
 							_('Type'),
 							(new CDiv())->addClass(ZBX_STYLE_FORM_INPUT_MARGIN),
 							(new CSelect('border_type'))
-								->addOptions(CSelect::createOptionsFromArray($shape_border_types))
-								->setId('border_type'),
+								->addOptions(CSelect::createOptionsFromArray($shape_border_types)),
 							(new CDiv())->addClass(ZBX_STYLE_FORM_INPUT_MARGIN),
 							_('Width'),
 							(new CDiv())->addClass(ZBX_STYLE_FORM_INPUT_MARGIN),
-							(new CNumericBox('border_width', SYSMAP_SHAPE_BORDER_WIDTH_DEFAULT, 2, false, false, false))
-								->setWidth(ZBX_TEXTAREA_NUMERIC_STANDARD_WIDTH),
+							(new CTextBox('border_width'))->setWidth(ZBX_TEXTAREA_NUMERIC_STANDARD_WIDTH),
 							(new CDiv())->addClass(ZBX_STYLE_FORM_INPUT_MARGIN),
 							_('Color'),
 							(new CDiv())->addClass(ZBX_STYLE_FORM_INPUT_MARGIN),
-							(new CColorPicker('border_color'))->allowEmpty()
+							(new CColor('border_color', '#{color}'))->appendColorPickerJs(false)
 						]))
 							->addClass(ZBX_STYLE_NOWRAP)
 							->addClass(ZBX_STYLE_TABLE_FORMS_SEPARATOR)
@@ -558,7 +547,7 @@ function createFontSelect(string $name): CSelect {
 					->addRow((new CCheckBox('chkbox_font_color'))
 							->setId('chkboxFontColor')
 							->setLabel(_('Font color')),
-						(new CColorPicker('mass_font_color'))->allowEmpty(),
+						(new CColor('mass_font_color', '#{color}'))->appendColorPickerJs(false),
 						null, 'shape_figure_row'
 					)
 					->addRow((new CCheckBox('chkbox_text_halign'))
@@ -582,7 +571,7 @@ function createFontSelect(string $name): CSelect {
 					->addRow((new CCheckBox('chkbox_background'))
 							->setId('chkboxBackground')
 							->setLabel(_('Background color')),
-						(new CColorPicker('mass_background_color'))->allowEmpty(),
+						(new CColor('mass_background_color', '#{color}'))->appendColorPickerJs(false),
 						null, 'shape_figure_row'
 					)
 					->addRow((new CCheckBox('chkbox_border_type'))
@@ -605,10 +594,7 @@ function createFontSelect(string $name): CSelect {
 								->setAttribute('data-value', _('Border width'))
 								->setAttribute('data-value-2', _('Line width'))
 							),
-						(new CNumericBox('mass_border_width', SYSMAP_SHAPE_BORDER_WIDTH_DEFAULT, 2, false, false,
-								false))
-							->setWidth(ZBX_TEXTAREA_NUMERIC_STANDARD_WIDTH)
-							->addClass('js-numericbox')
+						(new CTextBox('mass_border_width'))->setWidth(ZBX_TEXTAREA_NUMERIC_STANDARD_WIDTH)
 					)
 					->addRow((new CCheckBox('chkbox_border_color'))
 							->setId('chkboxBorderColor')
@@ -618,7 +604,7 @@ function createFontSelect(string $name): CSelect {
 								->setAttribute('data-value', _('Border color'))
 								->setAttribute('data-value-2', _('Line color'))
 							),
-						(new CColorPicker('mass_border_color'))->allowEmpty()
+						(new CColor('mass_border_color', '#{color}'))->appendColorPickerJs(false)
 					)
 					->addItem([
 						(new CDiv())->addClass(ZBX_STYLE_TABLE_FORMS_TD_LEFT),
@@ -696,19 +682,6 @@ function createFontSelect(string $name): CSelect {
 								MAP_LABEL_LOC_TOP => _('Top')
 							]))
 							->setId('massLabelLocation')
-					)
-					->addRow(
-						(new CCheckBox('checkbox-show-label'))
-							->setId('checkbox_show_label')
-							->setLabel(_('Show label')),
-						(new CRadioButtonList('show_label', MAP_SHOW_LABEL_DEFAULT))
-							->addValue(_('Default'), MAP_SHOW_LABEL_DEFAULT, 'mass_show_label_'.MAP_SHOW_LABEL_DEFAULT)
-							->addValue(_('Always'), MAP_SHOW_LABEL_ALWAYS, 'mass_show_label_'.MAP_SHOW_LABEL_ALWAYS)
-							->addValue(_('Auto hide'), MAP_SHOW_LABEL_AUTO_HIDE,
-								'mass_show_label_'.MAP_SHOW_LABEL_AUTO_HIDE
-							)
-							->setModern(true)
-							->setId('mass_show_label')
 					)
 					->addRow(
 						(new CCheckBox('chkbox_use_iconmap'))
@@ -815,16 +788,6 @@ function createFontSelect(string $name): CSelect {
 							->setMaxlength(DB::getFieldLength('sysmaps_links', 'label'))
 							->disableSpellcheck()
 					)
-					->addRow(_('Show label'),
-						(new CRadioButtonList('show_label', MAP_SHOW_LABEL_DEFAULT))
-							->setId('show_link_label')
-							->addValue(_('Default'), MAP_SHOW_LABEL_DEFAULT, 'show_link_label_'.MAP_SHOW_LABEL_DEFAULT)
-							->addValue(_('Always'), MAP_SHOW_LABEL_ALWAYS, 'show_link_label_'.MAP_SHOW_LABEL_ALWAYS)
-							->addValue(_('Auto hide'), MAP_SHOW_LABEL_AUTO_HIDE,
-								'show_link_label_'.MAP_SHOW_LABEL_AUTO_HIDE
-							)
-							->setModern(true)
-					)
 					->addRow(new CLabel(_('Connect to'), 'label-selementid2'), (new CSelect('selementid2'))
 							->setFocusableElementId('label-selementid2')
 							->setId('selementid2'),
@@ -834,46 +797,19 @@ function createFontSelect(string $name): CSelect {
 						(new CSelect('drawtype'))
 							->setFocusableElementId('label-drawtype')
 							->addOptions(CSelect::createOptionsFromArray([
-								DRAWTYPE_LINE => _('Line'),
-								DRAWTYPE_BOLD_LINE => _('Bold line'),
-								DRAWTYPE_DOT => _('Dot'),
-								DRAWTYPE_DASHED_LINE => _('Dashed line')
+								GRAPH_ITEM_DRAWTYPE_LINE => _('Line'),
+								GRAPH_ITEM_DRAWTYPE_BOLD_LINE => _('Bold line'),
+								GRAPH_ITEM_DRAWTYPE_DOT => _('Dot'),
+								GRAPH_ITEM_DRAWTYPE_DASHED_LINE => _('Dashed line')
 							]))
 					)
-					->addRow(_('Color (OK)'), new CColorPicker('color'))
-					->addRow(_('Indicator type'),
-						(new CRadioButtonList('indicator_type', MAP_INDICATOR_TYPE_TRIGGER))
-							->addValue(_('Static link'), MAP_INDICATOR_TYPE_STATIC_LINK)
-							->addValue(_('Trigger'), MAP_INDICATOR_TYPE_TRIGGER)
-							->addValue(_('Item value'), MAP_INDICATOR_TYPE_ITEM_VALUE)
-							->setModern(true),
-						'indicator-type-field'
+					->addRow(_('Color (OK)'),
+						(new CColor('color', '#{color}'))->appendColorPickerJs(false)
 					)
-					->addRow(
-						(new CLabel(_('Item'), 'itemid_ms'))->setAsteriskMark(),
-						[
-							(new CMultiSelect([
-								'name' => 'itemid',
-								'object_name' => 'items',
-								'multiple' => false,
-								'popup' => [
-									'parameters' => [
-										'srctbl' => 'items',
-										'srcfld1' => 'itemid',
-										'dstfrm' => 'linkForm',
-										'dstfld1' => 'itemid',
-										'editable' => 1,
-										'real_hosts' => true
-									]
-								]
-							]))->setWidth(ZBX_TEXTAREA_STANDARD_WIDTH)
-						],
-						'item-value-field'
-					)
-					->addRow((new CLabel(_('Indicators')))->setAsteriskMark(),
+					->addRow(_('Link indicators'),
 						(new CDiv([
 							(new CTable())
-								->setHeader(['', _('Trigger'), _('Type'), ''])
+								->setHeader([_('Trigger'), _('Type'), _('Color'), _('Action')])
 								->setAttribute('style', 'width: 100%;')
 								->setId('linkTriggerscontainer'),
 							(new CButtonLink(_('Add')))->onClick(
@@ -888,32 +824,7 @@ function createFontSelect(string $name): CSelect {
 							)
 						]))
 							->addClass(ZBX_STYLE_TABLE_FORMS_SEPARATOR)
-							->setAttribute('style', 'min-width: '.ZBX_TEXTAREA_BIG_WIDTH.'px;'),
-						'link-indicators-field'
-					)
-					->addRow((new CLabel(_('Indicators')))->setAsteriskMark(),
-						(new CDiv([
-							(new CTable())
-								->setHeader(['', _('Threshold'), _('Type'), ''])
-								->setAttribute('style', 'width: '.ZBX_TEXTAREA_MEDIUM_WIDTH.'px;')
-								->setId('link-thresholds-container'),
-							(new CButtonLink(_('Add')))->setId('threshold-add')
-						]))
-							->addClass(ZBX_STYLE_TABLE_FORMS_SEPARATOR)
-							->setAttribute('style', 'max-width: '.ZBX_TEXTAREA_BIG_WIDTH.'px;'),
-						'link-thresholds-field'
-					)
-					->addRow((new CLabel(_('Indicators')))->setAsteriskMark(),
-						(new CDiv([
-							(new CTable())
-								->setHeader(['', _('Pattern'), _('Type'), ''])
-								->setAttribute('style', 'width: '.ZBX_TEXTAREA_MEDIUM_WIDTH.'px;')
-								->setId('link-highlights-container'),
-							(new CButtonLink(_('Add')))->setId('highlight-add')
-						]))
-							->addClass(ZBX_STYLE_TABLE_FORMS_SEPARATOR)
-							->setAttribute('style', 'max-width: '.ZBX_TEXTAREA_BIG_WIDTH.'px;'),
-						'link-highlights-field'
+							->setAttribute('style', 'min-width: '.ZBX_TEXTAREA_BIG_WIDTH.'px;')
 					)
 					->addItem([
 						(new CDiv())->addClass(ZBX_STYLE_TABLE_FORMS_TD_LEFT),
@@ -937,7 +848,7 @@ function createFontSelect(string $name): CSelect {
 
 <script type="text/x-jquery-tmpl" id="elementLinkTableRowTpl">
 	<?= (new CRow([
-			'#{to_element_name}',
+			'#{toElementName}',
 			(new CCol())->addClass('element-urls'),
 			(new CCol(
 				(new CButtonLink(_('Edit')))
@@ -950,8 +861,8 @@ function createFontSelect(string $name): CSelect {
 
 <script type="text/x-jquery-tmpl" id="massElementLinkTableRowTpl">
 	<?= (new CRow([
-			'#{from_element_name}',
-			'#{to_element_name}',
+			'#{fromElementName}',
+			'#{toElementName}',
 			(new CCol())->addClass('element-urls'),
 			(new CCol(
 				(new CButtonLink(_('Edit')))
@@ -964,79 +875,29 @@ function createFontSelect(string $name): CSelect {
 
 <script type="text/x-jquery-tmpl" id="linkTriggerRow">
 	<?= (new CRow([
-			(new CColorPicker('linktrigger_#{index}_color'))->setColor('#{color}'),
 			'#{desc_exp}',
 			[
-				new CVar('linktrigger_#{index}_desc_exp', '#{desc_exp}'),
-				new CVar('linktrigger_#{index}_triggerid', '#{triggerid}'),
-				(new CSelect('linktrigger_#{index}_drawtype'))
-					->setId('linktrigger_#{index}_drawtype')
+				new CVar('linktrigger_#{linktriggerid}_desc_exp', '#{desc_exp}'),
+				new CVar('linktrigger_#{linktriggerid}_triggerid', '#{triggerid}'),
+				new CVar('linktrigger_#{linktriggerid}_linktriggerid', '#{linktriggerid}'),
+				(new CSelect('linktrigger_#{linktriggerid}_drawtype'))
+					->setId('linktrigger_#{linktriggerid}_drawtype')
 					->addOptions(CSelect::createOptionsFromArray([
-						DRAWTYPE_LINE => _('Line'),
-						DRAWTYPE_BOLD_LINE => _('Bold line'),
-						DRAWTYPE_DOT => _('Dot'),
-						DRAWTYPE_DASHED_LINE => _('Dashed line')
+						GRAPH_ITEM_DRAWTYPE_LINE => _('Line'),
+						GRAPH_ITEM_DRAWTYPE_BOLD_LINE => _('Bold line'),
+						GRAPH_ITEM_DRAWTYPE_DOT => _('Dot'),
+						GRAPH_ITEM_DRAWTYPE_DASHED_LINE => _('Dashed line')
 					]))
 			],
+			(new CColor('linktrigger_#{linktriggerid}_color', '#{color}'))->appendColorPickerJs(false),
 			(new CCol(
 				(new CButtonLink(_('Remove')))
-					->addClass('trigger-remove')
-					->setAttribute('data-index', '#{index}')
+					->addClass('triggerRemove')
+					->setAttribute('data-linktriggerid', '#{linktriggerid}')
 			))->addClass(ZBX_STYLE_NOWRAP)
 		]))
-			->setId('linktrigger_#{index}')
+			->setId('linktrigger_#{linktriggerid}')
 			->toString()
-	?>
-</script>
-
-<script type="text/x-jquery-tmpl" id="threshold-row">
-	<?= (new CRow([
-		(new CColorPicker('threshold_#{index}_color'))->setColor('#{color}'),
-		(new CTextBox('threshold_#{index}_threshold', '#{threshold}', false))
-			->addClass('js-threshold-input')
-			->setWidth(ZBX_TEXTAREA_SMALL_WIDTH)
-			->setAriaRequired(),
-		(new CSelect('threshold_#{index}_drawtype'))
-			->setId('threshold_#{index}_drawtype')
-			->addOptions(CSelect::createOptionsFromArray([
-				DRAWTYPE_LINE => _('Line'),
-				DRAWTYPE_BOLD_LINE => _('Bold line'),
-				DRAWTYPE_DOT => _('Dot'),
-				DRAWTYPE_DASHED_LINE => _('Dashed line')
-			])),
-		(new CCol(
-			(new CButtonLink(_('Remove')))
-				->addClass('threshold-remove')
-				->setAttribute('data-index', '#{index}')
-		))->addClass(ZBX_STYLE_NOWRAP)
-	]))
-		->setId('threshold_#{index}')
-		->toString()
-	?>
-</script>
-
-<script type="text/x-jquery-tmpl" id="highlight-row">
-	<?= (new CRow([
-		(new CColorPicker('highlight_#{index}_color'))->setColor('#{color}'),
-		(new CTextBox('highlight_#{index}_pattern', '#{pattern}', false))
-			->setWidth(ZBX_TEXTAREA_SMALL_WIDTH)
-			->setAriaRequired(),
-		(new CSelect('highlight_#{index}_drawtype'))
-			->setId('highlight_#{index}_drawtype')
-			->addOptions(CSelect::createOptionsFromArray([
-				DRAWTYPE_LINE => _('Line'),
-				DRAWTYPE_BOLD_LINE => _('Bold line'),
-				DRAWTYPE_DOT => _('Dot'),
-				DRAWTYPE_DASHED_LINE => _('Dashed line')
-			])),
-		(new CCol(
-			(new CButtonLink(_('Remove')))
-				->addClass('highlight-remove')
-				->setAttribute('data-index', '#{index}')
-		))->addClass(ZBX_STYLE_NOWRAP)
-	]))
-		->setId('highlight_#{index}')
-		->toString()
 	?>
 </script>
 

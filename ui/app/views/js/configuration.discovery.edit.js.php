@@ -22,7 +22,7 @@
 window.drule_edit_popup = new class {
 
 	init({druleid, dchecks, drule}) {
-		this.overlay = overlays_stack.getById('discovery.edit');
+		this.overlay = overlays_stack.getById('discoveryForm');
 		this.dialogue = this.overlay.$dialogue[0];
 		this.form = this.overlay.$dialogue.$body[0].querySelector('form');
 
@@ -31,10 +31,6 @@ window.drule_edit_popup = new class {
 		this.drule = drule;
 		this.dcheckid = getUniqueId();
 		this.available_device_types = [<?= SVC_AGENT ?>, <?= SVC_SNMPv1 ?>, <?= SVC_SNMPv2c ?>, <?= SVC_SNMPv3 ?>];
-
-		const return_url = new URL('zabbix.php', location.href);
-		return_url.searchParams.set('action', 'discovery.list');
-		ZABBIX.PopupManager.setReturnUrl(return_url.href);
 
 		document.getElementById('discovery_by').addEventListener('change', () => this.#updateForm());
 
@@ -371,7 +367,7 @@ window.drule_edit_popup = new class {
 		this.#post(curl.getUrl(), {druleids: [this.druleid]}, (response) => {
 			overlayDialogueDestroy(this.overlay.dialogueid);
 
-			this.dialogue.dispatchEvent(new CustomEvent('dialogue.submit', {detail: response}));
+			this.dialogue.dispatchEvent(new CustomEvent('dialogue.submit', {detail: response.success}));
 		});
 	}
 
@@ -388,7 +384,7 @@ window.drule_edit_popup = new class {
 		this.#post(curl.getUrl(), fields, (response) => {
 			overlayDialogueDestroy(this.overlay.dialogueid);
 
-			this.dialogue.dispatchEvent(new CustomEvent('dialogue.submit', {detail: response}));
+			this.dialogue.dispatchEvent(new CustomEvent('dialogue.submit', {detail: response.success}));
 		});
 	}
 

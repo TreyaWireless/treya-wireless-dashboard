@@ -25,25 +25,48 @@
 		init() {
 			const $filter_groups = $('#filter_groups_');
 
-			$filter_groups.on('change', () => this.#updateMultiselect($filter_groups));
-			this.#updateMultiselect($filter_groups);
+			$filter_groups.on('change', () => this._updateMultiselect($filter_groups));
+			this._updateMultiselect($filter_groups);
 
-			this.#initActions();
-			this.#initPopupListeners();
+			this._initActions();
 		}
 
-		#initActions() {
+		_initActions() {
 			document.addEventListener('click', (e) => {
 				if (e.target.classList.contains('js-create-maintenance')) {
-					ZABBIX.PopupManager.open('maintenance.edit');
+					this._edit();
+				}
+				else if (e.target.classList.contains('js-edit-maintenance')) {
+					this._edit({maintenanceid: e.target.dataset.maintenanceid});
 				}
 				else if (e.target.classList.contains('js-massdelete-maintenance')) {
-					this.#delete(e.target, Object.keys(chkbxRange.getSelectedIds()));
+					this._delete(e.target, Object.keys(chkbxRange.getSelectedIds()));
 				}
+			})
+		}
+
+		_edit(parameters = {}) {
+			const overlay = PopUp('maintenance.edit', parameters, {
+				dialogueid: 'maintenance-edit',
+				dialogue_class: 'modal-popup-large',
+				prevent_navigation: true
+			});
+
+			const dialogue = overlay.$dialogue[0];
+
+			dialogue.addEventListener('dialogue.submit', (e) => {
+				postMessageOk(e.detail.title);
+
+				if ('messages' in e.detail) {
+					postMessageDetails('success', e.detail.messages);
+				}
+
+				uncheckTableRows('maintenance');
+				location.href = location.href;
 			});
 		}
 
-		#delete(target, maintenanceids) {
+		_delete(target, maintenanceids) {
 			const confirmation = maintenanceids.length > 1
 				? <?= json_encode(_('Delete selected maintenance periods?')) ?>
 				: <?= json_encode(_('Delete selected maintenance period?')) ?>;
@@ -55,10 +78,10 @@
 			const curl = new Curl('zabbix.php');
 			curl.setArgument('action', 'maintenance.delete');
 
-			this.#post(target, maintenanceids, curl.getUrl());
+			this._post(target, maintenanceids, curl.getUrl());
 		}
 
-		#post(target, maintenanceids, url) {
+		_post(target, maintenanceids, url) {
 			target.classList.add('is-loading');
 
 			const post_data = {
@@ -106,18 +129,8 @@
 				});
 		}
 
-		#updateMultiselect($ms) {
+		_updateMultiselect($ms) {
 			$ms.multiSelect('setDisabledEntries', [...$ms.multiSelect('getData').map((entry) => entry.id)]);
-		}
-
-		#initPopupListeners() {
-			ZABBIX.EventHub.subscribe({
-				require: {
-					context: CPopupManager.EVENT_CONTEXT,
-					event: CPopupManagerEvent.EVENT_SUBMIT
-				},
-				callback: () => uncheckTableRows('maintenance')
-			});
 		}
 	};
 </script>

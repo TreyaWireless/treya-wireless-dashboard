@@ -69,11 +69,7 @@ $module_form = (new CFormGrid())
 
 $form
 	->addItem($module_form)
-	->addItem(
-		(new CScriptTag('module_edit.init('.json_encode([
-			'rules' => $data['js_validation_rules']
-		]).');'))->setOnDocumentReady()
-	);
+	->addItem((new CScriptTag('module_edit.init();'))->setOnDocumentReady());
 
 $output = [
 	'header' => _('Module'),
@@ -87,8 +83,7 @@ $output = [
 			'action' => 'module_edit.submit();'
 		]
 	],
-	'script_inline' => getPagePostJs().$this->readJsFile('module.edit.js.php'),
-	'dialogue_class' => 'modal-popup-medium'
+	'script_inline' => getPagePostJs().$this->readJsFile('module.edit.js.php')
 ];
 
 if ($data['user']['debug_mode'] == GROUP_DEBUG_MODE_ENABLED) {

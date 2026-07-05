@@ -85,7 +85,7 @@ class CDashboardHelper {
 					],
 					'rf_rate' => 0,
 					'fields' => [],
-					'is_configured' => true
+					'messages' => []
 				];
 
 				/** @var CWidget $widget */
@@ -94,9 +94,7 @@ class CDashboardHelper {
 				if ($widget !== null && $widget->getType() === CModule::TYPE_WIDGET) {
 					$form = $widget->getForm(self::constructWidgetFields($widget_data['fields']), $templateid);
 
-					$messages = $form->validate();
-
-					$prepared_widget['is_configured'] = !$messages;
+					$prepared_widget['messages'] = $form->validate();
 					$prepared_widget['fields'] = $form->getFieldsValues();
 
 					if ($with_rf_rate) {

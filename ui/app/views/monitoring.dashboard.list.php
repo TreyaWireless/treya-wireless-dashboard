@@ -103,14 +103,14 @@ foreach ($data['dashboards'] as $dashboard) {
 	$table->addRow([
 		(new CCheckBox('dashboardids['.$dashboard['dashboardid'].']', $dashboard['dashboardid']))
 			->setEnabled($dashboard['editable']),
-		new CDiv([
+		(new CDiv([
 			(new CLink($dashboard['name'],
 				(new CUrl('zabbix.php'))
 					->setArgument('action', 'dashboard.view')
 					->setArgument('dashboardid', $dashboard['dashboardid'])
 					->getUrl()
 			))->addClass(ZBX_STYLE_WORDBREAK)
-		]),
+		])),
 		(new CCol($tags))->addClass(ZBX_STYLE_LIST_TABLE_ACTIONS)
 	]);
 }

@@ -16,7 +16,7 @@
 
 ?>
 
-window.widget_form = new class extends CWidgetForm {
+window.widget_graph_form = new class {
 
 	/**
 	 * @type {HTMLFormElement}
@@ -24,12 +24,11 @@ window.widget_form = new class extends CWidgetForm {
 	#form;
 
 	init() {
-		this.#form = this.getForm();
+		this.#form = document.getElementById('widget-dialogue-form');
 
 		document.getElementById('source_type').addEventListener('change', () => this.#updateForm());
 
 		this.#updateForm();
-		this.ready();
 	}
 
 	#updateForm() {

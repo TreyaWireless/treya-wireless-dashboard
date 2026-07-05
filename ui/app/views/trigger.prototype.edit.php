@@ -19,8 +19,6 @@
  * @var array $data
  */
 
-$readonly = $data['limited'] || $data['is_discovered_prototype'];
-
 $trigger_form = (new CForm())
 	->addItem((new CVar(CSRF_TOKEN_NAME, CCsrfTokenHelper::get('trigger')))->removeId())
 	->setId('trigger-prototype-form')
@@ -29,6 +27,8 @@ $trigger_form = (new CForm())
 	->addItem((new CVar('parent_discoveryid', $data['parent_discoveryid']))->removeId())
 	->addVar('hostid', $data['hostid'])
 	->addVar('context', $data['context'])
+	->addVar('expr_temp', $data['expr_temp'], 'expr_temp')
+	->addVar('recovery_expr_temp', $data['recovery_expr_temp'], 'recovery_expr_temp')
 	->addStyle('display: none;');
 
 // Enable form submitting on Enter.
@@ -47,12 +47,13 @@ if ($data['limited']) {
 		->addItem((new CVar('manual_close', $data['manual_close']))->removeId());
 }
 
-$data['form_name'] = $trigger_form->getName();
-
 // Append tabs to form.
 $triggers_tab = (new CTabView())
 	->addTab('triggersTab',_('Trigger prototype'),
-		new CPartial('trigger.edit.trigger.tab', $data + ['readonly' => $readonly])
+		new CPartial('trigger.edit.trigger.tab', $data += [
+			'readonly' => $data['limited'],
+			'form_name' => $trigger_form->getName()
+		])
 	)
 	->addTab('tags-tab', _('Tags'),
 		new CPartial('configuration.tags.tab', [
@@ -60,13 +61,10 @@ $triggers_tab = (new CTabView())
 			'tags' => $data['tags'],
 			'show_inherited_tags' => $data['show_inherited_tags'],
 			'tabs_id' => 'tabs',
-			'tags_tab_id' => 'tags-tab',
-			'has_inline_validation' => true,
-			'readonly' => $data['is_discovered_prototype']
+			'tags_tab_id' => 'tags-tab'
 		]), TAB_INDICATOR_TAGS
 	)
-	->addTab('dependenciesTab', _('Dependencies'),
-		new CPartial('trigger.edit.dependencies.tab', $data + ['readonly' => $data['is_discovered_prototype']]),
+	->addTab('dependenciesTab', _('Dependencies'), new CPartial('trigger.edit.dependencies.tab', $data),
 		TAB_INDICATOR_DEPENDENCY
 	);
 
@@ -90,34 +88,14 @@ else {
 			'title' => _('Update'),
 			'keepOpen' => true,
 			'isSubmit' => true,
-			'action' => 'trigger_edit_popup.submit();',
-			'enabled' => !$data['is_discovered_prototype']
+			'action' => 'trigger_edit_popup.submit();'
 		],
 		[
 			'title' => _('Clone'),
 			'class' => ZBX_STYLE_BTN_ALT, 'js-clone',
 			'keepOpen' => true,
 			'isSubmit' => false,
-			'action' => 'trigger_edit_popup.clone('.json_encode([
-				'title' => _('New trigger prototype'),
-				'buttons' => [
-					[
-						'title' => _('Add'),
-						'class' => 'js-add',
-						'keepOpen' => true,
-						'isSubmit' => true,
-						'action' => 'trigger_edit_popup.submit();'
-					],
-					[
-						'title' => _('Cancel'),
-						'class' => ZBX_STYLE_BTN_ALT,
-						'cancel' => true,
-						'action' => ''
-					]
-				],
-				'rules' => (new CFormValidator(CControllerTriggerPrototypeCreate::getValidationRules()))->getRules()
-			]).');',
-			'enabled' => !$data['is_discovered_prototype']
+			'action' => 'trigger_edit_popup.clone();'
 		],
 		[
 			'title' => _('Delete'),
@@ -136,14 +114,8 @@ $popup_parameters = [
 	'context' => $data['context']
 ];
 
-$return_url = (new CUrl('zabbix.php'))
-	->setArgument('action', 'trigger.prototype.list')
-	->setArgument('context', $data['context']);
-
 if (array_key_exists('parent_discoveryid', $data)) {
 	$popup_parameters['parent_discoveryid'] = $data['parent_discoveryid'];
-
-	$return_url->setArgument('parent_discoveryid', $data['parent_discoveryid']);
 }
 
 if ($data['hostid']) {
@@ -153,17 +125,13 @@ if ($data['hostid']) {
 $trigger_form
 	->addItem($triggers_tab)
 	->addItem((new CScriptTag('trigger_edit_popup.init('.json_encode([
-			'rules' => $data['js_validation_rules'],
 			'triggerid' => $data['triggerid'],
 			'expression_popup_parameters' => $popup_parameters,
-			'readonly' => $readonly,
+			'readonly' => $data['limited'],
 			'dependencies' => $data['db_dependencies'],
 			'action' => 'trigger.prototype.edit',
 			'context' => $data['context'],
-			'db_trigger' => $data['db_trigger'],
-			'return_url' => $return_url->getUrl(),
-			'overlayid' => 'trigger.prototype.edit',
-			'parent_discoveryid' => array_key_exists('parent_discoveryid', $data) ? $data['parent_discoveryid'] : null
+			'db_trigger' => $data['db_trigger']
 		]).');'))->setOnDocumentReady()
 	);
 
@@ -172,8 +140,7 @@ $output = [
 	'doc_url' => CDocHelper::getUrl(CDocHelper::DATA_COLLECTION_TRIGGER_PROTOTYPE_EDIT),
 	'body' => $trigger_form->toString(),
 	'buttons' => $buttons,
-	'script_inline' => getPagePostJs().$this->readJsFile('trigger.edit.js.php'),
-	'dialogue_class' => 'modal-popup-large'
+	'script_inline' => getPagePostJs().$this->readJsFile('trigger.edit.js.php')
 ];
 
 if ($data['user']['debug_mode'] == GROUP_DEBUG_MODE_ENABLED) {

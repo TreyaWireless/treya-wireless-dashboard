@@ -29,14 +29,7 @@ class CWidgetFieldRangeControlView extends CWidgetFieldView {
 	}
 
 	public function getJavaScript(): string {
-		return '
-			CWidgetForm.addField(
-				new CWidgetFieldRangeControl('.json_encode([
-					'name' => $this->field->getName(),
-					'form_name' => $this->form_name
-				]).')
-			);
-		';
+		return $this->getRangeControl()->getPostJS();
 	}
 
 	private function getRangeControl(): CRangeControl {

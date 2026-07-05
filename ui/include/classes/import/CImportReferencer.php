@@ -1837,7 +1837,7 @@ class CImportReferencer {
 				' FROM group_prototype gp,hosts hp,host_discovery hd,items i,hosts h'.
 				' WHERE gp.hostid=hp.hostid'.
 					' AND hp.hostid=hd.hostid'.
-					' AND hd.lldruleid=i.itemid'.
+					' AND hd.parent_itemid=i.itemid'.
 					' AND i.hostid=h.hostid'.
 					' AND ('.implode(' OR ', $sql_where).')'
 			);
@@ -1879,7 +1879,7 @@ class CImportReferencer {
 				' FROM hostmacro hm'.
 					' JOIN hosts hp on hm.hostid=hp.hostid'.
 					' JOIN host_discovery hd on hp.hostid=hd.hostid'.
-					' JOIN items dr on hd.lldruleid=dr.itemid'.
+					' JOIN items dr on hd.parent_itemid=dr.itemid'.
 					' JOIN hosts h on dr.hostid=h.hostid'.
 				' WHERE '.implode(' OR ', $sql_where)
 			);
@@ -1952,10 +1952,10 @@ class CImportReferencer {
 
 		if ($sql_where) {
 			$db_host_prototypes = DBselect(
-				'SELECT hp.host,hp.uuid,hp.hostid,hd.lldruleid,dr.hostid AS parent_hostid'.
+				'SELECT hp.host,hp.uuid,hp.hostid,hd.parent_itemid,dr.hostid AS parent_hostid'.
 				' FROM hosts hp'.
 					' JOIN host_discovery hd ON hp.hostid=hd.hostid'.
-					' JOIN items dr ON hd.lldruleid=dr.itemid'.
+					' JOIN items dr ON hd.parent_itemid=dr.itemid'.
 					' JOIN hosts h on dr.hostid=h.hostid'.
 				' WHERE '.implode(' OR ', $sql_where)
 			);
@@ -1964,7 +1964,7 @@ class CImportReferencer {
 					'uuid' => $db_host_prototype['uuid'],
 					'host' => $db_host_prototype['host'],
 					'parent_hostid' => $db_host_prototype['parent_hostid'],
-					'discovery_ruleid' => $db_host_prototype['lldruleid']
+					'discovery_ruleid' => $db_host_prototype['parent_itemid']
 				];
 			}
 		}

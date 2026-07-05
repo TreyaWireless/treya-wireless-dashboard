@@ -133,9 +133,7 @@ class CControllerActionLogList extends CController {
 				'output' => ['alertid', 'actionid', 'userid', 'clock', 'sendto', 'subject', 'message', 'status',
 					'retries', 'error', 'alerttype'
 				],
-				'filter' => [
-					'status' => $data['actionlog_statuses'] ?: null
-				],
+				'filter' => ['status' => $data['actionlog_statuses']],
 				'selectMediatypes' => ['mediatypeid', 'name', 'maxattempts'],
 				'userids' => $userids ?: null,
 				'actionids' => $actionids ?: null,

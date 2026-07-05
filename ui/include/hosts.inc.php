@@ -583,7 +583,6 @@ function getHostPrototypeParentTemplates(array $host_prototypes) {
 		$db_host_prototypes = API::HostPrototype()->get([
 			'output' => ['hostid', 'templateid'],
 			'selectDiscoveryRule' => ['itemid'],
-			'selectDiscoveryRulePrototype' => ['itemid'],
 			'selectParentHost' => ['hostid'],
 			'hostids' => array_keys($parent_host_prototypeids)
 		]);
@@ -594,9 +593,7 @@ function getHostPrototypeParentTemplates(array $host_prototypes) {
 		foreach ($db_host_prototypes as $db_host_prototype) {
 			$data['templates'][$db_host_prototype['parentHost']['hostid']] = [];
 			$hostids[$db_host_prototype['hostid']] = $db_host_prototype['parentHost']['hostid'];
-
-			$parent_lld = $db_host_prototype['discoveryRule'] ?: $db_host_prototype['discoveryRulePrototype'];
-			$lld_ruleids[$db_host_prototype['hostid']] = $parent_lld['itemid'];
+			$lld_ruleids[$db_host_prototype['hostid']] = $db_host_prototype['discoveryRule']['itemid'];
 
 			if ($db_host_prototype['templateid'] != 0) {
 				if (!array_key_exists($db_host_prototype['templateid'], $all_parent_host_prototypeids)) {
@@ -1111,6 +1108,20 @@ function isReadableHosts(array $hostids) {
 }
 
 /**
+ * Check if user has read permissions for templates.
+ *
+ * @param array $templateids
+ *
+ * @return bool
+ */
+function isReadableTemplates(array $templateids) {
+	return count($templateids) == API::Template()->get([
+		'countOutput' => true,
+		'templateids' => $templateids
+	]);
+}
+
+/**
  * Check if user has write permissions for hosts or templates.
  *
  * @param array $hostids
@@ -1278,11 +1289,14 @@ function prepareHostPrototypeTags(array $tags): array {
  * Format host prototype interfaces received via form for API input.
  *
  * @param array $interfaces
+ * @param array $main_interfaces
  *
  * @return array
  */
-function prepareHostPrototypeInterfaces(array $interfaces): array {
-	foreach ($interfaces as &$interface) {
+function prepareHostPrototypeInterfaces(array $interfaces, array $main_interfaces): array {
+	foreach ($interfaces as $i => &$interface) {
+		$interface['main'] = $i == $main_interfaces[$interface['type']] ? INTERFACE_PRIMARY : INTERFACE_SECONDARY;
+
 		if (array_key_exists('details', $interface)) {
 			$interface['details'] += ['bulk' => SNMP_BULK_DISABLED];
 		}

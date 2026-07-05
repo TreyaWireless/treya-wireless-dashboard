@@ -50,15 +50,4 @@ class CWidgetFieldNumericBoxView extends CWidgetFieldView {
 
 		return $view;
 	}
-
-	public function getJavaScript(): string {
-		return '
-			CWidgetForm.addField(
-				new CWidgetFieldNumericBox('.json_encode([
-					'name' => $this->field->getName(),
-					'form_name' => $this->form_name
-				]).')
-			);
-		';
-	}
 }

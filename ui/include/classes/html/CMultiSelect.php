@@ -93,11 +93,11 @@ class CMultiSelect extends CTag {
 		}
 
 		if (array_key_exists('data', $options)) {
-			$this->params['data'] = array_values($options['data']);
+			$this->params['data'] = zbx_cleanHashes($options['data']);
 		}
 
 		$options_list = [
-			'defaultValue', 'disabled', 'selectedLimit', 'addNew', 'newItemName', 'styles', 'placeholder', 'hidden',
+			'defaultValue', 'disabled', 'selectedLimit', 'addNew', 'styles', 'placeholder', 'hidden',
 			'readonly', 'maxlength'
 		];
 		foreach ($options_list as $option) {
@@ -153,8 +153,8 @@ class CMultiSelect extends CTag {
 	 */
 	protected function mapOptions(array $options) {
 		$valid_fields = ['name', 'object_name', 'multiselect_id', 'multiple', 'disabled', 'default_value', 'data',
-			'add_new', 'new_item_name', 'add_post_js', 'styles', 'popup', 'custom_select', 'placeholder', 'autosuggest',
-			'hidden', 'readonly', 'maxlength'
+			'add_new', 'add_post_js', 'styles', 'popup', 'custom_select', 'placeholder', 'autosuggest', 'hidden',
+			'readonly', 'maxlength'
 		];
 
 		foreach ($options as $field => $value) {
@@ -173,7 +173,6 @@ class CMultiSelect extends CTag {
 			'default_value' => 'defaultValue',
 			'data' => 'data',
 			'add_new' => 'addNew',
-			'new_item_name' => 'newItemName',
 			'add_post_js' => 'add_post_js',
 			'styles' => 'styles',
 			'placeholder' => 'placeholder',

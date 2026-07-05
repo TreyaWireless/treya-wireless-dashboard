@@ -123,13 +123,10 @@ function make_event_details(array $event, array $allowed) {
 
 			if ($correlations) {
 				if ($allowed['ui_correlation']) {
-					$correlation_name = (new CLink($correlations[0]['name'],
-						(new CUrl('zabbix.php'))
-							->setArgument('action', 'popup')
-							->setArgument('popup', 'correlation.edit')
-							->setArgument('correlationid', $correlations[0]['correlationid'])
-							->getUrl()
-					))->addClass(ZBX_STYLE_LINK_ALT);
+					$correlation_name = (new CLink($correlations[0]['name']))
+						->addClass(ZBX_STYLE_LINK_ALT)
+						->addClass('js-correlation_edit')
+						->setAttribute('data-correlationid', $correlations[0]['correlationid']);
 				}
 				else {
 					$correlation_name = $correlations[0]['name'];
@@ -436,16 +433,13 @@ function make_small_eventlist(array $startEvent, array $allowed) {
 		 */
 		addTriggerValueStyle($cell_status, $value, $value_clock, $is_acknowledged);
 
-		$problem_update_url = (new CUrl('zabbix.php'))
-			->setArgument('action', 'popup')
-			->setArgument('popup', 'acknowledge.edit')
-			->setArgument('eventids[]', $event['eventid'])
-			->getUrl();
-
 		// Create acknowledge link.
 		$problem_update_link = ($allowed['add_comments'] || $allowed['change_severity'] || $allowed['acknowledge']
 				|| $can_be_closed || $allowed['suppress_problems'] || $allowed['rank_change'])
-			? (new CLink(_('Update'), $problem_update_url))->addClass(ZBX_STYLE_LINK_ALT)
+			? (new CLink(_('Update')))
+				->addClass(ZBX_STYLE_LINK_ALT)
+				->setAttribute('data-eventid', $event['eventid'])
+				->onClick('acknowledgePopUp({eventids: [this.dataset.eventid]}, this);')
 			: new CSpan(_('Update'));
 
 		$table->addRow([

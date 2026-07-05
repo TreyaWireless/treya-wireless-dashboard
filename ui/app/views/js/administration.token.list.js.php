@@ -20,36 +20,54 @@
 ?>
 
 <script>
-	const view = new class {
+	const view = {
 
 		init() {
-			this.#initActionButtons();
-			this.#initPopupListeners();
+			this.initActionButtons();
 			this.expiresDaysHandler();
-		}
+		},
 
-		#initActionButtons() {
-			document.addEventListener('click', e => {
+		initActionButtons() {
+			document.addEventListener('click', (e) => {
 				if (e.target.classList.contains('js-create-token')) {
-					ZABBIX.PopupManager.open('token.edit', {admin_mode: '1'});
+					this.createToken();
+				}
+				else if (e.target.classList.contains('js-edit-token')) {
+					this.editToken(e.target.dataset.tokenid);
 				}
 				else if (e.target.classList.contains('js-massdelete-token')) {
-					this.#massDeleteToken(e.target, Object.keys(chkbxRange.getSelectedIds()));
+					this.massDeleteToken(e.target, Object.keys(chkbxRange.getSelectedIds()));
 				}
 			});
-		}
+		},
 
-		#initPopupListeners() {
-			ZABBIX.EventHub.subscribe({
-				require: {
-					context: CPopupManager.EVENT_CONTEXT,
-					event: CPopupManagerEvent.EVENT_SUBMIT
-				},
-				callback: () => uncheckTableRows('token')
+		expiresDaysHandler() {
+			const filter_expires_state = document.getElementById('filter-expires-state');
+			const filter_expires_days = document.getElementById('filter-expires-days');
+
+			filter_expires_days.disabled = !filter_expires_state.checked;
+		},
+
+		createToken() {
+			this.openTokenPopup({admin_mode: '1'});
+		},
+
+		editToken(tokenid) {
+			const token_data = {tokenid, admin_mode: '1'};
+			this.openTokenPopup(token_data);
+		},
+
+		openTokenPopup(token_data) {
+			const overlay = PopUp('popup.token.edit', token_data, {
+				dialogueid: 'token_edit',
+				dialogue_class: 'modal-popup-generic',
+				prevent_navigation: true
 			});
-		}
 
-		#massDeleteToken(target, tokenids) {
+			overlay.$dialogue[0].addEventListener('dialogue.submit', this.events.tokenSuccess, {once: true});
+		},
+
+		massDeleteToken(target, tokenids) {
 			const confirmation = tokenids.length > 1
 				? <?= json_encode(_('Delete selected tokens?')) ?>
 				: <?= json_encode(_('Delete selected token?')) ?>;
@@ -104,13 +122,23 @@
 				.finally(() => {
 					target.classList.remove('is-loading');
 				});
-		}
+		},
 
-		expiresDaysHandler() {
-			const filter_expires_state = document.getElementById('filter-expires-state');
-			const filter_expires_days = document.getElementById('filter-expires-days');
+		events: {
+			tokenSuccess(e) {
+				const data = e.detail;
 
-			filter_expires_days.disabled = !filter_expires_state.checked;
+				if ('success' in data) {
+					postMessageOk(data.success.title);
+
+					if ('messages' in data.success) {
+						postMessageDetails('success', data.success.messages);
+					}
+				}
+
+				uncheckTableRows('token');
+				location.href = location.href;
+			}
 		}
 	};
 </script>

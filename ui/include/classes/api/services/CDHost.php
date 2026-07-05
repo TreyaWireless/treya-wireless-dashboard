@@ -167,10 +167,11 @@ class CDHost extends CApiService {
 		if ($result) {
 			$result = $this->addRelatedObjects($options, $result);
 			$result = $this->unsetExtraFields($result, ['druleid'], $options['output']);
+		}
 
-			if (!$options['preservekeys']) {
-				$result = array_values($result);
-			}
+		// removing keys (hash -> array)
+		if (!$options['preservekeys']) {
+			$result = zbx_cleanHashes($result);
 		}
 
 		return $result;

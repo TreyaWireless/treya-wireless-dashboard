@@ -46,7 +46,7 @@ class TabIndicators {
 	getForm() {
 		const ACTION = document.querySelector('#action-form');
 		const AUTHENTICATION = document.querySelector('#authentication-form');
-		const GRAPH = document.querySelector('form.dashboard-widget-svggraph');
+		const GRAPH = document.querySelector('#widget-dialogue-form');
 		const HOST = document.querySelector('#host-form');
 		const HOST_DISCOVERY = document.querySelector('#host-discovery-form');
 		const HOST_PROTOTYPE = document.querySelector('#host-prototype-form');
@@ -54,7 +54,7 @@ class TabIndicators {
 		const ITEM_PROTOTYPE = document.querySelector('#item-prototype-form');
 		const MAP = document.querySelector('#sysmap-form');
 		const MEDIA_TYPE = document.querySelector('#media-type-form');
-		const PIE_CHART = document.querySelector('form.dashboard-widget-piechart');
+		const PIE_CHART = document.querySelector('#widget-dialogue-form');
 		const PROXY = document.querySelector('#proxy-form');
 		const SERVICE = document.querySelector('#service-form');
 		const SLA = document.querySelector('#sla-form');
@@ -62,7 +62,6 @@ class TabIndicators {
 		const TRIGGER = document.querySelector('#trigger-form');
 		const TRIGGER_PROTOTYPE = document.querySelector('#trigger-prototype-form');
 		const USER = document.querySelector('#user-form');
-		const USERPROFILE_NOTIFICATION = document.querySelector('#userprofile-notification-form');
 		const USER_GROUP = document.querySelector('#user-group-form');
 		const WEB_SCENARIO = document.querySelector('#webscenario-form');
 
@@ -105,8 +104,6 @@ class TabIndicators {
 				return TRIGGER_PROTOTYPE;
 			case !!USER:
 				return USER;
-			case !!USERPROFILE_NOTIFICATION:
-				return USERPROFILE_NOTIFICATION;
 			case !!USER_GROUP:
 				return USER_GROUP;
 			case !!WEB_SCENARIO:
@@ -361,7 +358,9 @@ class HostMacrosTabIndicatorItem extends TabIndicatorItem {
 	}
 
 	getValue() {
-		return [...document.querySelectorAll('#tbl_macros .form_row')]
+		let macros = [...document.forms['host-form'].querySelectorAll('#tbl_macros .form_row')];
+
+		return macros
 			.filter((row) => {
 				const macro = row.querySelector('textarea[name$="[macro]"]');
 				const inherited_type = row.querySelector('input[name$="[inherited_type]"]');
@@ -403,13 +402,15 @@ class HostPrototypeMacrosTabIndicatorItem extends TabIndicatorItem {
 	}
 
 	getValue() {
-		return [...document.querySelectorAll('#tbl_macros .form_row')]
+		let macros = [...document.forms['hostPrototypeForm'].querySelectorAll('#tbl_macros .form_row')];
+
+		return macros
 			.filter((row) => {
 				const macro = row.querySelector('textarea[name$="[macro]"]');
 				const inherited_type = row.querySelector('input[name$="[inherited_type]"]');
+				const inherited = HostPrototypeMacrosTabIndicatorItem.ZBX_PROPERTY_INHERITED;
 
-				if (inherited_type !== null
-						&& parseInt(inherited_type.value, 10) == HostMacrosTabIndicatorItem.ZBX_PROPERTY_INHERITED) {
+				if (inherited_type !== null && parseInt(inherited_type.value, 10) == inherited) {
 					return false;
 				}
 
@@ -445,13 +446,15 @@ class TemplateMacrosTabIndicatorItem extends TabIndicatorItem {
 	}
 
 	getValue() {
-		return [...document.querySelectorAll('#tbl_macros .form_row')]
+		let macros = [...document.forms['templates-form'].querySelectorAll('#tbl_macros .form_row')];
+
+		return macros
 			.filter((row) => {
 				const macro = row.querySelector('textarea[name$="[macro]"]');
 				const inherited_type = row.querySelector('input[name$="[inherited_type]"]');
+				const inherited = TemplateMacrosTabIndicatorItem.ZBX_PROPERTY_INHERITED;
 
-				if (inherited_type !== null
-						&& parseInt(inherited_type.value, 10) == HostMacrosTabIndicatorItem.ZBX_PROPERTY_INHERITED) {
+				if (inherited_type !== null && parseInt(inherited_type.value, 10) == inherited) {
 					return false;
 				}
 
@@ -884,10 +887,9 @@ class FiltersTabIndicatorItem extends TabIndicatorItem {
 	}
 
 	getValue() {
-		const form_rows = document
-			.querySelectorAll('#conditions tbody .form_row > td > input.macro:not(:placeholder-shown)');
-
-		return [...form_rows].filter((row) => !row.readOnly || row.dataset.discovered).length;
+		return document
+			.querySelectorAll('#conditions tbody .form_row > td > input.macro:not(:placeholder-shown):not([readonly])')
+			.length;
 	}
 
 	initObserver() {
@@ -1357,7 +1359,6 @@ class SharingTabIndicatorItem extends TabIndicatorItem {
 class GraphAxesTabIndicatorItem extends TabIndicatorItem {
 
 	static SVG_GRAPH_AXIS_UNITS_AUTO = 0;
-	static SVG_GRAPH_AXIS_SCALE_LINEAR = 0;
 
 	constructor() {
 		super(TAB_INDICATOR_TYPE_MARK);
@@ -1372,12 +1373,6 @@ class GraphAxesTabIndicatorItem extends TabIndicatorItem {
 
 		for (const input of document.querySelectorAll('#lefty_min, #lefty_max, #righty_min, #righty_max')) {
 			if (!input.disabled && input.value !== '') {
-				return true;
-			}
-		}
-
-		for (const input of document.querySelectorAll('#lefty_scale, #righty_scale')) {
-			if (!input.disabled && input.value != GraphAxesTabIndicatorItem.SVG_GRAPH_AXIS_SCALE_LINEAR) {
 				return true;
 			}
 		}

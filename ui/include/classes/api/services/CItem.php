@@ -131,6 +131,8 @@ class CItem extends CItemGeneral {
 			'selectTags'				=> null,
 			'selectTriggers'			=> null,
 			'selectGraphs'				=> null,
+			'selectDiscoveryRule'		=> null,
+			'selectItemDiscovery'		=> null,
 			'selectPreprocessing'		=> null,
 			'selectValueMap'			=> null,
 			'countOutput'				=> false,
@@ -142,8 +144,7 @@ class CItem extends CItemGeneral {
 			'limitSelects'				=> null
 		];
 		$options = zbx_array_merge($defOptions, $options);
-
-		self::validateGet($options);
+		$this->validateGet($options);
 
 		// editable + permission check
 		if (self::$userData['type'] != USER_TYPE_SUPER_ADMIN && !$options['nopermissions']) {
@@ -438,7 +439,7 @@ class CItem extends CItemGeneral {
 				break;
 			}
 
-			$this->prepareChunkObjects($items_chunk, $options);
+			$this->prepareChunkObjects($items_chunk, $options, $sqlParts);
 
 			$items += $items_chunk;
 			$items_chunk = [];
@@ -452,21 +453,30 @@ class CItem extends CItemGeneral {
 		return $items;
 	}
 
-	private static function validateGet(array &$options) {
-		$api_input_rules = ['type' => API_OBJECT, 'flags' => API_ALLOW_UNEXPECTED, 'fields' => [
-			'selectValueMap' =>			['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => 'valuemapid,name,mappings'],
-			'evaltype' => 				['type' => API_INT32, 'in' => implode(',', [TAG_EVAL_TYPE_AND_OR, TAG_EVAL_TYPE_OR])],
-			'selectDiscoveryRule' =>	['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_NORMALIZE, 'in' => implode(',', CDiscoveryRule::OUTPUT_FIELDS), 'default' => null],
-			'selectItemDiscovery' =>	['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_NORMALIZE | API_DEPRECATED, 'in' => implode(',', self::DISCOVERY_DATA_OUTPUT_FIELDS), 'default' => null],
-			'selectDiscoveryData' =>	['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_NORMALIZE, 'in' => implode(',', self::DISCOVERY_DATA_OUTPUT_FIELDS), 'default' => null]
+	/**
+	 * Validates the input parameters for the get() method.
+	 *
+	 * @param array $options
+	 *
+	 * @throws APIException if the input is invalid
+	 */
+	private function validateGet(array $options) {
+		// Validate input parameters.
+		$api_input_rules = ['type' => API_OBJECT, 'fields' => [
+			'selectValueMap' => ['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => 'valuemapid,name,mappings'],
+			'evaltype' => ['type' => API_INT32, 'in' => implode(',', [TAG_EVAL_TYPE_AND_OR, TAG_EVAL_TYPE_OR])]
 		]];
-
-		if (!CApiInputValidator::validate($api_input_rules, $options, '/', $error)) {
+		$options_filter = array_intersect_key($options, $api_input_rules['fields']);
+		if (!CApiInputValidator::validate($api_input_rules, $options_filter, '/', $error)) {
 			self::exception(ZBX_API_ERROR_PARAMETERS, $error);
 		}
 	}
 
-	private function prepareChunkObjects(array &$items, array $options): void {
+	private function prepareChunkObjects(array &$items, array $options, array $sqlParts): void {
+		if (self::dbDistinct($sqlParts)) {
+			$items = $this->addNclobFieldValues($options, $items);
+		}
+
 		$items = $this->addRelatedObjects($options, $items);
 		$items = $this->unsetExtraFields($items, ['hostid', 'interfaceid', 'value_type', 'valuemapid'],
 			$options['output']
@@ -903,7 +913,6 @@ class CItem extends CItemGeneral {
 		self::updateTags($items, $db_items, $upd_itemids);
 		self::updatePreprocessing($items, $db_items, $upd_itemids);
 		self::updateParameters($items, $db_items, $upd_itemids);
-		self::updateMapLinks($items, $db_items);
 
 		$items = array_intersect_key($items, $upd_itemids);
 		$db_items = array_intersect_key($db_items, array_flip($upd_itemids));
@@ -912,30 +921,6 @@ class CItem extends CItemGeneral {
 		self::prepareItemsForApi($db_items);
 
 		self::addAuditLog(CAudit::ACTION_UPDATE, CAudit::RESOURCE_ITEM, $items, $db_items);
-	}
-
-	private static function updateMapLinks(array $items, array $db_items): void {
-		$itemids = [];
-
-		$num_types = [ITEM_VALUE_TYPE_FLOAT, ITEM_VALUE_TYPE_UINT64];
-		$text_types = [ITEM_VALUE_TYPE_STR, ITEM_VALUE_TYPE_LOG, ITEM_VALUE_TYPE_TEXT];
-
-		foreach ($items as $item) {
-			$db_item = $db_items[$item['itemid']];
-
-			if (!array_key_exists('value_type', $item) || $item['value_type'] == $db_item['value_type']) {
-				continue;
-			}
-
-			if ((in_array($db_item['value_type'], $num_types) && !in_array($item['value_type'], $num_types))
-					|| (in_array($db_item['value_type'], $text_types) && !in_array($item['value_type'], $text_types))) {
-				$itemids[] = $item['itemid'];
-			}
-		}
-
-		if ($itemids) {
-			API::Map()->unlinkItems($itemids);
-		}
 	}
 
 	/**
@@ -1726,9 +1711,64 @@ class CItem extends CItemGeneral {
 			}
 		}
 
-		self::addRelatedDiscoveryRules($options, $result);
-		self::addRelatedItemDiscovery($options, $result);
-		self::addRelatedDiscoveryData($options, $result);
+		// adding discoveryrule
+		if ($options['selectDiscoveryRule'] !== null && $options['selectDiscoveryRule'] != API_OUTPUT_COUNT) {
+			$discoveryRules = [];
+			$relationMap = new CRelationMap();
+			// discovered items
+			$dbRules = DBselect(
+				'SELECT id1.itemid,id2.parent_itemid'.
+					' FROM item_discovery id1,item_discovery id2,items i'.
+					' WHERE '.dbConditionInt('id1.itemid', $itemids).
+					' AND id1.parent_itemid=id2.itemid'.
+					' AND i.itemid=id1.itemid'.
+					' AND i.flags='.ZBX_FLAG_DISCOVERY_CREATED
+			);
+			while ($rule = DBfetch($dbRules)) {
+				$relationMap->addRelation($rule['itemid'], $rule['parent_itemid']);
+			}
+
+			// item prototypes
+			// TODO: this should not be in the item API
+			$dbRules = DBselect(
+				'SELECT id.parent_itemid,id.itemid'.
+					' FROM item_discovery id,items i'.
+					' WHERE '.dbConditionInt('id.itemid', $itemids).
+					' AND i.itemid=id.itemid'.
+					' AND i.flags='.ZBX_FLAG_DISCOVERY_PROTOTYPE
+			);
+			while ($rule = DBfetch($dbRules)) {
+				$relationMap->addRelation($rule['itemid'], $rule['parent_itemid']);
+			}
+
+			$related_ids = $relationMap->getRelatedIds();
+
+			if ($related_ids) {
+				$discoveryRules = API::DiscoveryRule()->get([
+					'output' => $options['selectDiscoveryRule'],
+					'itemids' => $related_ids,
+					'nopermissions' => true,
+					'preservekeys' => true
+				]);
+			}
+
+			$result = $relationMap->mapOne($result, $discoveryRules, 'discoveryRule');
+		}
+
+		// adding item discovery
+		if ($options['selectItemDiscovery'] !== null) {
+			$itemDiscoveries = API::getApiService()->select('item_discovery', [
+				'output' => $this->outputExtend($options['selectItemDiscovery'], ['itemdiscoveryid', 'itemid']),
+				'filter' => ['itemid' => array_keys($result)],
+				'preservekeys' => true
+			]);
+			$relationMap = $this->createRelationMap($itemDiscoveries, 'itemid', 'itemdiscoveryid');
+
+			$itemDiscoveries = $this->unsetExtraFields($itemDiscoveries, ['itemid', 'itemdiscoveryid'],
+				$options['selectItemDiscovery']
+			);
+			$result = $relationMap->mapOne($result, $itemDiscoveries, 'itemDiscovery');
+		}
 
 		$requested_output = array_filter([
 			'lastclock' => $this->outputIsRequested('lastclock', $options['output']),
@@ -1798,28 +1838,6 @@ class CItem extends CItemGeneral {
 		return $result;
 	}
 
-	private static function addRelatedItemDiscovery(array $options, array &$result): void {
-		if ($options['selectItemDiscovery'] === null) {
-			return;
-		}
-
-		foreach ($result as &$item) {
-			$item['itemDiscovery'] = [];
-		}
-		unset($item);
-
-		$_options = [
-			'output' => array_merge(['itemid'], $options['selectItemDiscovery']),
-			'filter' => ['itemid' => array_keys($result)]
-		];
-		$resource = DBselect(DB::makeSql('item_discovery', $_options));
-
-		while ($item_discovery = DBfetch($resource)) {
-			$result[$item_discovery['itemid']]['itemDiscovery'] =
-				array_diff_key($item_discovery, array_flip(['itemid']));
-		}
-	}
-
 	protected function applyQueryOutputOptions($tableName, $tableAlias, array $options, array $sqlParts) {
 		$sqlParts = parent::applyQueryOutputOptions($tableName, $tableAlias, $options, $sqlParts);
 
@@ -1885,14 +1903,10 @@ class CItem extends CItemGeneral {
 	 */
 	public static function deleteForce(array $db_items): void {
 		self::addInheritedItems($db_items);
-		self::addDependentItems($db_items, $db_lld_rules, $db_lld_rule_prototypes, $db_item_prototypes);
+		self::addDependentItems($db_items, $db_lld_rules, $db_item_prototypes);
 
 		if ($db_lld_rules) {
 			CDiscoveryRule::deleteForce($db_lld_rules);
-		}
-
-		if ($db_lld_rule_prototypes) {
-			CDiscoveryRulePrototype::deleteForce($db_lld_rule_prototypes);
 		}
 
 		if ($db_item_prototypes) {
@@ -1904,8 +1918,6 @@ class CItem extends CItemGeneral {
 		self::deleteAffectedGraphs($del_itemids);
 		self::resetGraphsYAxis($del_itemids);
 		self::deleteFromFavoriteGraphs($del_itemids);
-
-		API::Map()->unlinkItems($del_itemids);
 
 		self::deleteAffectedTriggers($del_itemids);
 
@@ -1928,13 +1940,11 @@ class CItem extends CItemGeneral {
 	 *
 	 * @param array      $db_items
 	 * @param array|null $db_lld_rules
-	 * @param array|null $db_lld_rule_prototypes
 	 * @param array|null $db_item_prototypes
 	 */
 	protected static function addDependentItems(array &$db_items, ?array &$db_lld_rules = null,
-			?array &$db_lld_rule_prototypes = null, ?array &$db_item_prototypes = null): void {
+			?array &$db_item_prototypes = null): void {
 		$db_lld_rules = [];
-		$db_lld_rule_prototypes = [];
 		$db_item_prototypes = [];
 
 		$master_itemids = array_keys($db_items);
@@ -1949,15 +1959,10 @@ class CItem extends CItemGeneral {
 			$master_itemids = [];
 
 			while ($row = DBfetch($result)) {
-				if (in_array($row['flags'], [ZBX_FLAG_DISCOVERY_RULE, ZBX_FLAG_DISCOVERY_RULE_CREATED])) {
-					$db_lld_rules[$row['itemid']] = $row;
+				if ($row['flags'] == ZBX_FLAG_DISCOVERY_RULE) {
+					$db_lld_rules[$row['itemid']] = array_diff_key($row, array_flip(['flags']));
 				}
-				elseif (in_array($row['flags'], [ZBX_FLAG_DISCOVERY_RULE_PROTOTYPE, ZBX_FLAG_DISCOVERY_RULE_PROTOTYPE_CREATED])) {
-					$master_itemids[] = $row['itemid'];
-
-					$db_lld_rule_prototypes[$row['itemid']] = $row;
-				}
-				elseif (in_array($row['flags'], [ZBX_FLAG_DISCOVERY_PROTOTYPE, ZBX_FLAG_DISCOVERY_PROTOTYPE_CREATED])) {
+				elseif ($row['flags'] == ZBX_FLAG_DISCOVERY_PROTOTYPE) {
 					$master_itemids[] = $row['itemid'];
 
 					$db_item_prototypes[$row['itemid']] = array_diff_key($row, array_flip(['flags']));

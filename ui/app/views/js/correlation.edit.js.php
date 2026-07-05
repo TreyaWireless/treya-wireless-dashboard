@@ -22,15 +22,11 @@
 window.correlation_edit_popup = new class {
 
 	init({correlation}) {
-		this.overlay = overlays_stack.getById('correlation.edit');
+		this.overlay = overlays_stack.getById('correlation-form');
 		this.dialogue = this.overlay.$dialogue[0];
 		this.form = this.overlay.$dialogue.$body[0].querySelector('form');
 		this.correlation = correlation;
 		this.correlationid = correlation.correlationid;
-
-		const return_url = new URL('zabbix.php', location.href);
-		return_url.searchParams.set('action', 'correlation.list');
-		ZABBIX.PopupManager.setReturnUrl(return_url.href);
 
 		this.dialogue.addEventListener('click', (e) => {
 			if (e.target.classList.contains('js-condition-add')) {
@@ -338,7 +334,7 @@ window.correlation_edit_popup = new class {
 		this.#post(curl.getUrl(), {correlationids: [this.correlationid]}, (response) => {
 			overlayDialogueDestroy(this.overlay.dialogueid);
 
-			this.dialogue.dispatchEvent(new CustomEvent('dialogue.submit', {detail: response}));
+			this.dialogue.dispatchEvent(new CustomEvent('dialogue.submit', {detail: response.success}));
 		});
 	}
 
@@ -354,7 +350,7 @@ window.correlation_edit_popup = new class {
 		this.#post(curl.getUrl(), fields, (response) => {
 			overlayDialogueDestroy(this.overlay.dialogueid);
 
-			this.dialogue.dispatchEvent(new CustomEvent('dialogue.submit', {detail: response}));
+			this.dialogue.dispatchEvent(new CustomEvent('dialogue.submit', {detail: response.success}));
 		});
 	}
 

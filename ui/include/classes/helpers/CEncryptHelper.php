@@ -34,15 +34,17 @@ class CEncryptHelper {
 	/**
 	 * Return session key.
 	 *
-	 * @return string
+	 * @return string|null
 	 */
-	private static function getKey(): string {
+	private static function getKey(): ?string {
 		if (!self::$key) {
 			// This if contain copy in CEncryptedCookieSession class.
 			if (CSettingsHelper::getPrivate(CSettingsHelper::SESSION_KEY) === '') {
 				self::$key = self::generateKey();
 
-				self::updateKey(self::$key);
+				if (!self::updateKey(self::$key)) {
+					return null;
+				}
 
 				return self::$key;
 			}
@@ -73,7 +75,9 @@ class CEncryptHelper {
 	 * @return string
 	 */
 	public static function sign(string $data): string {
-		return hash_hmac(self::SIGN_ALGO, $data, self::getKey());
+		$key = self::getKey() ?? '';
+
+		return hash_hmac(self::SIGN_ALGO, $data, $key);
 	}
 
 	/**
@@ -89,11 +93,16 @@ class CEncryptHelper {
 	 * Update secret session key.
 	 *
 	 * @param string $key
+	 *
+	 * @return boolean
 	 */
-	public static function updateKey(string $key): void {
-		DB::update('settings', [
-			'values' => ['value_str' => $key],
-			'where' => ['name' => 'session_key']
-		]);
+	public static function updateKey(string $key): bool {
+		$db_config = DB::select('config', ['output' => ['configid']])[0];
+
+		return DBexecute(
+			'UPDATE config'.
+			' SET session_key='.zbx_dbstr($key).
+			' WHERE '.dbConditionInt('configid', [$db_config['configid']])
+		);
 	}
 }

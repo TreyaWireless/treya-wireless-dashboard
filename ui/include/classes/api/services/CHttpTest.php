@@ -239,10 +239,11 @@ class CHttpTest extends CApiService {
 			}
 
 			$result = $this->unsetExtraFields($result, ['hostid'], $options['output']);
+		}
 
-			if (!$options['preservekeys']) {
-				$result = array_values($result);
-			}
+		// removing keys (hash -> array)
+		if (!$options['preservekeys']) {
+			$result = zbx_cleanHashes($result);
 		}
 
 		return $result;

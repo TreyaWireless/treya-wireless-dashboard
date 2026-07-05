@@ -224,7 +224,6 @@ $discoveryTable = (new CTableInfo())
 		_('Triggers'),
 		_('Graphs'),
 		_('Hosts'),
-		_('Discovery rules'),
 		make_sorting_header(_('Key'), 'key_', $data['sort'], $data['sortorder'], $url),
 		make_sorting_header(_('Interval'), 'delay', $data['sort'], $data['sortorder'], $url),
 		make_sorting_header(_('Type'), 'type', $data['sort'], $data['sortorder'], $url),
@@ -235,7 +234,6 @@ $discoveryTable = (new CTableInfo())
 
 $update_interval_parser = new CUpdateIntervalParser(['usermacros' => true]);
 $csrf_token = CCsrfTokenHelper::get('host_discovery.php');
-$current_time = time();
 
 foreach ($data['discoveries'] as $discovery) {
 	// description
@@ -244,44 +242,17 @@ foreach ($data['discoveries'] as $discovery) {
 		$data['allowed_ui_conf_templates']
 	);
 
-	if ($discovery['flags'] & ZBX_FLAG_DISCOVERY_CREATED) {
-		if ($discovery['discoveryRule']) {
-			if ($discovery['is_discovery_rule_editable']) {
-				$description[] = (new CLink($discovery['discoveryRule']['name'],
-					(new CUrl('host_discovery.php'))
-						->setArgument('form', 'update')
-						->setArgument('itemid',  $discovery['discoveryRule']['itemid'])
-						->setArgument('context', 'host')
-				))
-					->addClass(ZBX_STYLE_LINK_ALT)
-					->addClass(ZBX_STYLE_ORANGE);
-			}
-			else {
-				$description[] = (new CSpan($discovery['discoveryRule']['name']))->addClass(ZBX_STYLE_ORANGE);
-			}
-		}
-		else {
-			$description[] = (new CSpan(_('Inaccessible discovery rule')))->addClass(ZBX_STYLE_ORANGE);
-		}
-
-		$description[] = NAME_DELIMITER;
-	}
-
 	if ($discovery['type'] == ITEM_TYPE_DEPENDENT) {
 		if ($discovery['master_item']['type'] == ITEM_TYPE_HTTPTEST) {
 			$description[] = $discovery['master_item']['name'];
 		}
 		else {
-			$item_url = (new CUrl('zabbix.php'))
-				->setArgument('action', 'popup')
-				->setArgument('popup', 'item.edit')
-				->setArgument('context', $data['context'])
-				->setArgument('itemid', $discovery['master_item']['itemid'])
-				->getUrl();
-
-			$description[] = (new CLink($discovery['master_item']['name'], $item_url))
+			$description[] = (new CLink($discovery['master_item']['name']))
 				->addClass(ZBX_STYLE_LINK_ALT)
-				->addClass(ZBX_STYLE_TEAL);
+				->addClass(ZBX_STYLE_TEAL)
+				->addClass('js-update-item')
+				->setAttribute('data-itemid', $discovery['master_item']['itemid'])
+				->setAttribute('data-context', $data['context']);
 		}
 
 		$description[] = NAME_DELIMITER;
@@ -313,18 +284,15 @@ foreach ($data['discoveries'] as $discovery) {
 			->addClass(ZBX_STYLE_LINK_ACTION)
 			->addClass(itemIndicatorStyle($discovery['status'], $discovery['state']));
 
-	// Hide zeros for specific items.
-	if (in_array($discovery['type'], [ITEM_TYPE_TRAPPER, ITEM_TYPE_SNMPTRAP, ITEM_TYPE_DEPENDENT, ITEM_TYPE_NESTED])
-			|| ($discovery['type'] == ITEM_TYPE_ZABBIX_ACTIVE && strncmp($discovery['key_'], 'mqtt.get', 8) == 0)) {
+	// Hide zeros for trapper, SNMP trap and dependent items.
+	if ($discovery['type'] == ITEM_TYPE_TRAPPER || $discovery['type'] == ITEM_TYPE_SNMPTRAP
+			|| $discovery['type'] == ITEM_TYPE_DEPENDENT || ($discovery['type'] == ITEM_TYPE_ZABBIX_ACTIVE
+				&& strncmp($discovery['key_'], 'mqtt.get', 8) == 0)) {
 		$discovery['delay'] = '';
 	}
 	elseif ($update_interval_parser->parse($discovery['delay']) == CParser::PARSE_SUCCESS) {
 		$discovery['delay'] = $update_interval_parser->getDelay();
 	}
-
-	$disable_source = $discovery['status'] == ITEM_STATUS_DISABLED && $discovery['discoveryData']
-		? $discovery['discoveryData']['disable_source']
-		: '';
 
 	// info
 	if ($data['context'] === 'host') {
@@ -332,13 +300,6 @@ foreach ($data['discoveries'] as $discovery) {
 
 		if ($discovery['status'] == ITEM_STATUS_ACTIVE && $discovery['error'] !== '') {
 			$info_icons[] = makeErrorIcon($discovery['error']);
-		}
-
-		if ($discovery['discoveryData'] && $discovery['discoveryData']['status'] == ZBX_LLD_STATUS_LOST) {
-			$info_icons[] = getLldLostEntityIndicator($current_time, $discovery['discoveryData']['ts_delete'],
-				$discovery['discoveryData']['ts_disable'], $disable_source,
-				$discovery['status'] == ITEM_STATUS_DISABLED, _('discovery rule')
-			);
 		}
 	}
 
@@ -350,14 +311,9 @@ foreach ($data['discoveries'] as $discovery) {
 		$checkbox->setAttribute('data-actions', 'execute');
 	}
 
-	$host_url = (new CUrl('zabbix.php'))
-		->setArgument('action', 'popup')
-		->setArgument('popup', $data['context'] === 'host' ? 'host.edit' : 'template.edit')
-		->setArgument($data['context'] === 'host' ? 'hostid' : 'templateid', $discovery['hosts'][0]['hostid'])
-		->getUrl();
-
-	$host = new CLink($discovery['hosts'][0]['name'], $host_url);
-	$disabled_by_lld = $disable_source == ZBX_DISABLE_SOURCE_LLD;
+	$host = (new CLink($discovery['hosts'][0]['name']))
+		->setAttribute('data-hostid', $discovery['hosts'][0]['hostid'])
+		->addClass('js-edit-'.$data['context']);
 
 	$discoveryTable->addRow([
 		$checkbox,
@@ -383,36 +339,26 @@ foreach ($data['discoveries'] as $discovery) {
 		],
 		[
 			new CLink(_('Graph prototypes'),
-				(new CUrl('zabbix.php'))
-					->setArgument('action', 'graph.prototype.list')
+				(new CUrl('graphs.php'))
 					->setArgument('parent_discoveryid', $discovery['itemid'])
 					->setArgument('context', $data['context'])
 			),
 			CViewHelper::showNum($discovery['graphs'])
 		],
-		[
-			new CLink(_('Host prototypes'),
-				(new CUrl('host_prototypes.php'))
-					->setArgument('parent_discoveryid', $discovery['itemid'])
-					->setArgument('context', $data['context'])
-			),
-			CViewHelper::showNum($discovery['hostPrototypes'])
-		],
-		[
-			new CLink(_('Discovery prototypes'),
-				(new CUrl('host_discovery_prototypes.php'))
-					->setArgument('parent_discoveryid', $discovery['itemid'])
-					->setArgument('context', $data['context'])
-			),
-			CViewHelper::showNum($discovery['discoveryRulePrototypes'])
-		],
+		$discovery['hosts'][0]['flags'] == ZBX_FLAG_DISCOVERY_NORMAL
+			? [
+				new CLink(_('Host prototypes'),
+					(new CUrl('host_prototypes.php'))
+						->setArgument('parent_discoveryid', $discovery['itemid'])
+						->setArgument('context', $data['context'])
+				),
+				CViewHelper::showNum($discovery['hostPrototypes'])
+			]
+			: '',
 		(new CDiv($discovery['key_']))->addClass(ZBX_STYLE_WORDWRAP),
 		$discovery['delay'],
 		item_type2str($discovery['type']),
-		[
-			$status,
-			$disabled_by_lld ? makeDescriptionIcon(_('Disabled automatically by an LLD rule.')) : null
-		],
+		$status,
 		($data['context'] === 'host') ? makeInformationList($info_icons) : null
 	]);
 }

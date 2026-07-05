@@ -21,20 +21,26 @@ class DB {
 	const DBEXECUTE_ERROR = 1;
 	const RESERVEIDS_ERROR = 2;
 	const SCHEMA_ERROR = 3;
-	const INIT_ERROR = 4;
+	const INPUT_ERROR = 4;
+	const INIT_ERROR = 5;
 
-	const FIELD_TYPE_INT = 0x01;
-	const FIELD_TYPE_CHAR = 0x02;
-	const FIELD_TYPE_ID = 0x04;
-	const FIELD_TYPE_FLOAT = 0x08;
-	const FIELD_TYPE_UINT = 0x10;
-	const FIELD_TYPE_BLOB = 0x20;
-	const FIELD_TYPE_TEXT = 0x40;
-	const FIELD_TYPE_CUID = 0x80;
+	const TABLE_TYPE_CONFIG = 1;
+	const TABLE_TYPE_HISTORY = 2;
+
+	const FIELD_TYPE_INT = 0x0001;
+	const FIELD_TYPE_CHAR = 0x0002;
+	const FIELD_TYPE_ID = 0x0004;
+	const FIELD_TYPE_FLOAT = 0x0008;
+	const FIELD_TYPE_UINT = 0x0010;
+	const FIELD_TYPE_BLOB = 0x0020;
+	const FIELD_TYPE_TEXT = 0x0040;
+	const FIELD_TYPE_CUID = 0x0080;
+	const FIELD_TYPE_NCLOB = 0x0100;
 
 	const SUPPORTED_FILTER_TYPES = self::FIELD_TYPE_INT | self::FIELD_TYPE_CHAR | self::FIELD_TYPE_ID |
 		self::FIELD_TYPE_FLOAT | self::FIELD_TYPE_UINT | self::FIELD_TYPE_CUID;
-	const SUPPORTED_SEARCH_TYPES = self::FIELD_TYPE_CHAR | self::FIELD_TYPE_TEXT | self::FIELD_TYPE_CUID;
+	const SUPPORTED_SEARCH_TYPES = self::FIELD_TYPE_CHAR | self::FIELD_TYPE_TEXT | self::FIELD_TYPE_CUID |
+		self::FIELD_TYPE_NCLOB;
 
 	/**
 	 * Maximum number of IDs per SQL request.
@@ -63,9 +69,11 @@ class DB {
 				case ZBX_DB_MYSQL:
 					self::$dbBackend = new MysqlDbBackend();
 					break;
-
 				case ZBX_DB_POSTGRESQL:
 					self::$dbBackend = new PostgresqlDbBackend();
+					break;
+				case ZBX_DB_ORACLE:
+					self::$dbBackend = new OracleDbBackend();
 					break;
 			}
 		}
@@ -189,7 +197,28 @@ class DB {
 	 */
 	public static function getSchema(?string $table = null): array {
 		if (self::$schema === null) {
-			self::$schema = include __DIR__.'/../../'.self::SCHEMA_FILE;
+			$schema = include __DIR__.'/../../'.self::SCHEMA_FILE;
+
+			global $DB;
+
+			if ($DB['TYPE'] === ZBX_DB_ORACLE) {
+				$config = DBfetch(DBselect('SELECT dbversion_status FROM config'));
+				$dbversion_status = $config ? (array) json_decode($config['dbversion_status'], true) : [];
+
+				foreach ($dbversion_status as $dbversion) {
+					if (array_key_exists('schema_diff', $dbversion)
+							&& array_key_exists('tables', $dbversion['schema_diff'])) {
+						foreach ($dbversion['schema_diff']['tables'] as $table_name => $table_params) {
+							foreach ($table_params['fields'] as $field_name => $field) {
+								$schema[$table_name]['fields'][$field_name]['type'] = $field['type'];
+								$schema[$table_name]['fields'][$field_name]['length'] = $field['length'];
+							}
+						}
+					}
+				}
+			}
+
+			self::$schema = $schema;
 		}
 
 		if ($table === null) {
@@ -231,17 +260,6 @@ class DB {
 	}
 
 	/**
-	 * Returns length of the field by schema.
-	 *
-	 * @param array $field_schema
-	 *
-	 * @return int
-	 */
-	public static function getFieldLengthBySchema(array $field_schema): int {
-		return $field_schema['length'];
-	}
-
-	/**
 	 * Returns length of the field.
 	 *
 	 * @param string $table_name
@@ -249,8 +267,20 @@ class DB {
 	 *
 	 * @return int
 	 */
-	public static function getFieldLength(string $table_name, string $field_name): int {
-		return self::getFieldLengthBySchema(self::getSchema($table_name)['fields'][$field_name]);
+	public static function getFieldLength($table_name, $field_name) {
+		global $DB;
+
+		$schema = self::getSchema($table_name);
+
+		if ($schema['fields'][$field_name]['type'] & self::FIELD_TYPE_TEXT) {
+			return ($DB['TYPE'] == ZBX_DB_ORACLE) ? 2048 : 65535;
+		}
+
+		if ($schema['fields'][$field_name]['type'] & self::FIELD_TYPE_NCLOB) {
+			return 65535;
+		}
+
+		return $schema['fields'][$field_name]['length'];
 	}
 
 	public static function getDefaults($table) {
@@ -376,7 +406,25 @@ class DB {
 					$values[$field] = zbx_dbstr($values[$field]);
 				}
 				elseif ($tableSchema['fields'][$field]['type'] & self::FIELD_TYPE_TEXT) {
+					if ($DB['TYPE'] == ZBX_DB_ORACLE) {
+						$length = mb_strlen($values[$field]);
+
+						if ($length > 2048) {
+							self::exception(self::SCHEMA_ERROR, _s('Value "%1$s" is too long for field "%2$s" - %3$d characters. Allowed length is %4$d characters.',
+								$values[$field], $field, $length, 2048));
+						}
+					}
 					$values[$field] = zbx_dbstr($values[$field]);
+				}
+				elseif ($tableSchema['fields'][$field]['type'] & self::FIELD_TYPE_NCLOB) {
+					// Using strlen because 4000 bytes is largest possible string literal in oracle query.
+					if ($DB['TYPE'] == ZBX_DB_ORACLE && strlen($values[$field]) > ORACLE_MAX_STRING_SIZE) {
+						$chunks = zbx_dbstr(self::chunkMultibyteStr($values[$field], ORACLE_MAX_STRING_SIZE));
+						$values[$field] = 'TO_NCLOB('.implode(') || TO_NCLOB(', $chunks).')';
+					}
+					else {
+						$values[$field] = zbx_dbstr($values[$field]);
+					}
 				}
 				elseif ($tableSchema['fields'][$field]['type'] & self::FIELD_TYPE_BLOB) {
 					switch ($DB['TYPE']) {
@@ -387,10 +435,34 @@ class DB {
 						case ZBX_DB_POSTGRESQL:
 							$values[$field] = "'".pg_escape_bytea($DB['DB'], $values[$field])."'";
 							break;
+
+						case ZBX_DB_ORACLE:
+							// Do nothing; Check CImage.php to see how to update BLOB data with ORACLE DB.
+							break;
 					}
 				}
 			}
 		}
+	}
+
+	/**
+	 * @param string $str
+	 * @param int $chunk_size
+	 *
+	 * @return array
+	 */
+	public static function chunkMultibyteStr(string $str, int $chunk_size): array {
+		$chunks = [];
+		$offset = 0;
+		$size = strlen($str);
+
+		while ($offset < $size) {
+			$chunk = mb_strcut($str, $offset, $chunk_size);
+			$chunks[] = $chunk;
+			$offset = strlen($chunk) + $offset;
+		}
+
+		return $chunks;
 	}
 
 	/**
@@ -464,12 +536,21 @@ class DB {
 
 		$mandatory_fields = [];
 
-		if ($DB['TYPE'] === ZBX_DB_MYSQL) {
-			foreach ($table_schema['fields'] as $name => $field) {
-				if ($field['type'] & self::FIELD_TYPE_TEXT) {
-					$mandatory_fields += [$name => $field['default']];
+		switch ($DB['TYPE']) {
+			case ZBX_DB_MYSQL:
+				foreach ($table_schema['fields'] as $name => $field) {
+					if ($field['type'] & self::FIELD_TYPE_TEXT || $field['type'] & self::FIELD_TYPE_NCLOB) {
+						$mandatory_fields += [$name => $field['default']];
+					}
 				}
-			}
+				break;
+
+			case ZBX_DB_ORACLE:
+				foreach ($table_schema['fields'] as $name => $field) {
+					if ($field['type'] & self::FIELD_TYPE_BLOB) {
+						$mandatory_fields += [$name => 'EMPTY_BLOB()'];
+					}
+				}
 		}
 
 		return $mandatory_fields;
@@ -1242,7 +1323,16 @@ class DB {
 			foreach ((array) $patterns as $pattern) {
 				// escaping parameter that is about to be used in LIKE statement
 				$pattern = mb_strtoupper(strtr($pattern, ['!' => '!!', '%' => '!%', '_' => '!_']));
-				$pattern = zbx_dbstr($start.$pattern.'%');
+				$pattern = $start.$pattern.'%';
+
+				if ($DB['TYPE'] == ZBX_DB_ORACLE && $field_schema['type'] & self::FIELD_TYPE_NCLOB
+						&& strlen($pattern) > ORACLE_MAX_STRING_SIZE) {
+					$chunks = zbx_dbstr(self::chunkMultibyteStr($pattern, ORACLE_MAX_STRING_SIZE));
+					$pattern = 'TO_NCLOB('.implode(') || TO_NCLOB(', $chunks).')';
+				}
+				else {
+					$pattern = zbx_dbstr($pattern);
+				}
 
 				$search[] = self::uppercaseField($field_name, $table_name, $table_alias).' LIKE '.$pattern." ESCAPE '!'";
 			}
@@ -1312,60 +1402,6 @@ class DB {
 		}
 
 		return $sql_parts;
-	}
-
-	/**
-	 * Get array of the field names by which filtering is supported from the given table.
-	 * If $output_fields parameter is given, get filterable fields among them in scope of the given table name.
-	 *
-	 * @param string     $table_name
-	 * @param array|null $output_fields
-	 *
-	 * @return array
-	 */
-	public static function getFilterFields(string $table_name, ?array $output_fields = null): array {
-		$table_schema = self::getSchema($table_name);
-
-		if ($output_fields !== null) {
-			$table_schema['fields'] = array_intersect_key($table_schema['fields'], array_flip($output_fields));
-		}
-
-		$filter_fields = [];
-
-		foreach ($table_schema['fields'] as $field_name => $field_schema) {
-			if ($field_schema['type'] & self::SUPPORTED_FILTER_TYPES) {
-				$filter_fields[] = $field_name;
-			}
-		}
-
-		return $filter_fields;
-	}
-
-	/**
-	 * Get array of the field names by which searching is supported from the given table.
-	 * If $output_fields parameter is given, get searchable fields among them in scope of the given table name.
-	 *
-	 * @param string     $table_name
-	 * @param array|null $output_fields
-	 *
-	 * @return array
-	 */
-	public static function getSearchFields(string $table_name, ?array $output_fields = null): array {
-		$table_schema = self::getSchema($table_name);
-
-		if ($output_fields !== null) {
-			$table_schema['fields'] = array_intersect_key($table_schema['fields'], array_flip($output_fields));
-		}
-
-		$search_fields = [];
-
-		foreach ($table_schema['fields'] as $field_name => $field_schema) {
-			if ($field_schema['type'] & self::SUPPORTED_SEARCH_TYPES) {
-				$search_fields[] = $field_name;
-			}
-		}
-
-		return $search_fields;
 	}
 
 	/**

@@ -21,7 +21,7 @@
  * @var array $data
  */
 
-$form = new CWidgetFormView($data);
+$form = (new CWidgetFormView($data));
 
 $form
 	->addField(
@@ -61,7 +61,7 @@ $form
 			->addClass('js-fieldset-adv-conf')
 	)
 	->includeJsFile('widget.edit.js.php')
-	->initFormJs('widget_form.init();')
+	->addJavaScript('widget_clock_form.init();')
 	->show();
 
 function getDateFieldsGroupView(array $fields): CWidgetFieldsGroupView {

@@ -18,13 +18,14 @@
  * @var CPartial $this
  * @var array    $data
  */
-
-(new CTemplateTag('tag-row-tmpl', renderTagTableRow('#{rowNum}', ['tag' => '', 'value' => ''], [
-	'add_post_js' => false,
-	'with_automatic' => array_key_exists('with_automatic', $data) && $data['with_automatic'],
-	'has_inline_validation' => $data['has_inline_validation']
-])))->show()
 ?>
+
+<script type="text/x-jquery-tmpl" id="tag-row-tmpl">
+	<?= renderTagTableRow('#{rowNum}', ['tag' => '', 'value' => ''], [
+		'add_post_js' => false,
+		'with_automatic' => array_key_exists('with_automatic', $data) && $data['with_automatic']
+	]) ?>
+</script>
 
 <script type="text/javascript">
 	jQuery(function() {
@@ -50,9 +51,6 @@
 				const type_input = e.target.closest('.form_row').querySelector('input[name$="[type]"]');
 
 				type_input.value &= ~<?= ZBX_PROPERTY_OWN ?>;
-				type_input.setAttribute('data-skip-from-submit', '');
-				type_input.closest('tr').querySelectorAll('textarea')
-					.forEach((node) => node.setAttribute('data-skip-from-submit', ''));
 			});
 		}
 		const tags_tab = $('#<?= $data['tags_tab_id'] ?>[aria-hidden="false"]');

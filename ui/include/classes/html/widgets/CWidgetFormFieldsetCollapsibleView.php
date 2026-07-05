@@ -56,6 +56,10 @@ class CWidgetFormFieldsetCollapsibleView extends CFormFieldsetCollapsible {
 			return $this;
 		}
 
+		if (is_string($value)) {
+			$value = $this->encode($value, $this->getEncStrategy());
+		}
+
 		$this->fields[] = $value;
 
 		return $this;

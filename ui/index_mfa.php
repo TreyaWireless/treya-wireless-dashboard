@@ -115,7 +115,7 @@ try {
 			CSessionHelper::unset(['state', 'username', 'confirmid']);
 
 			API::getWrapper()->auth = [
-				'type' => CJsonRpc::AUTH_TYPE_COOKIE,
+				'type' => CJsonRpc::AUTH_TYPE_FRONTEND,
 				'auth' => CWebUser::$data['sessionid']
 			];
 

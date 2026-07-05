@@ -522,18 +522,6 @@ class CControllerPopupGeneric extends CController {
 				'table_columns' => [
 					_('Media type')
 				]
-			],
-			'host_inventory' => [
-				'title' => _('Inventory'),
-				'min_user_type' => USER_TYPE_ZABBIX_USER,
-				'allowed_src_fields' => 'id,name',
-				'form' => [
-					'name' => 'inventory_form',
-					'id' => 'inventory_form'
-				],
-				'table_columns' => [
-					_('Name')
-				]
 			]
 		];
 	}
@@ -745,13 +733,6 @@ class CControllerPopupGeneric extends CController {
 			]);
 
 			if (!$lld_rules) {
-				$lld_rules = API::DiscoveryRulePrototype()->get([
-					'output' => [],
-					'itemids' => $this->getInput('parent_discoveryid')
-				]);
-			}
-
-			if (!$lld_rules) {
 				return false;
 			}
 		}
@@ -805,7 +786,7 @@ class CControllerPopupGeneric extends CController {
 		}
 
 		if ($this->hasInput('monitored_hosts')) {
-			$group_options['with_monitored_hosts'] = 1;
+			$group_options['monitored_hosts'] = 1;
 			$host_options['monitored_hosts'] = 1;
 		}
 		elseif ($this->hasInput('real_hosts')) {
@@ -1332,10 +1313,6 @@ class CControllerPopupGeneric extends CController {
 					];
 				}
 
-				if ($this->hasInput('normal_only')) {
-					$options['filter']['flags'] = ZBX_FLAG_DISCOVERY_NORMAL;
-				}
-
 				$records = (!$this->group_preselect_required || $this->groupids)
 					? API::Host()->get($options)
 					: [];
@@ -1470,7 +1447,6 @@ class CControllerPopupGeneric extends CController {
 				$options += [
 					'output' => ['triggerid', 'expression', 'description', 'status', 'priority', 'state'],
 					'selectHosts' => ['name'],
-					'selectItems' => ['status'],
 					'selectDependencies' => ['triggerid', 'expression', 'description'],
 					'expandDescription' => true
 				];
@@ -1484,23 +1460,6 @@ class CControllerPopupGeneric extends CController {
 
 				if (!$this->template_preselect_required || $this->templateids) {
 					$records = API::Trigger()->get($options);
-
-					if ($this->hasInput('with_monitored_triggers')) {
-						foreach ($records as $id => $record) {
-							foreach ($record['items'] as $item) {
-								if ($item['status'] != ITEM_STATUS_ACTIVE) {
-									unset($records[$id]);
-
-									break;
-								}
-							}
-
-							if ($record['status'] != TRIGGER_STATUS_ENABLED) {
-								unset($records[$id]);
-							}
-						}
-
-					}
 				}
 				else {
 					$records = [];
@@ -1616,7 +1575,6 @@ class CControllerPopupGeneric extends CController {
 
 				if ($this->source_table === 'graph_prototypes') {
 					$options['selectDiscoveryRule'] = ['hostid'];
-					$options['selectDiscoveryRulePrototype'] = ['hostid'];
 
 					$records = (!$this->host_preselect_required || $this->hostids)
 						? API::GraphPrototype()->get($options)
@@ -1852,21 +1810,10 @@ class CControllerPopupGeneric extends CController {
 				break;
 
 			case 'media_types':
-				$options += ['output' => ['mediatypeid', 'name']];
+				$options += ['output' => ['name']];
 
 				$records = API::MediaType()->get($options);
 				CArrayHelper::sort($records, ['name']);
-				break;
-
-			case 'host_inventory':
-				$records = [];
-
-				foreach (getHostInventories(true) as $inventory_field) {
-					$records[$inventory_field['nr']] = [
-						'id' => $inventory_field['nr'],
-						'name' => $inventory_field['title']
-					];
-				}
 				break;
 		}
 

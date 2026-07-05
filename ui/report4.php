@@ -49,7 +49,7 @@ $current_year = date('Y');
 $media_types = [];
 
 $db_media_types = API::MediaType()->get([
-	'output' => ['mediatypeid', 'name'],
+	'output' => ['name'],
 	'preservekeys' => true
 ]);
 CArrayHelper::sort($db_media_types, ['name']);

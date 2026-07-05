@@ -16,6 +16,8 @@
 
 class CFormFieldsetCollapsible extends CFormFieldset {
 
+	public const ZBX_STYLE_TOGGLE = 'toggle';
+
 	protected bool $is_expanded = false;
 
 	public function __construct(string $caption, $body = null) {
@@ -33,7 +35,7 @@ class CFormFieldsetCollapsible extends CFormFieldset {
 	protected function makeLegend(): string {
 		return (new CTag('legend', true,
 			(new CSimpleButton(new CSpan($this->caption)))
-				->addClass(ZBX_STYLE_TOGGLE)
+				->addClass(self::ZBX_STYLE_TOGGLE)
 				->addClass($this->is_expanded ? ZBX_ICON_CHEVRON_UP : ZBX_ICON_CHEVRON_DOWN)
 				->setTitle($this->is_expanded ? _('Collapse') : _('Expand'))
 		))->toString();

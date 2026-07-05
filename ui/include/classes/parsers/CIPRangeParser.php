@@ -17,7 +17,7 @@
 /**
  * Class containing methods for IP range and network mask parsing.
  */
-class CIPRangeParser extends CParser {
+class CIPRangeParser {
 
 	/**
 	 * An error message if IP range is not valid.
@@ -109,9 +109,9 @@ class CIPRangeParser extends CParser {
 	 *
 	 * @param string $ranges
 	 *
-	 * @return int
+	 * @return bool
 	 */
-	public function parse($ranges, $pos = 0): int {
+	public function parse($ranges) {
 		$this->error = '';
 		$this->max_ip_count = '0';
 		$this->max_ip_range = '';
@@ -144,10 +144,10 @@ class CIPRangeParser extends CParser {
 			$this->max_ip_count = '0';
 			$this->max_ip_range = '';
 
-			return self::PARSE_FAIL;
+			return false;
 		}
 
-		return self::PARSE_SUCCESS;
+		return true;
 	}
 
 	/**
@@ -155,7 +155,7 @@ class CIPRangeParser extends CParser {
 	 *
 	 * @return string
 	 */
-	public function getError(): string {
+	public function getError() {
 		return $this->error;
 	}
 

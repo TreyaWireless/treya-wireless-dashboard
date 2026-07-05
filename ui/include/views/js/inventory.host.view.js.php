@@ -22,24 +22,59 @@
 <script>
 	const view = new class {
 
-		init() {
-			this.#initPopupListeners();
+		constructor() {
+			this._registerEvents();
 		}
 
-		#initPopupListeners() {
-			ZABBIX.EventHub.subscribe({
-				require: {
-					context: CPopupManager.EVENT_CONTEXT,
-					event: CPopupManagerEvent.EVENT_SUBMIT
-				},
-				callback: ({data, event}) => {
-					if (data.submit.success?.action === 'delete') {
-						const url = new URL('hostinventories.php', location.href);
+		editHost({hostid}) {
+			this._openHostPopup({hostid});
+		}
 
-						event.setRedirectUrl(url.href);
-					}
-				}
+		_openHostPopup(host_data) {
+			const original_url = location.href;
+			const overlay = PopUp('popup.host.edit', host_data, {
+				dialogueid: 'host_edit',
+				dialogue_class: 'modal-popup-large',
+				prevent_navigation: true
 			});
+
+			overlay.$dialogue[0].addEventListener('dialogue.submit', this.events.elementSuccess);
+			overlay.$dialogue[0].addEventListener('dialogue.close', () => {
+				history.replaceState({}, '', original_url);
+			});
+		}
+
+		_editTemplate(parameters) {
+			const overlay = PopUp('template.edit', parameters, {
+				dialogueid: 'templates-form',
+				dialogue_class: 'modal-popup-large',
+				prevent_navigation: true
+			});
+
+			overlay.$dialogue[0].addEventListener('dialogue.submit', this.events.elementSuccess, {once: true});
+		}
+
+		_registerEvents() {
+			this.events = {
+				elementSuccess(e) {
+					const data = e.detail;
+					let curl = null;
+
+					if ('success' in data) {
+						postMessageOk(data.success.title);
+
+						if ('messages' in data.success) {
+							postMessageDetails('success', data.success.messages);
+						}
+
+						if ('action' in data.success && data.success.action === 'delete') {
+							curl = new Curl('hostinventories.php').getUrl();
+						}
+					}
+
+					location.href = curl === null ? location.href : curl;
+				}
+			};
 		}
 	};
 </script>

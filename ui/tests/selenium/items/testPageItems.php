@@ -1,0 +1,289 @@
+<?php
+/*
+** Copyright (C) 2001-2026 Zabbix SIA
+**
+** This program is free software: you can redistribute it and/or modify it under the terms of
+** the GNU Affero General Public License as published by the Free Software Foundation, version 3.
+**
+** This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+** without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+** See the GNU Affero General Public License for more details.
+**
+** You should have received a copy of the GNU Affero General Public License along with this program.
+** If not, see <https://www.gnu.org/licenses/>.
+**/
+
+
+require_once __DIR__.'/../../include/CLegacyWebTest.php';
+
+/**
+ * @backup items
+ *
+ * @onBefore prepareItemData
+ */
+class testPageItems extends CLegacyWebTest {
+
+	/**
+	 * Attach TableBehavior and MessageBehavior to the test.
+	 *
+	 * @return array
+	 */
+	public function getBehaviors() {
+		return [
+			CTableBehavior::class,
+			CMessageBehavior::class
+		];
+	}
+
+	public static function prepareItemData() {
+		$hostid = CDBHelper::getValue("SELECT hostid FROM hosts WHERE host='Host for trigger tags filtering'");
+		CDataHelper::call('item.create', [
+			[
+				'hostid' => $hostid,
+				'name' => 'Multiple   spaces   in item name',
+				'key_' => 'customItemkey123',
+				'type' => ITEM_TYPE_TRAPPER,
+				'value_type' => 0
+			]
+		]);
+	}
+
+	public static function data() {
+		return CDBHelper::getDataProvider(
+						'SELECT hostid,status'.
+						' FROM hosts'.
+						' WHERE host LIKE \'%-layout-test%\''
+		);
+	}
+
+	/**
+	 * @dataProvider data
+	 */
+	public function testPageItems_CheckLayout($data) {
+		if ($data['status'] == HOST_STATUS_MONITORED || $data['status'] == HOST_STATUS_NOT_MONITORED) {
+			$this->zbxTestLogin('zabbix.php?action=item.list&context=host&filter_set=1&filter_hostids[0]='.$data['hostid']);
+			$this->zbxTestTextPresent('All hosts');
+			$this->zbxTestTextPresent(
+				[
+					'Name',
+					'Triggers',
+					'Key',
+					'Interval',
+					'History',
+					'Trends',
+					'Type',
+					'Status',
+					'Info'
+				]
+			);
+			$this->zbxTestAssertElementPresentXpath("//button[text()='Execute now'][@disabled]");
+			$this->zbxTestTextPresent('Clear history and trends');
+		}
+		elseif ($data['status'] == HOST_STATUS_TEMPLATE) {
+			$this->zbxTestLogin('zabbix.php?action=item.list&context=template&filter_set=1&filter_hostids[0]='.$data['hostid']);
+			$this->zbxTestTextPresent('All templates');
+			$this->zbxTestTextPresent(
+				[
+					'Name',
+					'Triggers',
+					'Key',
+					'Interval',
+					'History',
+					'Trends',
+					'Type',
+					'Status'
+				]
+			);
+			$this->zbxTestAssertElementNotPresentXpath("//button[text()='Execute now']");
+			$this->zbxTestAssertElementNotPresentXpath("//button[text()='Clear history and trends']");
+		}
+
+		$this->zbxTestCheckTitle('Configuration of items');
+		$this->zbxTestCheckHeader('Items');
+		$this->zbxTestTextPresent(['Enable', 'Disable', 'Mass update', 'Copy', 'Delete']);
+	}
+
+	/**
+	 * @dataProvider data
+	 */
+	public function testPageItems_CheckNowAll($data) {
+		$context = ($data['status'] == HOST_STATUS_TEMPLATE) ? 'template' : 'host';
+		$this->zbxTestLogin('zabbix.php?action=item.list&context='.$context.'&filter_set=1&filter_hostids[0]='.$data['hostid']);
+		$this->zbxTestCheckHeader('Items');
+
+		$this->zbxTestClick('all_items');
+
+		if ($data['status'] == HOST_STATUS_TEMPLATE) {
+			$this->assertFalse($this->query('button:Execute now')->exists());
+			$this->assertFalse($this->query('button:Clear history and trends')->exists());
+		}
+		else {
+			$this->zbxTestClickButtonText('Execute now');
+			$this->zbxTestWaitUntilMessageTextPresent('msg-good', 'Request sent successfully');
+		}
+	}
+
+	public static function getHostAndGroupData() {
+		return [
+			// One host group without host.
+			[
+				[
+					'filter_options' => [
+						'Host groups' => 'Group to check triggers filtering'
+					],
+					'result' => [
+						['Host for triggers filtering' => 'Discovered item one'],
+						['Host for triggers filtering' => 'Inheritance item for triggers filtering'],
+						['Host for triggers filtering' => 'Item for triggers filtering']
+					]
+				]
+			],
+			// Two host group without host.
+			[
+				[
+					'filter_options' => [
+						'Host groups' => ['Group to check triggers filtering', 'Zabbix servers'],
+						'Key' => 'trap'
+					],
+					'result' => [
+						['Host for triggers filtering' => 'Inheritance item for triggers filtering'],
+						['Host for triggers filtering' => 'Item for triggers filtering'],
+						['Host for trigger tags filtering' => 'Trapper'],
+						['ЗАББИКС Сервер' => 'Utilization of snmp trapper data collector processes, in %'],
+						['ЗАББИКС Сервер' => 'Utilization of trapper data collector processes, in %']
+					],
+					'not_displayed' => [
+						'Host' => 'Test Item Template',
+						'Name' => 'Macro value: Value 2 B resolved'
+					]
+				]
+			],
+			// Two hosts without host group.
+			[
+				[
+					'filter_options' => [
+						'Key' => 'trap',
+						'Hosts' => [
+							[
+								'values' => ['Host for trigger tags filtering'],
+								'context' => 'Zabbix servers'
+							],
+							[
+								'values' => ['Host for triggers filtering'],
+								'context' => 'Group to check triggers filtering'
+							]
+						]
+					],
+					'result' => [
+						['Host for triggers filtering' => 'Inheritance item for triggers filtering'],
+						['Host for triggers filtering' => 'Item for triggers filtering'],
+						['Host for trigger tags filtering' => 'Trapper']
+					]
+				]
+			],
+			// Two hosts and two their host groups.
+			[
+				[
+					'filter_options' => [
+						'Host groups' => ['Group to check triggers filtering', 'Zabbix servers'],
+						'Hosts' => [
+							[
+								'values' => ['Host for trigger tags filtering'],
+								'context' => 'Zabbix servers'
+							],
+							[
+								'values' => ['Host for triggers filtering'],
+								'context' => 'Group to check triggers filtering'
+							]
+						]
+					],
+					'result' => [
+						['Host for triggers filtering' => 'Discovered item one'],
+						['Host for triggers filtering' => 'Inheritance item for triggers filtering'],
+						['Host for triggers filtering' => 'Item for triggers filtering'],
+						['Host for trigger tags filtering' => 'Multiple spaces in item name'],
+						['Host for trigger tags filtering' => 'Trapper']
+					]
+				]
+			],
+			// Multiple spaces in Name field.
+			[
+				[
+					'filter_options' => [
+						'Name' => '   '
+					],
+					'result' => [
+						['Host for trigger tags filtering' => 'Multiple spaces in item name']
+					]
+				]
+			]
+		];
+	}
+
+	/**
+	 * @dataProvider getHostAndGroupData
+	 */
+	public function testPageItems_FilterHostAndGroupsFilter($data) {
+		$this->page->login()->open('zabbix.php?action=item.list&context=host&filter_set=1&filter_hostids[0]=99062');
+		$form = $this->query('name:zbx_filter')->asForm()->one();
+
+		// Item create button enabled and breadcrumbs exist.
+		$this->assertTrue($this->query('button:Create item')->one()->isEnabled());
+		$this->assertFalse($this->query('class:breadcrumbs')->all()->isEmpty());
+		// Clear hosts in filter fields.
+		if (!array_key_exists('Hosts', $data['filter_options'])) {
+			$form->getField('Hosts')->asMultiselect()->clear();
+		}
+
+		$form->fill($data['filter_options']);
+		$form->submit();
+		$this->page->waitUntilReady();
+		// Item create button disabled and breadcrumbs not exist.
+		$this->assertFalse($this->query('button:Create item (select host first)')->one()->isEnabled());
+		$this->assertTrue($this->query('class:filter-breadcrumb')->all()->isEmpty());
+		// Check results in table.
+		$table = $this->query('name:item_list')->one()->query('class:list-table')->asTable()->one();
+		foreach ($table->getRows() as $i => $row) {
+			$get_host = $row->getColumn('Name')->query('class:js-update-item')->one()->getText();
+			$get_group = $row->getColumn('Host')->getText();
+			foreach ($data['result'][$i] as $group => $host) {
+				$this->assertEquals($host, $get_host);
+				$this->assertEquals($group, $get_group);
+			}
+		}
+		if (array_key_exists('not_displayed', $data)) {
+			foreach ($data['not_displayed'] as $column => $value) {
+				$this->assertNotContains($value, $table->getCells($column));
+			}
+		}
+		$this->assertEquals(count($data['result']), $table->getRows()->count());
+	}
+
+	/**
+	 * @dataProvider data
+	 */
+	public function testPageItems_Delete($data) {
+		$context = ($data['status'] == HOST_STATUS_TEMPLATE) ? 'template' : 'host';
+		$this->page->login()->open('zabbix.php?action=item.list&context='.$context.'&filter_set=1&filter_hostids[0]='.
+				$data['hostid']
+		)->waitUntilReady();
+
+		$table_rows_count = $this->query('class:list-table')->asTable()->one()->getRows()->count();
+		$this->assertTableStats($table_rows_count);
+		$delete_button = $this->query('button:Delete')->one();
+
+		// Cancel delete.
+		$this->query('id:all_items')->asCheckbox()->one()->check();
+		$delete_button->click();
+		$this->page->dismissAlert();
+		$this->assertTableStats($table_rows_count);
+		$this->assertSelectedCount($table_rows_count);
+
+		// Delete all.
+		$delete_button->click();
+		$this->page->acceptAlert();
+		$this->assertMessage(TEST_GOOD, 'Item deleted');
+		$this->assertTableStats(0);
+		$this->assertSelectedCount(0);
+	}
+}

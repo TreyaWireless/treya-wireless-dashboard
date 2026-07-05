@@ -199,7 +199,6 @@ switch ($data['popup_type']) {
 	case 'hosts':
 	case 'template_groups':
 	case 'host_groups':
-	case 'host_inventory':
 	case 'proxies':
 	case 'proxy_groups':
 	case 'host_templates':
@@ -344,14 +343,37 @@ switch ($data['popup_type']) {
 				$description = new CLabel($trigger['description']);
 			}
 
-			$description
-				->setAttribute('data-reference', $options['reference'])
-				->setAttribute('data-triggerid', $trigger['triggerid'])
-				->setAttribute('data-parentid', $options['parentid'])
-				->onClick('
-					addValue(this.dataset.reference, this.dataset.triggerid, this.dataset.parentid ?? null);
-					popup_generic.closePopup(event);
-				');
+			if ($data['multiselect']) {
+				$description
+					->setAttribute('data-reference', $options['reference'])
+					->setAttribute('data-triggerid', $trigger['triggerid'])
+					->setAttribute('data-parentid', $options['parentid'])
+					->onClick('
+						addValue(this.dataset.reference, this.dataset.triggerid, this.dataset.parentid ?? null);
+						popup_generic.closePopup(event);
+					');
+			}
+			else {
+				$values = [];
+
+				if ($options['dstfld1'] !== '' && $options['srcfld1'] !== '') {
+					$values[$options['dstfld1']] = $trigger[$options['srcfld1']];
+				}
+				if ($options['dstfld2'] !== '' && $options['srcfld2'] !== '') {
+					$values[$options['dstfld2']] = $trigger[$options['srcfld2']];
+				}
+				if ($options['dstfld3'] !== '' && $options['srcfld3'] !== '') {
+					$values[$options['dstfld3']] = $trigger[$options['srcfld3']];
+				}
+
+				$description
+					->setAttribute('data-dstfrm', $options['dstfrm'])
+					->setAttribute('data-values', json_encode($values))
+					->onClick('
+						addValues(this.dataset.dstfrm, JSON.parse(this.dataset.values));
+						popup_generic.closePopup(event);
+					');
+			}
 
 			if ($trigger['dependencies']) {
 				$description = [$description, BR(), bold(_('Depends on')), BR()];
@@ -375,19 +397,21 @@ switch ($data['popup_type']) {
 					->addClass(triggerIndicatorStyle($trigger['status'], $trigger['state']))
 			]);
 
-			$trigger = [
-				'id' => $trigger['triggerid'],
-				'name' => $trigger['description'],
-				'triggerid' => $trigger['triggerid'],
-				'description' => $trigger['description'],
-				'expression' => $trigger['expression'],
-				'priority' => $trigger['priority'],
-				'status' => $trigger['status'],
-				'host' => $trigger['hostname']
-			];
+			if ($data['multiselect']) {
+				$trigger = [
+					'id' => $trigger['triggerid'],
+					'name' => $trigger['description'],
+					'triggerid' => $trigger['triggerid'],
+					'description' => $trigger['description'],
+					'expression' => $trigger['expression'],
+					'priority' => $trigger['priority'],
+					'status' => $trigger['status'],
+					'host' => $trigger['hostname']
+				];
 
-			if ($data['popup_type'] === 'trigger_prototypes') {
-				$trigger['prototype'] = '1';
+				if ($data['popup_type'] === 'trigger_prototypes') {
+					$trigger['prototype'] = '1';
+				}
 			}
 		}
 		unset($trigger);
@@ -669,8 +693,7 @@ switch ($data['popup_type']) {
 				}
 				else {
 					$host_names = array_column($graph['hosts'], 'name', 'hostid');
-					$parent_lld = $graph['discoveryRule'] ?: $graph['discoveryRulePrototype'];
-					$host_name = $host_names[$parent_lld['hostid']];
+					$host_name = $host_names[$graph['discoveryRule']['hostid']];
 				}
 
 				$graph_name = $host_name.NAME_DELIMITER.$graph['name'];
@@ -906,7 +929,6 @@ $types = [
 	'hosts',
 	'host_templates',
 	'host_groups',
-	'host_inventory',
 	'template_groups',
 	'items',
 	'item_prototypes',
@@ -915,7 +937,6 @@ $types = [
 	'proxy_groups',
 	'roles',
 	'templates',
-	'template_triggers',
 	'users',
 	'usrgrp',
 	'sla',

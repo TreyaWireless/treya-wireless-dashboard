@@ -16,8 +16,6 @@
 
 class CControllerItemPrototypeList extends CControllerItemPrototype {
 
-	private array $parent_discovery = [];
-
 	protected function init() {
 		$this->disableCsrfValidation();
 	}
@@ -41,27 +39,11 @@ class CControllerItemPrototypeList extends CControllerItemPrototype {
 	}
 
 	protected function checkPermissions(): bool {
-		if (!parent::checkPermissions()) {
-			return false;
-		}
-
-		$options = [
-			'output' => ['itemid', 'name', 'hostid', 'flags'],
-			'selectDiscoveryData' => ['parent_itemid'],
-			'selectHosts' => ['status'],
+		return parent::checkPermissions() && (bool) API::DiscoveryRule()->get([
+			'output' => [],
 			'itemids' => $this->getInput('parent_discoveryid'),
 			'editable' => true
-		];
-
-		$parent_discovery = API::DiscoveryRule()->get($options) ?: API::DiscoveryRulePrototype()->get($options);
-
-		if (!$parent_discovery) {
-			return false;
-		}
-
-		$this->parent_discovery = reset($parent_discovery);
-
-		return true;
+		]);
 	}
 
 	public function doAction() {
@@ -73,29 +55,27 @@ class CControllerItemPrototypeList extends CControllerItemPrototype {
 			$this->updateProfileSort();
 		}
 
+		[$lld] = API::DiscoveryRule()->get([
+			'output' => ['hostid'],
+			'selectHosts' => ['status'],
+			'itemids' => $this->getInput('parent_discoveryid'),
+			'editable' => true
+		]);
 		$data = [
 			'action' => $this->getAction(),
 			'allowed_ui_conf_templates' => CWebUser::checkAccess(CRoleHelper::UI_CONFIGURATION_TEMPLATES),
 			'context' => $this->getInput('context'),
-			'hostid' => $this->parent_discovery['hostid'],
+			'hostid' => $lld['hostid'],
 			'items' => [],
 			'parent_discoveryid' => $this->getInput('parent_discoveryid'),
-			'is_parent_discovered' => $this->parent_discovery['flags'] & ZBX_FLAG_DISCOVERY_CREATED,
 			'sort' => $profile['sort'],
 			'sortorder' => $profile['sortorder']
 		];
 		$context = $this->getInput('context');
-		$is_template_lld = $this->parent_discovery['hosts'][0]['status'] == HOST_STATUS_TEMPLATE;
+		$is_template_lld = $lld['hosts'][0]['status'] == HOST_STATUS_TEMPLATE;
 
 		if (($context === 'template' && $is_template_lld) || ($context === 'host' && !$is_template_lld)) {
 			$data['items'] = $this->getItems($profile);
-
-			if ($this->parent_discovery['flags'] & ZBX_FLAG_DISCOVERY_CREATED) {
-				$data['source_link_data'] = [
-					'parent_itemid' => $this->parent_discovery['discoveryData']['parent_itemid'],
-					'name' => $this->parent_discovery['name']
-				];
-			}
 		}
 
 		$data['paging'] = CPagerHelper::paginate($this->getInput('page', 1), $data['items'], $profile['sort'],
@@ -114,15 +94,13 @@ class CControllerItemPrototypeList extends CControllerItemPrototype {
 
 	protected function getItems(array $profile): array {
 		$limit = CSettingsHelper::get(CSettingsHelper::SEARCH_LIMIT) + 1;
-
 		$items = API::ItemPrototype()->get([
 			'output' => [
 				'delay', 'history', 'key_', 'name', 'status', 'trends', 'type', 'discover',
-				'itemid', 'templateid', 'value_type', 'master_itemid', 'flags'
+				'itemid', 'templateid', 'value_type', 'master_itemid'
 			],
 			'discoveryids' => [$this->getInput('parent_discoveryid')],
 			'selectTags' => ['tag', 'value'],
-			'selectDiscoveryData' => ['parent_itemid'],
 			'editable' => true,
 			'sortfield' => $profile['sort'],
 			'limit' => $limit

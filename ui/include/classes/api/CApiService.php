@@ -560,6 +560,79 @@ class CApiService {
 	}
 
 	/**
+	 * Unset the NCLOB fields from output of the given options, if SQL query contains DISTINCT statement. Replace the
+	 * API_OUTPUT_EXTEND value in output of the given options to self::OUTPUT_FIELDS (if defined) or to all fields that
+	 * are specified in table schema.
+	 *
+	 * @param array $options
+	 * @param array $sql_parts
+	 */
+	protected function unsetNclobFieldsFromOutput(array &$options, array $sql_parts): void {
+		if ($options['countOutput'] || !self::dbDistinct($sql_parts)) {
+			return;
+		}
+
+		$schema = $this->getTableSchema();
+		$nclob_fields = [];
+
+		foreach ($schema['fields'] as $field_name => $field) {
+			if ($field['type'] & DB::FIELD_TYPE_NCLOB && $this->outputIsRequested($field_name, $options['output'])) {
+				$nclob_fields[] = $field_name;
+			}
+		}
+
+		if ($nclob_fields) {
+			if ($options['output'] === API_OUTPUT_EXTEND) {
+				$output = self::OUTPUT_FIELDS
+					? self::OUTPUT_FIELDS
+					: array_keys($schema['fields']);
+			}
+			else {
+				$output = $options['output'];
+			}
+
+			$options['output'] = array_diff($output, $nclob_fields);
+		}
+	}
+
+	/**
+	 * Add NCLOB type fields if there was DISTINCT in query.
+	 *
+	 * @param array $options    Array of query options.
+	 * @param array $result     Query results.
+	 *
+	 * @return array    The result array with added NCLOB fields.
+	 */
+	protected function addNclobFieldValues(array $options, array $result): array {
+		$schema = $this->getTableSchema();
+		$nclob_fields = [];
+
+		foreach ($schema['fields'] as $field_name => $field) {
+			if ($field['type'] & DB::FIELD_TYPE_NCLOB && $this->outputIsRequested($field_name, $options['output'])) {
+				$nclob_fields[] = $field_name;
+			}
+		}
+
+		if (!$nclob_fields) {
+			return $result;
+		}
+
+		$pk = $schema['key'];
+		$options = [
+			'output' => $nclob_fields,
+			'filter' => [$pk => array_keys($result)]
+		];
+
+		$db_items = DBselect(DB::makeSql($this->tableName, $options));
+
+		while ($db_item = DBfetch($db_items)) {
+			$result[$db_item[$pk]] += $db_item;
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Modifies the SQL parts to implement all of the filter related options.
 	 *
 	 * @param string $tableName
@@ -948,8 +1021,11 @@ class CApiService {
 
 		$filter = [];
 		foreach ($options['filter'] as $field => $value) {
-			if ($value === null || !array_key_exists($field, $tableSchema['fields'])
-					|| ($tableSchema['fields'][$field]['type'] & DB::SUPPORTED_FILTER_TYPES) == 0) {
+			// skip missing fields and text fields (not supported by Oracle)
+			// skip empty values
+			if (!array_key_exists($field, $tableSchema['fields'])
+					|| ($tableSchema['fields'][$field]['type'] & DB::SUPPORTED_FILTER_TYPES) == 0
+					|| zbx_empty($value)) {
 				continue;
 			}
 

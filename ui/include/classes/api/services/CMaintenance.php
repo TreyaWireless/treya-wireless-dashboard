@@ -77,6 +77,7 @@ class CMaintenance extends CApiService {
 			'searchWildcardsEnabled'	=> null,
 			// output
 			'output'					=> API_OUTPUT_EXTEND,
+			'selectGroups'				=> null,
 			'selectHostGroups'			=> null,
 			'selectHosts'				=> null,
 			'selectTags'				=> null,
@@ -89,6 +90,8 @@ class CMaintenance extends CApiService {
 			'limit'						=> null
 		];
 		$options = zbx_array_merge($defOptions, $options);
+
+		$this->checkDeprecatedParam($options, 'selectGroups');
 
 		// editable + PERMISSION CHECK
 		if (self::$userData['type'] != USER_TYPE_SUPER_ADMIN && !$options['nopermissions']) {
@@ -202,12 +205,11 @@ class CMaintenance extends CApiService {
 
 		if ($result) {
 			$result = $this->addRelatedObjects($options, $result);
-
-			if (!$options['preservekeys']) {
-				$result = array_values($result);
-			}
 		}
 
+		if (!$options['preservekeys']) {
+			$result = zbx_cleanHashes($result);
+		}
 		return $result;
 	}
 
@@ -264,6 +266,8 @@ class CMaintenance extends CApiService {
 										]],
 										['else' => true, 'type' => API_UNEXPECTED]
 			]],
+			'groupids' =>			['type' => API_IDS, 'flags' => API_DEPRECATED, 'uniq' => true],
+			'hostids' =>			['type' => API_IDS, 'flags' => API_DEPRECATED, 'uniq' => true],
 			'groups' =>				['type' => API_OBJECTS, 'flags' => API_NORMALIZE, 'uniq' => [['groupid']], 'fields' => [
 				'groupid' =>			['type' => API_ID, 'flags' => API_REQUIRED]
 			]],
@@ -306,6 +310,27 @@ class CMaintenance extends CApiService {
 		if (!CApiInputValidator::validate($api_input_rules, $maintenances, '/', $error)) {
 			self::exception(ZBX_API_ERROR_PARAMETERS, $error);
 		}
+
+		foreach ($maintenances as &$maintenance) {
+			if (array_key_exists('groupids', $maintenance)) {
+				if (array_key_exists('groups', $maintenance)) {
+					self::exception(ZBX_API_ERROR_PARAMETERS, _s('Parameter "%1$s" is deprecated.', 'groupids'));
+				}
+
+				$maintenance['groups'] = zbx_toObject($maintenance['groupids'], 'groupid');
+				unset($maintenance['groupids']);
+			}
+
+			if (array_key_exists('hostids', $maintenance)) {
+				if (array_key_exists('hosts', $maintenance)) {
+					self::exception(ZBX_API_ERROR_PARAMETERS, _s('Parameter "%1$s" is deprecated.', 'hostids'));
+				}
+
+				$maintenance['hosts'] = zbx_toObject($maintenance['hostids'], 'hostid');
+				unset($maintenance['hostids']);
+			}
+		}
+		unset($maintenance);
 
 		foreach ($maintenances as &$maintenance) {
 			$maintenance['active_since'] -= $maintenance['active_since'] % SEC_PER_MIN;
@@ -374,12 +399,35 @@ class CMaintenance extends CApiService {
 	 */
 	protected function validateUpdate(array &$maintenances, ?array &$db_maintenances = null): void {
 		$api_input_rules = ['type' => API_OBJECTS, 'flags' => API_NOT_EMPTY | API_NORMALIZE | API_ALLOW_UNEXPECTED, 'uniq' => [['maintenanceid']], 'fields' => [
-			'maintenanceid' =>	['type' => API_ID, 'flags' => API_REQUIRED]
+			'maintenanceid' =>	['type' => API_ID, 'flags' => API_REQUIRED],
+			'groupids' =>		['type' => API_IDS, 'flags' => API_DEPRECATED, 'uniq' => true],
+			'hostids' =>		['type' => API_IDS, 'flags' => API_DEPRECATED, 'uniq' => true]
 		]];
 
 		if (!CApiInputValidator::validate($api_input_rules, $maintenances, '/', $error)) {
 			self::exception(ZBX_API_ERROR_PARAMETERS, $error);
 		}
+
+		foreach ($maintenances as &$maintenance) {
+			if (array_key_exists('groupids', $maintenance)) {
+				if (array_key_exists('groups', $maintenance)) {
+					self::exception(ZBX_API_ERROR_PARAMETERS, _s('Parameter "%1$s" is deprecated.', 'groupids'));
+				}
+
+				$maintenance['groups'] = zbx_toObject($maintenance['groupids'], 'groupid');
+				unset($maintenance['groupids']);
+			}
+
+			if (array_key_exists('hostids', $maintenance)) {
+				if (array_key_exists('hosts', $maintenance)) {
+					self::exception(ZBX_API_ERROR_PARAMETERS, _s('Parameter "%1$s" is deprecated.', 'hostids'));
+				}
+
+				$maintenance['hosts'] = zbx_toObject($maintenance['hostids'], 'hostid');
+				unset($maintenance['hostids']);
+			}
+		}
+		unset($maintenance);
 
 		$db_maintenances = $this->get([
 			'output' => ['maintenanceid', 'name', 'maintenance_type', 'description', 'active_since', 'active_till',
@@ -1144,7 +1192,8 @@ class CMaintenance extends CApiService {
 	protected function addRelatedObjects(array $options, array $result): array {
 		$result = parent::addRelatedObjects($options, $result);
 
-		$this->addRelatedHostGroups($options, $result);
+		$this->addRelatedGroups($options, $result, 'selectGroups');
+		$this->addRelatedGroups($options, $result, 'selectHostGroups');
 
 		// selectHosts
 		if ($options['selectHosts'] !== null && $options['selectHosts'] != API_OUTPUT_COUNT) {
@@ -1190,21 +1239,33 @@ class CMaintenance extends CApiService {
 		return $result;
 	}
 
-	private function addRelatedHostGroups(array $options, array &$result): void {
-		if ($options['selectHostGroups'] === null || $options['selectHostGroups'] === API_OUTPUT_COUNT) {
+	/**
+	 * Adds related host groups requested by "select*" options to the resulting object set.
+	 *
+	 * @param array  $options [IN] Original input options.
+	 * @param array  $result  [IN/OUT] Result output.
+	 * @param string $option  [IN] Possible values:
+	 *                               - "selectGroups" (deprecated);
+	 *                               - "selectHostGroups" (or any other value).
+	 */
+	private function addRelatedGroups(array $options, array &$result, string $option): void {
+		if ($options[$option] === null || $options[$option] === API_OUTPUT_COUNT) {
 			return;
 		}
 
-		$relation_map = $this->createRelationMap($result, 'maintenanceid', 'groupid', 'maintenances_groups');
-		$related_ids = $relation_map->getRelatedIds();
-		$groups = $related_ids
-			? API::HostGroup()->get([
-				'output' => $options['selectHostGroups'],
+		$groups = [];
+		$relationMap = $this->createRelationMap($result, 'maintenanceid', 'groupid', 'maintenances_groups');
+		$related_ids = $relationMap->getRelatedIds();
+
+		if ($related_ids) {
+			$groups = API::HostGroup()->get([
+				'output' => $options[$option],
 				'groupids' => $related_ids,
 				'preservekeys' => true
-			])
-			: [];
+			]);
+		}
 
-		$result = $relation_map->mapMany($result, $groups, 'hostgroups');
+		$output_tag = $option === 'selectGroups' ? 'groups' : 'hostgroups';
+		$result = $relationMap->mapMany($result, $groups, $output_tag);
 	}
 }

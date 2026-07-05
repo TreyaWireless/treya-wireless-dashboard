@@ -84,7 +84,9 @@ class CEvent extends CApiService {
 			'output' =>					['type' => API_OUTPUT, 'in' => implode(',', self::OUTPUT_FIELDS), 'default' => API_OUTPUT_EXTEND],
 			'countOutput' =>			['type' => API_FLAG, 'default' => false],
 			'groupBy' =>				['type' => API_STRINGS_UTF8, 'flags' => API_NORMALIZE, 'in' => 'objectid', 'uniq' => true, 'default' => []],
+			'select_acknowledges' =>	['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_ALLOW_COUNT | API_DEPRECATED, 'replacement' => 'selectAcknowledges', 'in' => implode(',', $acknowledge_output_fields), 'default' => null],
 			'selectAcknowledges' =>		['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_ALLOW_COUNT, 'in' => implode(',', $acknowledge_output_fields), 'default' => null],
+			'select_alerts' =>			['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_DEPRECATED, 'replacement' => 'selectAlerts', 'in' => implode(',', $alert_output_fields), 'default' => null],
 			'selectAlerts' =>			['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', $alert_output_fields), 'default' => null],
 			'selectHosts' =>			['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', CHost::OUTPUT_FIELDS), 'default' => null],
 			'selectRelatedObject' =>	['type' => API_MULTIPLE, 'default' => null, 'rules' => [
@@ -93,7 +95,7 @@ class CEvent extends CApiService {
 											['if' => ['field' => 'object', 'in' => EVENT_OBJECT_DSERVICE], 'type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', CDService::OUTPUT_FIELDS)],
 											['if' => ['field' => 'object', 'in' => EVENT_OBJECT_AUTOREGHOST], 'type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => ''],
 											['if' => ['field' => 'object', 'in' => EVENT_OBJECT_ITEM], 'type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', CItem::OUTPUT_FIELDS)],
-											['if' => ['field' => 'object', 'in' => EVENT_OBJECT_LLDRULE], 'type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', CDiscoveryRule::getOutputFieldsOnHost())],
+											['if' => ['field' => 'object', 'in' => EVENT_OBJECT_LLDRULE], 'type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', CDiscoveryRule::OUTPUT_FIELDS)],
 											['if' => ['field' => 'object', 'in' => EVENT_OBJECT_SERVICE], 'type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', CService::OUTPUT_FIELDS)]
 			]],
 			'selectSuppressionData' =>		['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', ['maintenanceid', 'suppress_until', 'userid']), 'default' => null],

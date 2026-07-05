@@ -32,15 +32,4 @@ class CWidgetFieldCheckBoxView extends CWidgetFieldView {
 				->onChange($this->field->getAction())
 		];
 	}
-
-	public function getJavaScript(): string {
-		return '
-			CWidgetForm.addField(
-				new CWidgetFieldCheckbox('.json_encode([
-					'name' => $this->field->getName(),
-					'form_name' => $this->form_name
-				]).')
-			);
-		';
-	}
 }

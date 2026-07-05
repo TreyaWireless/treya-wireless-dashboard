@@ -755,15 +755,16 @@ class CWidgetNavTree extends CWidget {
 				}
 
 				overlayDialogue({
-					title: t('Edit tree element'),
-					class: 'modal-popup',
-					content,
-					buttons: [
+					'title': t('Edit tree element'),
+					'class': 'modal-popup',
+					'content': content,
+					'buttons': [
 						{
-							title: item_edit ? t('Apply') : t('Add'),
-							enabled: response.error === undefined,
-							action: (overlay) => {
-								const form = document.forms['widget_item_form'];
+							'title': item_edit ? t('Apply') : t('Add'),
+							'class': 'dialogue-widget-save',
+							'enabled': response.error === undefined,
+							'action': (overlay) => {
+								const form = document.getElementById('widget-dialogue-form');
 								const form_inputs = form.elements;
 								const url = new Curl('zabbix.php');
 
@@ -901,19 +902,17 @@ class CWidgetNavTree extends CWidget {
 
 								return false;
 							},
-							isSubmit: true
+							'isSubmit': true
 						},
 						{
-							title: t('Cancel'),
-							class: 'btn-alt',
-							action: () => {}
+							'title': t('Cancel'),
+							'class': 'btn-alt',
+							'action': () => {}
 						}
 					],
-					script_inline: response.script_inline
-				}, {
-					dialogueid: 'navtreeitem',
-					trigger_element
-				});
+					'dialogueid': 'navtreeitem',
+					'script_inline': response.script_inline
+				}, trigger_element);
 			}
 		});
 	}

@@ -36,7 +36,7 @@ class CHostGroup extends CApiService {
 
 	public const OUTPUT_FIELDS = ['groupid', 'name', 'flags', 'uuid'];
 
-	public const DISCOVERY_DATA_OUTPUT_FIELDS = ['parent_group_prototypeid', 'name', 'ts_delete', 'status'];
+	private const GROUP_DISCOVERY_FIELDS = ['parent_group_prototypeid', 'name', 'lastcheck', 'ts_delete', 'status'];
 
 	/**
 	 * Get host groups.
@@ -53,6 +53,13 @@ class CHostGroup extends CApiService {
 			'tls_psk_identity', 'tls_psk', 'tls_issuer', 'tls_subject', 'maintenanceid', 'maintenance_type',
 			'maintenance_from', 'maintenance_status', 'flags'
 		];
+		$discovery_rule_fields = ['itemid', 'hostid', 'name', 'type', 'key_', 'url', 'query_fields', 'request_method',
+			'timeout', 'post_type', 'posts', 'headers', 'status_codes', 'follow_redirects', 'retrieve_mode',
+			'http_proxy', 'authtype', 'verify_peer', 'verify_host', 'ssl_cert_file', 'ssl_key_file', 'ssl_key_password',
+			'ipmi_sensor', 'jmx_endpoint', 'interfaceid', 'username', 'publickey', 'privatekey', 'password', 'snmp_oid',
+			'parameters', 'params', 'delay', 'master_itemid', 'lifetime', 'trapper_hosts', 'allow_traps', 'description',
+			'status', 'state', 'error', 'templateid'
+		];
 		$host_prototype_fields = ['hostid', 'host', 'name', 'status', 'templateid', 'inventory_mode', 'discover',
 			'custom_interfaces', 'uuid'
 		];
@@ -64,7 +71,9 @@ class CHostGroup extends CApiService {
 			'graphids' =>							['type' => API_IDS, 'flags' => API_ALLOW_NULL | API_NORMALIZE, 'default' => null],
 			'triggerids' =>							['type' => API_IDS, 'flags' => API_ALLOW_NULL | API_NORMALIZE, 'default' => null],
 			'maintenanceids' =>						['type' => API_IDS, 'flags' => API_ALLOW_NULL | API_NORMALIZE, 'default' => null],
+			'monitored_hosts' =>					['type' => API_BOOLEAN, 'flags' => API_DEPRECATED, 'replacement' => 'with_monitored_hosts'],
 			'with_monitored_hosts' =>				['type' => API_BOOLEAN, 'default' => false],
+			'real_hosts' =>							['type' => API_BOOLEAN, 'flags' => API_DEPRECATED, 'replacement' => 'with_hosts'],
 			'with_hosts' =>							['type' => API_BOOLEAN, 'default' => false],
 			'with_items' =>							['type' => API_BOOLEAN, 'default' => false],
 			'with_item_prototypes' =>				['type' => API_BOOLEAN, 'default' => false],
@@ -86,9 +95,8 @@ class CHostGroup extends CApiService {
 			// output
 			'output' =>								['type' => API_OUTPUT, 'in' => implode(',', self::OUTPUT_FIELDS), 'default' => API_OUTPUT_EXTEND],
 			'selectHosts' =>						['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_ALLOW_COUNT, 'in' => implode(',', $host_fields), 'default' => null],
-			'selectGroupDiscoveries' =>				['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_NORMALIZE | API_DEPRECATED, 'in' => implode(',', self::DISCOVERY_DATA_OUTPUT_FIELDS), 'default' => null],
-			'selectDiscoveryData' =>				['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_NORMALIZE, 'in' => implode(',', self::DISCOVERY_DATA_OUTPUT_FIELDS), 'default' => null],
-			'selectDiscoveryRules' =>				['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_NORMALIZE, 'in' => implode(',', CDiscoveryRule::getOutputFieldsOnHost()), 'default' => null],
+			'selectGroupDiscoveries' =>				['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', self::GROUP_DISCOVERY_FIELDS), 'default' => null],
+			'selectDiscoveryRules' =>				['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', $discovery_rule_fields), 'default' => null],
 			'selectHostPrototypes' =>				['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', $host_prototype_fields), 'default' => null],
 			'countOutput' =>						['type' => API_BOOLEAN, 'default' => false],
 			// sort and limit
@@ -444,7 +452,7 @@ class CHostGroup extends CApiService {
 		DB::delete('sysmaps_elements', ['elementtype' => SYSMAP_ELEMENT_TYPE_HOST_GROUP, 'elementid' => $groupids]);
 
 		$this->unlinkHosts($db_groups);
-		self::deleteUnusedHgSets($groupids);
+		self::deleteUnusedHgSetGroups($groupids);
 
 		DB::delete('hstgrp', ['groupid' => $groupids]);
 
@@ -465,19 +473,11 @@ class CHostGroup extends CApiService {
 	}
 
 	/**
-	 * Deletes host group sets that have no hosts linked to them.
+	 * Deletes hgset groups of host group sets that have no hosts linked to them.
 	 * This may happen during parallel deletion of hosts which have the same host group set.
 	 */
-	private static function deleteUnusedHgSets(array $groupids): void {
-		DBexecute(
-			'DELETE FROM hgset'.
-			' WHERE EXISTS ('.
-				'SELECT NULL'.
-				' FROM hgset_group hg'.
-				' WHERE hgset.hgsetid=hg.hgsetid'.
-					' AND '.dbConditionId('hg.groupid', $groupids).
-			')'
-		);
+	private static function deleteUnusedHgSetGroups(array $groupids): void {
+		DB::delete('hgset_group', ['groupid' => $groupids]);
 	}
 
 	/**
@@ -1190,6 +1190,27 @@ class CHostGroup extends CApiService {
 			}
 		}
 
+		// adding discovery rule
+		if ($options['selectDiscoveryRules'] !== null) {
+			// discovered items
+			$discovery_rules = DBFetchArray(DBselect(
+				'SELECT gd.groupid,hd.parent_itemid'.
+					' FROM group_discovery gd,group_prototype gp,host_discovery hd'.
+					' WHERE '.dbConditionInt('gd.groupid', $groupids).
+					' AND gd.parent_group_prototypeid=gp.group_prototypeid'.
+					' AND gp.hostid=hd.hostid'
+			));
+			$relation_map = $this->createRelationMap($discovery_rules, 'groupid', 'parent_itemid');
+
+			$discovery_rules = API::DiscoveryRule()->get([
+				'output' => $options['selectDiscoveryRules'],
+				'itemids' => $relation_map->getRelatedIds(),
+				'preservekeys' => true
+			]);
+
+			$result = $relation_map->mapMany($result, $discovery_rules, 'discoveryRules');
+		}
+
 		// adding host prototype
 		if ($options['selectHostPrototypes'] !== null) {
 			$db_links = DBFetchArray(DBselect(
@@ -1217,93 +1238,25 @@ class CHostGroup extends CApiService {
 			}
 		}
 
-		self::addRelatedDiscoveryRules($options, $result);
-		self::addRelatedGroupDiscoveries($options, $result);
-		self::addRelatedDiscoveryData($options, $result);
+		// adding group discovery
+		if ($options['selectGroupDiscoveries'] !== null) {
+			$output = $options['selectGroupDiscoveries'] === API_OUTPUT_EXTEND
+				? self::GROUP_DISCOVERY_FIELDS
+				: $options['selectGroupDiscoveries'];
+
+			$group_discoveries = API::getApiService()->select('group_discovery', [
+				'output' => $this->outputExtend($output, ['groupid', 'groupdiscoveryid']),
+				'filter' => ['groupid' => $groupids],
+				'preservekeys' => true
+			]);
+			$relation_map = $this->createRelationMap($group_discoveries, 'groupid', 'groupdiscoveryid');
+
+			$group_discoveries = $this->unsetExtraFields($group_discoveries, ['groupid', 'groupdiscoveryid'], $output);
+
+			$result = $relation_map->mapMany($result, $group_discoveries, 'groupDiscoveries');
+		}
 
 		return $result;
-	}
-
-	private static function addRelatedDiscoveryRules(array $options, array &$result): void {
-		if ($options['selectDiscoveryRules'] === null) {
-			return;
-		}
-
-		foreach ($result as &$group) {
-			$group['discoveryRules'] = [];
-		}
-		unset($group);
-
-		$resource = DBselect(
-			'SELECT gd.groupid,hd.lldruleid'.
-			' FROM group_discovery gd'.
-			' JOIN group_prototype gp ON gd.parent_group_prototypeid=gp.group_prototypeid'.
-			' JOIN host_discovery hd ON gp.hostid=hd.hostid'.
-			' WHERE '.dbConditionId('gd.groupid', array_keys($result))
-		);
-
-		$groupids = [];
-
-		while ($row = DBfetch($resource)) {
-			$groupids[$row['lldruleid']][] = $row['groupid'];
-		}
-
-		$parent_lld_rules = API::DiscoveryRule()->get([
-			'output' => $options['selectDiscoveryRules'],
-			'itemids' => array_keys($groupids),
-			'nopermissions' => true,
-			'preservekeys' => true
-		]);
-
-		foreach ($parent_lld_rules as $lldruleid => $parent_lld_rule) {
-			foreach ($groupids[$lldruleid] as $groupid) {
-				$result[$groupid]['discoveryRules'][] = $parent_lld_rule;
-			}
-		}
-	}
-
-	private static function addRelatedGroupDiscoveries(array $options, array &$result): void {
-		if ($options['selectGroupDiscoveries'] === null) {
-			return;
-		}
-
-		foreach ($result as &$group) {
-			$group['groupDiscoveries'] = [];
-		}
-		unset($group);
-
-		$_options = [
-			'output' => array_merge(['groupid'], $options['selectGroupDiscoveries']),
-			'filter' => ['groupid' => array_keys($result)]
-		];
-		$resource = DBselect(DB::makeSql('group_discovery', $_options));
-
-		while ($group_discovery = DBfetch($resource)) {
-			$result[$group_discovery['groupid']]['discoveryData'][] =
-				array_diff_key($group_discovery, array_flip(['groupid']));
-		}
-	}
-
-	private static function addRelatedDiscoveryData(array $options, array &$result): void {
-		if ($options['selectDiscoveryData'] === null) {
-			return;
-		}
-
-		foreach ($result as &$group) {
-			$group['discoveryData'] = [];
-		}
-		unset($group);
-
-		$_options = [
-			'output' => array_merge(['groupid'], $options['selectDiscoveryData']),
-			'filter' => ['groupid' => array_keys($result)]
-		];
-		$resource = DBselect(DB::makeSql('group_discovery', $_options));
-
-		while ($discovery_data = DBfetch($resource)) {
-			$result[$discovery_data['groupid']]['discoveryData'][] =
-				array_diff_key($discovery_data, array_flip(['groupid']));
-		}
 	}
 
 	/**

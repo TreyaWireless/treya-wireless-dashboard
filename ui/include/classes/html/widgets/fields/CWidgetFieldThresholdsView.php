@@ -25,8 +25,8 @@ class CWidgetFieldThresholdsView extends CWidgetFieldView {
 	public function getView(): CDiv {
 		$header_row = [
 			'',
-			_('Threshold'),
-			(new CColHeader(''))->setWidth('100%')
+			(new CColHeader(_('Threshold')))->setWidth('100%'),
+			_('Action')
 		];
 
 		$thresholds_table = (new CTable())
@@ -50,12 +50,26 @@ class CWidgetFieldThresholdsView extends CWidgetFieldView {
 
 	public function getJavaScript(): string {
 		return '
-			CWidgetForm.addField(
-				new CWidgetFieldThresholds('.json_encode([
-					'name' => $this->field->getName(),
-					'form_name' => $this->form_name
-				]).')
-			);
+			var $thresholds_table = jQuery("#'.$this->field->getName().'-table");
+
+			$thresholds_table
+				.dynamicRows({template: "#'.$this->field->getName().'-row-tmpl", allow_empty: true})
+				.on("afteradd.dynamicRows", function(opt) {
+					const rows = this.querySelectorAll(".form_row");
+					const colors = jQuery("#widget-dialogue-form")[0]
+						.querySelectorAll(".'.ZBX_STYLE_COLOR_PICKER.' input");
+					const used_colors = [];
+					for (const color of colors) {
+						if (color.value !== "" && color.name.includes("thresholds")) {
+							used_colors.push(color.value);
+						}
+					}
+					jQuery(".color-picker input", rows[rows.length - 1])
+						.val(colorPalette.getNextColor(used_colors))
+						.colorpicker({
+							appendTo: ".overlay-dialogue-body"
+						});
+				});
 		';
 	}
 
@@ -67,7 +81,7 @@ class CWidgetFieldThresholdsView extends CWidgetFieldView {
 
 	public function getRowTemplate($row_num = '#{rowNum}', $color = '#{color}', $threshold = '#{threshold}'): CRow {
 		return (new CRow([
-			(new CColorPicker($this->field->getName().'['.$row_num.'][color]'))->setColor($color),
+			(new CColor($this->field->getName().'['.$row_num.'][color]', $color))->appendColorPickerJs(false),
 			(new CTextBox($this->field->getName().'['.$row_num.'][threshold]', $threshold, false))
 				->setWidth(ZBX_TEXTAREA_TINY_WIDTH)
 				->setAriaRequired(),

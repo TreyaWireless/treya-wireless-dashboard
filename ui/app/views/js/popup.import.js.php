@@ -110,6 +110,7 @@ window.popup_import = new class {
 			) ?>;
 
 		overlayDialogue({
+			class: 'position-middle',
 			content: document.createElement('span').innerText = message,
 			buttons: [
 				{
@@ -132,10 +133,7 @@ window.popup_import = new class {
 					}
 				}
 			]
-		}, {
-			position: Overlay.prototype.POSITION_CENTER,
-			trigger_element: (compare_overlay || this.overlay).$btn_submit
-		});
+		}, (compare_overlay || this.overlay).$btn_submit);
 	}
 
 	openImportComparePopup() {
@@ -154,16 +152,13 @@ window.popup_import = new class {
 
 				overlayDialogue({
 					title: response.header,
-					class: response.no_changes ? '' : 'modal-popup modal-popup-fullscreen',
+					class: response.no_changes ? 'position-middle' : 'modal-popup modal-popup-fullscreen',
+					dialogueid: 'popup_import_compare',
 					content: response.body,
 					buttons: response.buttons,
 					script_inline: response.script_inline,
 					debug: response.debug
-				}, {
-					dialogueid: 'popup_import_compare',
-					position: response.no_changes ? Overlay.prototype.POSITION_CENTER : undefined,
-					trigger_element: this.overlay.$btn_submit
-				});
+				}, this.overlay.$btn_submit);
 			})
 			.catch((exception) => {
 				document.getElementById('import_file').value = '';
@@ -250,6 +245,7 @@ window.popup_import = new class {
 	updateWarning(obj, content) {
 		if (obj.checked) {
 			overlayDialogue({
+				class: 'position-middle',
 				content: document.createElement('span').innerText = content,
 				buttons: [
 					{
@@ -266,10 +262,7 @@ window.popup_import = new class {
 						}
 					}
 				]
-			}, {
-				position: Overlay.prototype.POSITION_CENTER,
-				trigger_element: obj
-			});
+			}, obj);
 		}
 	}
 

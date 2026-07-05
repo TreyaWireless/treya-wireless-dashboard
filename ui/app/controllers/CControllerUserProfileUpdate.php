@@ -19,7 +19,7 @@
  */
 class CControllerUserProfileUpdate extends CControllerUserUpdateGeneral {
 
-	protected function checkInput(): bool {
+	protected function checkInput() {
 		$locales = array_keys(getLocales());
 		$locales[] = LANG_DEFAULT;
 		$themes = array_keys(APP::getThemes());
@@ -30,6 +30,7 @@ class CControllerUserProfileUpdate extends CControllerUserUpdateGeneral {
 			'current_password' =>	'string',
 			'password1' =>			'string',
 			'password2' =>			'string',
+			'medias' =>				'array',
 			'lang' =>				'db users.lang|in '.implode(',', $locales),
 			'timezone' =>			'db users.timezone|in '.implode(',', $this->timezones),
 			'theme' =>				'db users.theme|in '.implode(',', $themes),
@@ -43,20 +44,20 @@ class CControllerUserProfileUpdate extends CControllerUserUpdateGeneral {
 		];
 
 		$ret = $this->validateInput($fields);
-		$result = $this->getValidationResult();
+		$error = $this->GetValidationError();
 
 		if ($ret && !$this->validateCurrentPassword()) {
-			$result = self::VALIDATION_ERROR;
+			$error = self::VALIDATION_ERROR;
 			$ret = false;
 		}
 
 		if ($ret && !$this->validatePassword()) {
-			$result = self::VALIDATION_ERROR;
+			$error = self::VALIDATION_ERROR;
 			$ret = false;
 		}
 
 		if (!$ret) {
-			switch ($result) {
+			switch ($error) {
 				case self::VALIDATION_ERROR:
 					$response = new CControllerResponseRedirect(
 						(new CUrl('zabbix.php'))->setArgument('action', 'userprofile.edit')
@@ -75,7 +76,7 @@ class CControllerUserProfileUpdate extends CControllerUserUpdateGeneral {
 		return $ret;
 	}
 
-	protected function checkPermissions(): bool {
+	protected function checkPermissions() {
 		return (bool) API::User()->get([
 			'output' => [],
 			'userids' => $this->getInput('userid'),
@@ -83,7 +84,7 @@ class CControllerUserProfileUpdate extends CControllerUserUpdateGeneral {
 		]);
 	}
 
-	protected function doAction(): void {
+	protected function doAction() {
 		$user = [];
 
 		$this->getInputs($user, ['lang', 'timezone', 'theme', 'autologin', 'autologout', 'refresh', 'rows_per_page',
@@ -101,8 +102,13 @@ class CControllerUserProfileUpdate extends CControllerUserUpdateGeneral {
 			$user['passwd'] = $this->getInput('password1');
 		}
 
+		if (CWebUser::$data['type'] > USER_TYPE_ZABBIX_USER) {
+			$user['medias'] = $this->getInputUserMedia();
+		}
+
 		DBstart();
-		$result = (bool) API::User()->update($user);
+		$result = updateMessageSettings($this->getInput('messages', []));
+		$result = $result && (bool) API::User()->update($user);
 		$result = DBend($result);
 
 		if ($result) {

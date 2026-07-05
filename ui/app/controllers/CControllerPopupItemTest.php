@@ -24,7 +24,6 @@ abstract class CControllerPopupItemTest extends CController {
 	const ZBX_TEST_TYPE_ITEM = 0;
 	const ZBX_TEST_TYPE_ITEM_PROTOTYPE = 1;
 	const ZBX_TEST_TYPE_LLD = 2;
-	const ZBX_TEST_TYPE_LLD_PROTOTYPE = 3;
 
 	/**
 	 * Max-length of input fields that can contain resolved macro values. Used in views for input fields.
@@ -95,8 +94,10 @@ abstract class CControllerPopupItemTest extends CController {
 
 	/**
 	 * Item types with mandatory item key.
+	 *
+	 * @var array
 	 */
-	public static array $item_types_has_key_mandatory = [ITEM_TYPE_ZABBIX, ITEM_TYPE_SIMPLE, ITEM_TYPE_INTERNAL,
+	protected $item_types_has_key_mandatory = [ITEM_TYPE_ZABBIX, ITEM_TYPE_SIMPLE, ITEM_TYPE_INTERNAL,
 		ITEM_TYPE_EXTERNAL, ITEM_TYPE_DB_MONITOR, ITEM_TYPE_HTTPAGENT, ITEM_TYPE_IPMI,
 		ITEM_TYPE_SSH, ITEM_TYPE_TELNET, ITEM_TYPE_JMX, ITEM_TYPE_CALCULATED
 	];
@@ -180,7 +181,7 @@ abstract class CControllerPopupItemTest extends CController {
 		],
 		'parameters' => [
 			'host' => ['{HOSTNAME}', '{HOST.HOST}', '{HOST.NAME}'],
-			'interface' => ['{HOST.IP}', '{IPADDRESS}', '{HOST.DNS}', '{HOST.CONN}', '{HOST.PORT}'],
+			'interface' => ['{HOST.IP}', '{IPADDRESS}', '{HOST.DNS}', '{HOST.CONN}'],
 			'inventory' => ['{INVENTORY.ALIAS}', '{INVENTORY.ASSET.TAG}', '{INVENTORY.CHASSIS}', '{INVENTORY.CONTACT}',
 				'{PROFILE.CONTACT}', '{INVENTORY.CONTRACT.NUMBER}', '{INVENTORY.DEPLOYMENT.STATUS}',
 				'{INVENTORY.HARDWARE}', '{PROFILE.HARDWARE}', '{INVENTORY.HARDWARE.FULL}', '{INVENTORY.HOST.NETMASK}',
@@ -437,8 +438,7 @@ abstract class CControllerPopupItemTest extends CController {
 						$item_flags = [
 							self::ZBX_TEST_TYPE_ITEM => ZBX_FLAG_DISCOVERY_NORMAL,
 							self::ZBX_TEST_TYPE_ITEM_PROTOTYPE => ZBX_FLAG_DISCOVERY_PROTOTYPE,
-							self::ZBX_TEST_TYPE_LLD => ZBX_FLAG_DISCOVERY_RULE,
-							self::ZBX_TEST_TYPE_LLD_PROTOTYPE => ZBX_FLAG_DISCOVERY_RULE_PROTOTYPE
+							self::ZBX_TEST_TYPE_LLD => ZBX_FLAG_DISCOVERY_RULE
 						];
 						$item_flag = $item_flags[$this->getInput('test_type')];
 					}
@@ -825,9 +825,7 @@ abstract class CControllerPopupItemTest extends CController {
 				'supported_macros' => array_diff_key($this->macros_by_item_props['key'],
 					['support_user_macros' => true, 'support_lld_macros' => true]
 				),
-				'support_lldmacros' => in_array($this->test_type,
-					[self::ZBX_TEST_TYPE_ITEM_PROTOTYPE, self::ZBX_TEST_TYPE_LLD_PROTOTYPE]
-				),
+				'support_lldmacros' => ($this->test_type == self::ZBX_TEST_TYPE_ITEM_PROTOTYPE),
 				'texts_support_macros' => [$inputs['key']],
 				'texts_support_lld_macros' => [$inputs['key']],
 				'texts_support_user_macros' => [$inputs['key']],
@@ -855,9 +853,7 @@ abstract class CControllerPopupItemTest extends CController {
 		$macros_posted = $this->hasInput('macros')
 			? json_decode($this->getInput('macros'), true)
 			: [];
-		$macros_types = in_array($this->test_type,
-			[self::ZBX_TEST_TYPE_ITEM_PROTOTYPE, self::ZBX_TEST_TYPE_LLD_PROTOTYPE]
-		)
+		$macros_types = ($this->test_type == self::ZBX_TEST_TYPE_ITEM_PROTOTYPE)
 			? ['usermacros' => true, 'lldmacros' => true]
 			: ['usermacros' => true];
 
@@ -901,9 +897,7 @@ abstract class CControllerPopupItemTest extends CController {
 
 		$expression_parser = new CExpressionParser([
 			'usermacros' => true,
-			'lldmacros' => in_array($this->test_type,
-				[self::ZBX_TEST_TYPE_ITEM_PROTOTYPE, self::ZBX_TEST_TYPE_LLD_PROTOTYPE]
-			),
+			'lldmacros' => ($this->test_type == self::ZBX_TEST_TYPE_ITEM_PROTOTYPE),
 			'calculated' => true,
 			'host_macro' => true,
 			'empty_host' => true
@@ -1041,7 +1035,7 @@ abstract class CControllerPopupItemTest extends CController {
 				'macros_n' => []
 			];
 
-			if (in_array($this->test_type, [self::ZBX_TEST_TYPE_ITEM_PROTOTYPE, self::ZBX_TEST_TYPE_LLD_PROTOTYPE])) {
+			if ($this->test_type == self::ZBX_TEST_TYPE_ITEM_PROTOTYPE) {
 				$types += ['lldmacros' => true];
 			}
 

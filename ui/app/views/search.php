@@ -19,6 +19,10 @@
  * @var array $data
  */
 
+$this->addJsFile('items.js');
+$this->addJsFile('multilineinput.js');
+$this->includeJsFile('search.js.php');
+
 $sections = [];
 
 $table = (new CTableInfo())
@@ -42,14 +46,13 @@ foreach ($data['hosts'] as $hostid => $host) {
 	$interface = reset($host['interfaces']);
 	$visible_name = make_decoration($host['name'], $data['search']);
 
-	$host_url = (new CUrl('zabbix.php'))
-		->setArgument('action', 'popup')
-		->setArgument('popup', 'host.edit')
-		->setArgument('hostid', $hostid)
-		->getUrl();
-
 	$name_link = ($host['editable'] && $data['allowed_ui_conf_hosts'])
-		? new CLink($visible_name, $host_url)
+		? (new CLink($visible_name, (new CUrl('zabbix.php'))
+			->setArgument('action', 'host.edit')
+			->setArgument('hostid', $hostid)
+		))
+			->setAttribute('data-hostid', $host['hostid'])
+			->onClick('view.editHost(event, this.dataset.hostid);')
 		: new CSpan($visible_name);
 
 	if ($host['status'] == HOST_STATUS_NOT_MONITORED) {
@@ -133,15 +136,14 @@ foreach ($data['hosts'] as $hostid => $host) {
 
 	$graph_count = CViewHelper::showNum($host['graphs']);
 	$graphs_link = ($host['editable'] && $data['allowed_ui_conf_hosts'])
-		? [new CLink(_('Graphs'), (new CUrl('zabbix.php'))
-			->setArgument('action', 'graph.list')
+		? [new CLink(_('Graphs'), (new CUrl('graphs.php'))
 			->setArgument('filter_set', '1')
 			->setArgument('filter_hostids', [$hostid])
 			->setArgument('context', 'host')
 		), $graph_count]
 		: _('Graphs');
 
-	$discovery_count = CViewHelper::showNum($host['discoveryRules']);
+	$discovery_count = CViewHelper::showNum($host['discoveries']);
 	$discovery_link = ($host['editable'] && $data['allowed_ui_conf_hosts'])
 		? [new CLink(_('Discovery'), (new CUrl('host_discovery.php'))
 			->setArgument('filter_set', '1')
@@ -203,14 +205,13 @@ $table = (new CTableInfo())
 
 foreach ($data['host_groups'] as $groupid => $group) {
 	$caption = make_decoration($group['name'], $data['search']);
-	$group_url = (new CUrl('zabbix.php'))
-		->setArgument('action', 'popup')
-		->setArgument('popup', 'hostgroup.edit')
-		->setArgument('groupid', $groupid)
-		->getUrl();
-
 	$name_link = $group['editable'] && $data['allowed_ui_conf_host_groups']
-		? new CLink($caption, $group_url)
+		? (new CLink($caption, (new CUrl('zabbix.php'))
+			->setArgument('action', 'hostgroup.edit')
+			->setArgument('groupid', $groupid)
+		))
+			->addClass('js-edit-hostgroup')
+			->setAttribute('data-groupid', $groupid)
 		: new CSpan($caption);
 
 	$hosts_link = null;
@@ -288,17 +289,14 @@ if ($data['admin']) {
 		$trigger_count = CViewHelper::showNum($template['triggers']);
 		$graph_count = CViewHelper::showNum($template['graphs']);
 		$dashboard_count = CViewHelper::showNum($template['dashboards']);
-		$discovery_count = CViewHelper::showNum($template['discoveryRules']);
+		$discovery_count = CViewHelper::showNum($template['discoveries']);
 		$httptest_count = CViewHelper::showNum($template['httpTests']);
 
-		$template_url = (new CUrl('zabbix.php'))
-			->setArgument('action', 'popup')
-			->setArgument('popup', 'template.edit')
-			->setArgument('templateid', $templateid)
-			->getUrl();
-
 		$template_cell = ($template['editable'] && $data['allowed_ui_conf_templates'])
-			? [new CLink($visible_name, $template_url)]
+			? [(new CLink($visible_name))
+				->setAttribute('data-templateid', $templateid)
+				->onClick('view.editTemplate(event, this.dataset.templateid);')
+			]
 			: [new CSpan($visible_name)];
 
 		$items_link = ($template['editable'] && $data['allowed_ui_conf_templates'])
@@ -322,8 +320,7 @@ if ($data['admin']) {
 			: _('Triggers');
 
 		$graphs_link = ($template['editable'] && $data['allowed_ui_conf_templates'])
-			? [new CLink(_('Graphs'), (new CUrl('zabbix.php'))
-				->setArgument('action', 'graph.list')
+			? [new CLink(_('Graphs'), (new CUrl('graphs.php'))
 				->setArgument('filter_set', '1')
 				->setArgument('filter_hostids', [$templateid])
 				->setArgument('context', 'template')
@@ -393,14 +390,13 @@ $table = (new CTableInfo())
 
 foreach ($data['template_groups'] as $groupid => $group) {
 	$caption = make_decoration($group['name'], $data['search']);
-	$templategroup_url = (new CUrl('zabbix.php'))
-		->setArgument('action', 'popup')
-		->setArgument('popup', 'templategroup.edit')
-		->setArgument('groupid', $groupid)
-		->getUrl();
-
 	$name_link = $group['editable'] && $data['allowed_ui_conf_template_groups']
-		? new CLink($caption, $templategroup_url)
+		? (new CLink($caption, (new CUrl('zabbix.php'))
+			->setArgument('action', 'templategroup.edit')
+			->setArgument('groupid', $groupid)
+		))
+			->addClass('js-edit-templategroup')
+			->setAttribute('data-groupid', $groupid)
 		: new CSpan($caption);
 
 	$templates_link = null;
@@ -433,4 +429,8 @@ $sections[] = (new CSectionCollapsible($table))
 	->setTitle(_('Search').': '.$data['search'])
 	->setDocUrl(CDocHelper::getUrl(CDocHelper::SEARCH))
 	->addItem(new CDiv($sections))
+	->show();
+
+(new CScriptTag('view.init();'))
+	->setOnDocumentReady()
 	->show();

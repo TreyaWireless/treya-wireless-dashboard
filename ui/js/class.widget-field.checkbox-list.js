@@ -13,7 +13,7 @@
 **/
 
 
-class CWidgetFieldCheckboxList extends CWidgetField {
+class CWidgetFieldCheckboxList {
 
 	/**
 	 * @type {HTMLInputElement}
@@ -21,15 +21,13 @@ class CWidgetFieldCheckboxList extends CWidgetField {
 	#empty_input_element;
 
 	/**
-	 * @type {HTMLInputElement[]}
+	 * @type {Array<HTMLInputElement>}
 	 */
 	#checkboxes;
 
-	constructor({name, form_name}) {
-		super({name, form_name});
-
-		this.#empty_input_element = this.getForm().querySelector(`input[type="hidden"][name="${name}"]`);
-		this.#checkboxes = [...this.getForm().querySelectorAll(`input[type="checkbox"][name="${name}[]"]`)];
+	constructor(field_name) {
+		this.#empty_input_element = document.querySelector(`input[type="hidden"][name="${field_name}"]`);
+		this.#checkboxes = [...document.querySelectorAll(`input[type="checkbox"][name="${field_name}[]"]`)];
 
 		this.#initField();
 		this.#update();
@@ -39,10 +37,7 @@ class CWidgetFieldCheckboxList extends CWidgetField {
 		const observer = new MutationObserver(() => this.#update());
 
 		for (const checkbox of this.#checkboxes) {
-			checkbox.addEventListener('change', () => {
-				this.#update();
-				this.dispatchUpdateEvent();
-			});
+			checkbox.addEventListener('change', () => this.#update());
 			observer.observe(checkbox, {attributeFilter: ['disabled']});
 		}
 	}

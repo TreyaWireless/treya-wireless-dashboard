@@ -87,22 +87,19 @@ window.mediatype_test_edit_popup = new class {
 		}
 
 		overlayDialogue({
-			title: <?= json_encode(_('Media type test log')) ?>,
-			content,
-			class: 'modal-popup modal-popup-generic debug-modal',
-			footer,
-			buttons: [
+			'title': <?= json_encode(_('Media type test log')) ?>,
+			'content': content,
+			'class': 'modal-popup modal-popup-generic debug-modal position-middle',
+			'footer': footer,
+			'buttons': [
 				{
-					title: <?= json_encode(_('Ok')) ?>,
-					cancel: true,
-					focused: true,
-					action: function () {}
+					'title': <?= json_encode(_('Ok')) ?>,
+					'cancel': true,
+					'focused': true,
+					'action': function () {}
 				}
 			]
-		}, {
-			position: Overlay.prototype.POSITION_CENTER,
-			trigger_element
-		});
+		}, trigger_element);
 	}
 
 	/**

@@ -21,6 +21,7 @@
 
 $this->addJsFile('flickerfreescreen.js');
 $this->addJsFile('gtlc.js');
+$this->addJsFile('class.calendar.js');
 
 $this->includeJsFile('reports.auditlog.list.js.php');
 

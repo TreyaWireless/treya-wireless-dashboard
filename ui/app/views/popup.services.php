@@ -96,8 +96,7 @@ $output = [
 	'controls' => $controls->toString(),
 	'body' => $form->toString(),
 	'buttons' => $buttons,
-	'script_inline' => $this->readJsFile('popup.services.js.php'),
-	'dialogue_class' => 'modal-popup-generic'
+	'script_inline' => $this->readJsFile('popup.services.js.php')
 ];
 
 if ($data['user']['debug_mode'] == GROUP_DEBUG_MODE_ENABLED) {

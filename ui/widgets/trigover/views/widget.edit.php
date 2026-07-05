@@ -49,6 +49,6 @@ $groupids = array_key_exists('groupids', $data['fields'])
 		new CWidgetFieldCheckBoxView($data['fields']['show_suppressed'])
 	)
 	->addField(
-		new CWidgetFieldRadioButtonListView($data['fields']['layout'])
+		new CWidgetFieldRadioButtonListView($data['fields']['style'])
 	)
 	->show();

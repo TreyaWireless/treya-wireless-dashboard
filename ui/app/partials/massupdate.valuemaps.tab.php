@@ -40,7 +40,7 @@ $rename_container = (new CTable())
 	->setHeader([
 		_('From'),
 		_('To'),
-		''
+		_('Action')
 	])
 	->setFooter(new CCol(
 		(new CButtonLink(_('Add')))->addClass('element-table-add')
@@ -52,6 +52,7 @@ $remove_container->addItem([
 	(new CMultiSelect([
 		'name' => 'valuemap_remove[]',
 		'object_name' => 'valuemap_names',
+		'data' => [],
 		'popup' => [
 			'parameters' => [
 				'srctbl' => 'valuemap_names',

@@ -39,21 +39,18 @@ $(document).ready(function() {
 		$footer.text(<?= json_encode(_('Time elapsed:')) ?> + " " + debug.ms + 'ms');
 
 		overlayDialogue({
-			title: <?= json_encode(_('Script execution log')) ?>,
-			content: $content,
-			class: 'modal-popup modal-popup-generic debug-modal',
-			footer: $footer,
-			buttons: [
+			'title': <?= json_encode(_('Script execution log')) ?>,
+			'content': $content,
+			'class': 'modal-popup modal-popup-generic debug-modal position-middle',
+			'footer': $footer,
+			'buttons': [
 				{
-					title: <?= json_encode(_('Ok')) ?>,
-					cancel: true,
-					focused: true,
-					action: () => {}
+					'title': <?= json_encode(_('Ok')) ?>,
+					'cancel': true,
+					'focused': true,
+					'action': () => {}
 				}
 			]
-		}, {
-			position: Overlay.prototype.POSITION_CENTER,
-			trigger_element: opener
-		});
+		}, opener);
 	});
 });

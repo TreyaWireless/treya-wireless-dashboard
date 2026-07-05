@@ -81,7 +81,7 @@ abstract class CWidgetField {
 	 * Prefix field label to enhance clarity in case of error messages. For example:
 	 * Invalid parameter "<LABEL PREFIX>: <LABEL>": too many decimal places.
 	 */
-	public function prefixLabel(?string $prefix): static {
+	public function prefixLabel(string $prefix): self {
 		$this->label_prefix = $prefix;
 
 		return $this;
@@ -282,7 +282,6 @@ abstract class CWidgetField {
 			$this->setValue($value);
 		}
 		else {
-			$this->setValue($this->getDefault());
 			$errors[] = $error;
 		}
 

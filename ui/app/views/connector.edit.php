@@ -390,8 +390,7 @@ $output = [
 	'body' => $form->toString(),
 	'buttons' => $buttons,
 	'script_inline' => getPagePostJs().
-		$this->readJsFile('connector.edit.js.php'),
-	'dialogue_class' => 'modal-popup-static'
+		$this->readJsFile('connector.edit.js.php')
 ];
 
 if ($data['user']['debug_mode'] == GROUP_DEBUG_MODE_ENABLED) {

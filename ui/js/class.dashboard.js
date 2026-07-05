@@ -16,7 +16,6 @@
 const ZBX_STYLE_BTN_DASHBOARD_PAGE_PROPERTIES = 'btn-dashboard-page-properties';
 const ZBX_STYLE_DASHBOARD_IS_MULTIPAGE = 'dashboard-is-multipage';
 const ZBX_STYLE_DASHBOARD_IS_EDIT_MODE = 'dashboard-is-edit-mode';
-const ZBX_STYLE_DASHBOARD_IS_BUSY = 'dashboard-is-busy';
 const ZBX_STYLE_DASHBOARD_NAVIGATION_IS_SCROLLABLE = 'is-scrollable';
 const ZBX_STYLE_DASHBOARD_SELECTED_TAB = 'selected-tab';
 
@@ -38,20 +37,13 @@ class CDashboard {
 
 	static REFERENCE_DASHBOARD = 'DASHBOARD';
 
-	static EVENT_REFERRED_UPDATE = 'dashboard-referred-update';
 	static EVENT_FEEDBACK = 'dashboard-feedback';
 
 	#broadcast_options;
 
 	#broadcast_cache = new Map();
 
-	#selected_tab = null;
-
-	#are_tabs_blocked = false;
-
-	#widget_edit_dialogue = null;
-	#widget_edit_queue = null;
-	#widget_edit_position_fix = null;
+	#edit_widget_cache = null;
 
 	constructor(target, {
 		containers,
@@ -175,8 +167,6 @@ class CDashboard {
 
 		if (this._is_edit_mode) {
 			this._target.classList.add(ZBX_STYLE_DASHBOARD_IS_EDIT_MODE);
-
-			this.#preventUnrelatedEditors();
 		}
 
 		if (!this._is_edit_mode) {
@@ -192,7 +182,7 @@ class CDashboard {
 
 	broadcast(data) {
 		for (const [type, value] of Object.entries(data)) {
-			ZABBIX.EventHub.publish(new CEventHubEvent({
+			ZABBIX.EventHub.publish({
 				data: value,
 				descriptor: {
 					context: 'dashboard',
@@ -203,30 +193,10 @@ class CDashboard {
 					reference: CDashboard.REFERENCE_DASHBOARD,
 					type
 				}
-			}));
+			});
 
 			this.#broadcast_cache.set(type, value);
 		}
-	}
-
-	isReferred(type = null) {
-		for (const dashboard_page of this._dashboard_pages.keys()) {
-			for (const widget of dashboard_page.getWidgets()) {
-				for (const accessor of CWidgetBase.getFieldsReferencesAccessors(widget.getFields()).values()) {
-					if (accessor.getTypedReference() === '') {
-						continue;
-					}
-
-					const {reference, type: _type} = CWidgetBase.parseTypedReference(accessor.getTypedReference());
-
-					if (reference === CDashboard.REFERENCE_DASHBOARD && (_type === type || type === null)) {
-						return true;
-					}
-				}
-			}
-		}
-
-		return false;
 	}
 
 	isEditMode() {
@@ -237,8 +207,6 @@ class CDashboard {
 		this._is_edit_mode = true;
 
 		this._target.classList.add(ZBX_STYLE_DASHBOARD_IS_EDIT_MODE);
-
-		this.#preventUnrelatedEditors();
 
 		for (const dashboard_page of this._dashboard_pages.keys()) {
 			if (!dashboard_page.isEditMode()) {
@@ -256,20 +224,6 @@ class CDashboard {
 		if (is_internal_call) {
 			this.fire(DASHBOARD_EVENT_EDIT);
 		}
-	}
-
-	#preventUnrelatedEditors() {
-		ZABBIX.EventHub.subscribe({
-			require: {
-				context: CPopupManager.EVENT_CONTEXT,
-				event: CPopupManagerEvent.EVENT_OPEN
-			},
-			callback: ({event})=> {
-				event.preventDefault();
-
-				this._warn(t('Editing other objects is not allowed in dashboard editing mode.'));
-			}
-		});
 	}
 
 	_startSlideshow() {
@@ -482,7 +436,7 @@ class CDashboard {
 
 	_createBusyCondition() {
 		if (this._busy_conditions.size === 0) {
-			this.#enterBusyState();
+			this.fire(DASHBOARD_EVENT_BUSY);
 		}
 
 		const busy_condition = {};
@@ -496,28 +450,8 @@ class CDashboard {
 		this._busy_conditions.delete(busy_condition);
 
 		if (this._busy_conditions.size === 0) {
-			this.#leaveBusyState();
+			this.fire(DASHBOARD_EVENT_IDLE);
 		}
-	}
-
-	#enterBusyState() {
-		this._target.classList.add(ZBX_STYLE_DASHBOARD_IS_BUSY);
-
-		if (!this._is_kiosk_mode) {
-			this.#blockTabs();
-		}
-
-		this.fire(DASHBOARD_EVENT_BUSY);
-	}
-
-	#leaveBusyState() {
-		this._target.classList.remove(ZBX_STYLE_DASHBOARD_IS_BUSY);
-
-		if (!this._is_kiosk_mode) {
-			this.#unblockTabs();
-		}
-
-		this.fire(DASHBOARD_EVENT_IDLE);
 	}
 
 	isUnsaved() {
@@ -540,33 +474,16 @@ class CDashboard {
 		return this._data;
 	}
 
-	getMaxColumns() {
-		return this._max_columns;
-	}
-
-	getMaxRows() {
-		return this._max_rows;
-	}
-
-	getWidgetDefaults() {
-		return this._widget_defaults;
-	}
-
-	addCreatePlaceholderWidget(dashboard_page, {
-		type,
-		name = '',
-		view_mode = ZBX_WIDGET_VIEW_MODE_NORMAL,
-		pos
-	}) {
-		const widget = new CWidgetCreatePlaceholder({
-			type: 'create-placeholder',
+	addPastePlaceholderWidget(dashboard_page, {type, name, view_mode, pos}) {
+		const widget = new CWidgetPastePlaceholder({
+			type: 'paste-placeholder',
 			name,
 			view_mode,
 			fields: {},
 			defaults: this._widget_defaults[type],
 			widgetid: null,
 			pos,
-			is_new: true,
+			is_new: false,
 			rf_rate: 0,
 			dashboard: {
 				templateid: this._data.templateid,
@@ -588,10 +505,7 @@ class CDashboard {
 		return widget;
 	}
 
-	addWidgetFromData(
-		dashboard_page,
-		{type, name, view_mode, fields, widgetid, pos, is_new, rf_rate, unique_id = null, is_configured}
-	) {
+	addWidgetFromData(dashboard_page, {type, name, view_mode, fields, widgetid, pos, is_new, rf_rate, messages}) {
 		const widget_data = {
 			type,
 			name,
@@ -614,15 +528,15 @@ class CDashboard {
 			is_editable: this._is_editable,
 			is_edit_mode: this._is_edit_mode,
 			csrf_token: this._csrf_token,
-			unique_id: unique_id ?? this._createUniqueId()
+			unique_id: this._createUniqueId()
 		};
 
 		let widget;
 
 		if (type in this._widget_defaults) {
-			if (!is_configured) {
+			if (messages.length > 0) {
 				widget = new CWidgetMisconfigured(widget_data);
-				widget.setMessageType(CWidgetMisconfigured.MESSAGE_TYPE_NOT_CONFIGURED);
+				widget.setMessages(messages);
 			}
 			else {
 				let has_empty_references = false;
@@ -681,7 +595,7 @@ class CDashboard {
 	}
 
 	addNewWidget() {
-		this.editWidget();
+		this.editWidgetProperties();
 	}
 
 	addDashboardPage({dashboard_pageid, name, display_period, widgets}) {
@@ -721,6 +635,7 @@ class CDashboard {
 			cell_height: this._cell_height,
 			max_columns: this._max_columns,
 			max_rows: this._max_rows,
+			widget_defaults: this._widget_defaults,
 			is_editable: this._is_editable,
 			is_edit_mode: this._is_edit_mode,
 			csrf_token: this._csrf_token,
@@ -825,7 +740,7 @@ class CDashboard {
 		for (const widget of widgets) {
 			if ('reference' in widget.fields) {
 				const old_reference = widget.fields.reference;
-				const new_reference = this.createReference({references});
+				const new_reference = this._createReference({references});
 
 				widget.fields.reference = new_reference;
 
@@ -878,7 +793,7 @@ class CDashboard {
 						sane_widgets.push({
 							...widgets[i],
 							fields: response.widgets[i].fields,
-							is_configured: response.widgets[i].is_configured
+							messages: response.widgets[i].messages
 						});
 					}
 				}
@@ -952,7 +867,7 @@ class CDashboard {
 		}
 
 		if ('reference' in new_widget_data.fields) {
-			new_widget_data.fields.reference = this.createReference();
+			new_widget_data.fields.reference = this._createReference();
 		}
 
 		const references = this._getReferences({dashboard_page});
@@ -973,7 +888,7 @@ class CDashboard {
 			}
 		}
 
-		const create_placeholder_widget = this.addCreatePlaceholderWidget(dashboard_page, {
+		const paste_placeholder_widget = this.addPastePlaceholderWidget(dashboard_page, {
 			type: new_widget_data.type,
 			name: new_widget_data.name,
 			view_mode: new_widget_data.view_mode,
@@ -993,10 +908,10 @@ class CDashboard {
 
 				if (response.widgets[0] === null) {
 					if (widget !== null) {
-						dashboard_page.replaceWidget(create_placeholder_widget, widget);
+						dashboard_page.replaceWidget(paste_placeholder_widget, widget);
 					}
 					else {
-						dashboard_page.deleteWidget(create_placeholder_widget);
+						dashboard_page.deleteWidget(paste_placeholder_widget);
 					}
 
 					this._warn(t('Cannot paste inaccessible widget.'));
@@ -1004,13 +919,13 @@ class CDashboard {
 					return;
 				}
 
-				const widget_replace = this.replaceWidgetFromData(dashboard_page, create_placeholder_widget, {
+				const widget_replace = this.replaceWidgetFromData(dashboard_page, paste_placeholder_widget, {
 					...new_widget_data,
 					fields: response.widgets[0].fields,
 					widgetid: null,
 					pos: new_widget_pos,
-					is_new: false,
-					is_configured: response.widgets[0].is_configured
+					is_new: true,
+					messages: response.widgets[0].messages
 				});
 
 				if (widget !== null) {
@@ -1018,7 +933,7 @@ class CDashboard {
 				}
 			})
 			.catch(exception => {
-				dashboard_page.deleteWidget(create_placeholder_widget);
+				dashboard_page.deleteWidget(paste_placeholder_widget);
 
 				clearMessages();
 
@@ -1226,8 +1141,7 @@ class CDashboard {
 			.on(DASHBOARD_PAGE_EVENT_WIDGET_ADD, this._events.dashboardPageWidgetAdd)
 			.on(DASHBOARD_PAGE_EVENT_WIDGET_ADD_NEW, this._events.dashboardPageWidgetAddNew)
 			.on(DASHBOARD_PAGE_EVENT_WIDGET_DELETE, this._events.dashboardPageWidgetDelete)
-			.on(DASHBOARD_PAGE_EVENT_WIDGET_RESIZE, this._events.dashboardPageWidgetResize)
-			.on(DASHBOARD_PAGE_EVENT_WIDGET_DRAG, this._events.dashboardPageWidgetDrag)
+			.on(DASHBOARD_PAGE_EVENT_WIDGET_POSITION, this._events.dashboardPageWidgetPosition)
 			.on(DASHBOARD_PAGE_EVENT_WIDGET_ACTIONS, this._events.dashboardPageWidgetActions)
 			.on(DASHBOARD_PAGE_EVENT_WIDGET_EDIT, this._events.dashboardPageWidgetEdit)
 			.on(DASHBOARD_PAGE_EVENT_WIDGET_COPY, this._events.dashboardPageWidgetCopy)
@@ -1245,8 +1159,7 @@ class CDashboard {
 			.off(DASHBOARD_PAGE_EVENT_WIDGET_ADD, this._events.dashboardPageWidgetAdd)
 			.off(DASHBOARD_PAGE_EVENT_WIDGET_ADD_NEW, this._events.dashboardPageWidgetAddNew)
 			.off(DASHBOARD_PAGE_EVENT_WIDGET_DELETE, this._events.dashboardPageWidgetDelete)
-			.off(DASHBOARD_PAGE_EVENT_WIDGET_RESIZE, this._events.dashboardPageWidgetResize)
-			.off(DASHBOARD_PAGE_EVENT_WIDGET_DRAG, this._events.dashboardPageWidgetDrag)
+			.off(DASHBOARD_PAGE_EVENT_WIDGET_POSITION, this._events.dashboardPageWidgetPosition)
 			.off(DASHBOARD_PAGE_EVENT_WIDGET_ACTIONS, this._events.dashboardPageWidgetActions)
 			.off(DASHBOARD_PAGE_EVENT_WIDGET_EDIT, this._events.dashboardPageWidgetEdit)
 			.off(DASHBOARD_PAGE_EVENT_WIDGET_COPY, this._events.dashboardPageWidgetCopy)
@@ -1540,140 +1453,312 @@ class CDashboard {
 			});
 	}
 
-	editWidget({dashboard_page = null, widget = null, new_widget_pos = null} = {}) {
-		if (this.#isWidgetEditing()) {
-			if (this.#widget_edit_queue !== null) {
-				this.#widget_edit_queue = {dashboard_page, widget, new_widget_pos};
+	editWidgetProperties(properties = {}, {new_widget_pos = null} = {}) {
+		this._clearWarnings();
 
-				return;
-			}
+		if (!('type' in properties)) {
+			properties.type = this._widget_last_type;
 
-			this.#widget_edit_queue = {dashboard_page, widget, new_widget_pos};
-
-			this.#widget_edit_dialogue.promiseTrySubmit()
-				.then(success => {
-					if (!success) {
-						this.#widget_edit_queue = null;
-					}
-				});
-
-			return;
-		}
-
-		const sandbox = new CWidgetEditSandbox({dashboard: this});
-
-		const validator = new CWidgetEditValidator({dashboard: this});
-
-		this.#widget_edit_dialogue = new CWidgetEditDialogue({dashboard: this});
-
-		const sandbox_params = {};
-
-		const dialogue_params = {
-			sandbox,
-			validator,
-			position_fix: this.#widget_edit_position_fix
-		};
-
-		if (widget !== null) {
-			if (dashboard_page !== this._selected_dashboard_page) {
-				this._selectDashboardPage(dashboard_page);
-			}
-
-			sandbox_params.dashboard_page = dashboard_page;
-			sandbox_params.widget = widget;
-
-			dialogue_params.type = widget.getType();
-			dialogue_params.name = widget.getName();
-			dialogue_params.view_mode = widget.getViewMode();
-			dialogue_params.fields = widget.getFields();
-			dialogue_params.is_new = false;
-		}
-		else {
-			if (this._widget_last_type === null) {
+			if (properties.type === null) {
 				this._warn(t('Cannot add widget: no widgets available.'));
 
 				return;
 			}
+		}
 
-			sandbox_params.dashboard_page = this._selected_dashboard_page;
-			sandbox_params.type = this._widget_last_type;
-			sandbox_params.pos = new_widget_pos;
+		this.#edit_widget_cache = {
+			type: properties.type
+		};
 
-			dialogue_params.type = this._widget_last_type;
-			dialogue_params.is_new = true;
+		if ('unique_id' in properties && 'dashboard_page_unique_id' in properties) {
+			this.#edit_widget_cache.unique_id = properties.unique_id;
+			this.#edit_widget_cache.dashboard_page_unique_id = properties.dashboard_page_unique_id;
+		}
+		else {
+			this.#edit_widget_cache.new_widget_dashboard_page = this._selected_dashboard_page;
+		}
+
+		const overlay = PopUp(`widget.${properties.type}.edit`, {
+			templateid: this._data.templateid ?? undefined,
+			...properties
+		}, {
+			dialogueid: 'widget_properties',
+			dialogue_class: 'modal-widget-configuration',
+			prevent_navigation: true
+		});
+
+		overlay.xhr.then(() => {
+			const form = overlay.$dialogue.$body[0].querySelector('form');
+
+			if (!('unique_id' in properties) || !('dashboard_page_unique_id' in properties)) {
+				this.#edit_widget_cache.new_widget_pos = new_widget_pos;
+
+				const default_widget_size = this._widget_defaults[properties.type].size;
+
+				if (new_widget_pos === null) {
+					this.#edit_widget_cache.new_widget_pos_reserved =
+						this.#edit_widget_cache.new_widget_dashboard_page.findFreePos(default_widget_size);
+				}
+				else {
+					this.#edit_widget_cache.new_widget_pos_reserved = {
+						...default_widget_size,
+						...new_widget_pos
+					};
+
+					this.#edit_widget_cache.new_widget_pos_reserved.width = Math.min(
+						this.#edit_widget_cache.new_widget_pos_reserved.width,
+						this._max_columns - this.#edit_widget_cache.new_widget_pos_reserved.x
+					);
+
+					this.#edit_widget_cache.new_widget_pos_reserved.height = Math.min(
+						this.#edit_widget_cache.new_widget_pos_reserved.height,
+						this._max_rows - this.#edit_widget_cache.new_widget_pos_reserved.y
+					);
+
+					this.#edit_widget_cache.new_widget_pos_reserved =
+						this.#edit_widget_cache.new_widget_dashboard_page.accommodatePos(
+							this.#edit_widget_cache.new_widget_pos_reserved
+						);
+				}
+
+				if (this.#edit_widget_cache.new_widget_pos_reserved === null) {
+					for (const el of form.parentNode.children) {
+						if (el.matches('.msg-warning')) {
+							el.parentNode.removeChild(el);
+						}
+					}
+
+					const message_box = makeMessageBox('warning', [],
+						t('Cannot add widget: not enough free space on the dashboard.')
+					)[0];
+
+					form.parentNode.insertBefore(message_box, form);
+
+					overlay.$btn_submit[0].disabled = true;
+				}
+			}
+		});
+
+		overlay.$dialogue[0].removeEventListener('dialogue.close', this._events.editWidgetPropertiesClose);
+		overlay.$dialogue[0].addEventListener('dialogue.close', this._events.editWidgetPropertiesClose, {once: true});
+	}
+
+	reloadWidgetProperties() {
+		const overlay = overlays_stack.getById('widget_properties');
+		const form = overlay.$dialogue.$body[0].querySelector('form');
+		const fields = getFormFields(form);
+
+		const properties = {
+			type: fields.type
+		};
+
+		if (properties.type === this.#edit_widget_cache.type) {
+			properties.name = fields.name;
+			properties.view_mode = fields.show_header === '1'
+				? ZBX_WIDGET_VIEW_MODE_NORMAL
+				: ZBX_WIDGET_VIEW_MODE_HIDDEN_HEADER;
+
+			delete fields.type;
+			delete fields.name;
+			delete fields.show_header;
+
+			properties.fields = fields;
+		}
+
+		let new_widget_pos = null;
+
+		if ('unique_id' in this.#edit_widget_cache && 'dashboard_page_unique_id' in this.#edit_widget_cache) {
+			properties.unique_id = this.#edit_widget_cache.unique_id;
+			properties.dashboard_page_unique_id = this.#edit_widget_cache.dashboard_page_unique_id;
+		}
+		else {
+			new_widget_pos = this.#edit_widget_cache.new_widget_pos;
+		}
+
+		this.editWidgetProperties(properties, {new_widget_pos});
+	}
+
+	applyWidgetProperties() {
+		const overlay = overlays_stack.getById('widget_properties');
+		const form = overlay.$dialogue.$body[0].querySelector('form');
+		const fields = getFormFields(form);
+
+		const templateid = this._data.templateid ?? undefined;
+		const type = fields.type;
+		const name = fields.name;
+		const view_mode = fields.show_header === '1'
+			? ZBX_WIDGET_VIEW_MODE_NORMAL
+			: ZBX_WIDGET_VIEW_MODE_HIDDEN_HEADER;
+
+		delete fields.type;
+		delete fields.name;
+		delete fields.show_header;
+
+		let dashboard_page = null;
+		let widget = null;
+
+		if ('unique_id' in this.#edit_widget_cache && 'dashboard_page_unique_id' in this.#edit_widget_cache) {
+			dashboard_page = this.getDashboardPage(this.#edit_widget_cache.dashboard_page_unique_id);
+			widget = dashboard_page.getWidget(this.#edit_widget_cache.unique_id);
 		}
 
 		const busy_condition = this._createBusyCondition();
 
-		sandbox.promiseInit(sandbox_params)
-			.then(() => {
-				this.#widget_edit_dialogue.addEventListener(CWidgetEditDialogue.EVENT_LOAD, () => {
-					this._selected_dashboard_page.enterWidgetEditing(sandbox.getWidget(), {is_exclusive: true});
-				});
+		Promise.resolve()
+			.then(() => this._promiseDashboardWidgetCheck({templateid, type, name, view_mode, fields}))
+			.then(({fields}) => {
+				this._is_unsaved = true;
 
-				this.#widget_edit_dialogue.addEventListener(CWidgetEditDialogue.EVENT_READY, () => {
-					this._selected_dashboard_page.enterWidgetEditing(sandbox.getWidget());
-				});
+				overlayDialogueDestroy(overlay.dialogueid);
 
-				return this.#widget_edit_dialogue.run(dialogue_params);
-			})
-			.then(({is_submit, position_fix}) => {
-				this._selected_dashboard_page.leaveWidgetEditing();
-
-				if (is_submit) {
-					const type = sandbox.getWidget().getType();
-
-					if (type !== this._widget_last_type && type !== widget?.getType()) {
-						this._widget_last_type = type;
-
-						updateUserProfile('web.dashboard.last_widget_type', type, [], PROFILE_TYPE_STR);
-					}
-
-					if (this.#widget_edit_queue !== null) {
-						const {dashboard_page, widget, new_widget_pos} = this.#widget_edit_queue;
-
-						setTimeout(() => this.editWidget({dashboard_page, widget, new_widget_pos}));
-					}
+				if (type !== this._widget_last_type && widget?.getType() !== type) {
+					this._widget_last_type = type;
+					updateUserProfile('web.dashboard.last_widget_type', type, [], PROFILE_TYPE_STR);
 				}
 
-				this.#widget_edit_position_fix = position_fix;
+				if ('reference' in fields && fields.reference === '') {
+					fields.reference = this._createReference();
+				}
+
+				const widget_data = {
+					type,
+					name,
+					view_mode,
+					fields,
+					widgetid: widget === null || widget.getType() !== type ? null : widget.getWidgetId(),
+					pos: widget === null ? this.#edit_widget_cache.new_widget_pos_reserved : widget.getPos(),
+					is_new: widget === null,
+					rf_rate: 0,
+					messages: []
+				};
+
+				if (widget === null) {
+					if (this.#edit_widget_cache.new_widget_dashboard_page.getState()
+							=== DASHBOARD_PAGE_STATE_DESTROYED) {
+						return;
+					}
+
+					this.#edit_widget_cache.new_widget_dashboard_page.promiseScrollIntoView(widget_data.pos)
+						.then(() => {
+							this.addWidgetFromData(this.#edit_widget_cache.new_widget_dashboard_page, widget_data);
+							this.#edit_widget_cache.new_widget_dashboard_page.resetWidgetPlaceholder();
+						});
+				}
+				else {
+					if (dashboard_page.getState() === DASHBOARD_PAGE_STATE_DESTROYED) {
+						return;
+					}
+
+					dashboard_page.promiseScrollIntoView(widget_data.pos)
+						.then(() => {
+							const widget_replace = this.replaceWidgetFromData(dashboard_page, widget, widget_data);
+
+							dashboard_page.resetWidgetPlaceholder();
+
+							this.#validateFieldsReferences({dashboard_page, widget_delete: widget, widget_replace});
+						});
+				}
 			})
 			.catch(exception => {
-				if (typeof exception === 'string') {
-					this._warn(exception);
+				let title;
+				let messages = [];
 
-					return;
+				if (typeof exception === 'object' && 'error' in exception) {
+					title = exception.error.title;
+					messages = exception.error.messages;
+				}
+				else {
+					title = t('Failed to update widget properties.');
 				}
 
-				throw exception;
+				const message_box = makeMessageBox('bad', messages, title);
+
+				if (form.isConnected) {
+					for (const element of form.parentNode.children) {
+						if (element.matches('.msg-good, .msg-bad, .msg-warning')) {
+							element.parentNode.removeChild(element);
+						}
+					}
+
+					form.parentNode.insertBefore(message_box[0], form);
+				}
+				else {
+					clearMessages();
+					addMessage(message_box);
+				}
 			})
 			.finally(() => {
-				this.#widget_edit_dialogue = null;
-				this.#widget_edit_queue = null;
-
+				overlay.unsetLoading();
 				this._deleteBusyCondition(busy_condition);
 			});
 	}
 
-	#isWidgetEditing() {
-		return this.#widget_edit_dialogue !== null;
+	initWidgetPropertiesForm() {
+		const overlay = overlays_stack.getById('widget_properties');
+		const form = overlay.$dialogue.$body[0].querySelector('form');
+
+		form.fields = {};
+
+		form.querySelector('[name="type"]').addEventListener('change', () => this.reloadWidgetProperties());
+
+		form.addEventListener('change', e => {
+			const do_trim = e.target.matches(
+				'input[type="text"]:not([data-no-trim="1"]), textarea:not([data-no-trim="1"])'
+			);
+
+			if (do_trim) {
+				e.target.value = e.target.value.trim();
+			}
+		}, {capture: true});
+
+		for (const fieldset of
+				form.querySelectorAll(`fieldset.${ZBX_STYLE_COLLAPSIBLE}`)) {
+			new CFormFieldsetCollapsible(fieldset);
+		}
+
+		try {
+			new TabIndicators();
+		}
+		catch (error) {
+		}
 	}
 
-	getWidgetEditingContext() {
-		let unique_id = null;
-
-		for (const widget of this._selected_dashboard_page.getWidgets()) {
-			if (widget.isWidgetEditing(true)) {
-				unique_id = widget.getUniqueId();
-
-				break;
-			}
+	getEditingWidgetContext() {
+		if ('unique_id' in this.#edit_widget_cache && 'dashboard_page_unique_id' in this.#edit_widget_cache) {
+			return {
+				unique_id: this.#edit_widget_cache.unique_id,
+				dashboard_page_unique_id: this.#edit_widget_cache.dashboard_page_unique_id
+			};
 		}
 
 		return {
-			unique_id,
-			dashboard_page_unique_id: this._selected_dashboard_page.getUniqueId()
+			unique_id: null,
+			dashboard_page_unique_id: this.#edit_widget_cache.new_widget_dashboard_page.getUniqueId()
 		};
+	}
+
+	_isEditingWidgetProperties() {
+		return overlays_stack.getById('widget_properties') !== undefined;
+	}
+
+	_promiseDashboardWidgetCheck({templateid, type, name, view_mode, fields}) {
+		const curl = new Curl('zabbix.php');
+
+		curl.setArgument('action', 'dashboard.widget.check');
+
+		return fetch(curl.getUrl(), {
+			method: 'POST',
+			headers: {'Content-Type': 'application/json'},
+			body: JSON.stringify({templateid, type, name, view_mode, fields})
+		})
+			.then(response => response.json())
+			.then(response => {
+				if ('error' in response) {
+					throw {error: response.error};
+				}
+
+				return response;
+			});
 	}
 
 	_getDashboardPageActionsContextMenu(dashboard_page) {
@@ -1828,21 +1913,19 @@ class CDashboard {
 		}
 
 		if (this._getDashboardPageActionsContextMenu(dashboard_page).length > 0) {
-			const actions_button = document.createElement('button');
+			const properties_button = document.createElement('button');
 
-			actions_button.type = 'button';
-			actions_button.title = t('Actions');
-			actions_button.setAttribute('aria-expanded', 'false');
-			actions_button.setAttribute('aria-haspopup', 'true');
-			actions_button.classList.add(ZBX_STYLE_BTN_ICON, ZBX_ICON_MORE, ZBX_STYLE_BTN_DASHBOARD_PAGE_PROPERTIES);
+			properties_button.type = 'button';
+			properties_button.title = t('Actions');
+			properties_button.setAttribute('aria-expanded', 'false');
+			properties_button.setAttribute('aria-haspopup', 'true');
+			properties_button.classList.add(ZBX_STYLE_BTN_ICON, ZBX_ICON_MORE, ZBX_STYLE_BTN_DASHBOARD_PAGE_PROPERTIES);
 
-			tab_contents.append(actions_button);
+			tab_contents.append(properties_button);
 		}
 
 		this._tabs.getTarget().insertBefore(tab, null);
 		this._tabs_dashboard_pages.set(tab, dashboard_page);
-
-		this._updateTabsNavigationButtons();
 	}
 
 	_updateTab(dashboard_page) {
@@ -1888,54 +1971,30 @@ class CDashboard {
 
 		this._tabs.getTarget().removeChild(data.tab);
 		this._tabs_dashboard_pages.delete(data.tab);
-
-		if (this.#selected_tab === data.tab) {
-			this.#selected_tab = null;
-		}
-
-		this._updateTabsNavigationButtons();
 	}
 
 	_selectTab(dashboard_page) {
-		this.#selected_tab = this._dashboard_pages.get(dashboard_page).tab;
-
 		this._tabs.getTarget().querySelectorAll(`.${ZBX_STYLE_DASHBOARD_SELECTED_TAB}`).forEach(element => {
 			element.classList.remove(ZBX_STYLE_DASHBOARD_SELECTED_TAB);
 		})
 
-		this.#selected_tab.firstElementChild.classList.add(ZBX_STYLE_DASHBOARD_SELECTED_TAB);
-		this._updateTabsNavigationButtons();
-		this._tabs.scrollIntoView(this.#selected_tab);
+		const data = this._dashboard_pages.get(dashboard_page);
+
+		data.tab.firstElementChild.classList.add(ZBX_STYLE_DASHBOARD_SELECTED_TAB);
+		this._updateNavigationButtons(dashboard_page);
+		this._tabs.scrollIntoView(data.tab);
 	}
 
-	#blockTabs() {
-		this.#are_tabs_blocked = true;
-
-		this._tabs.enableSorting(false);
-
-		this._updateTabsNavigationButtons();
-	}
-
-	#unblockTabs() {
-		this.#are_tabs_blocked = false;
-
-		this._tabs.enableSorting(this._is_edit_mode);
-
-		this._updateTabsNavigationButtons();
-	}
-
-	_updateTabsNavigationButtons() {
+	_updateNavigationButtons(dashboard_page = null) {
 		this._containers.navigation.classList.toggle(ZBX_STYLE_DASHBOARD_NAVIGATION_IS_SCROLLABLE,
 			this._tabs.isScrollable()
 		);
 
-		if (this.#are_tabs_blocked || this.#selected_tab === null) {
-			this._buttons.previous_page.disabled = true;
-			this._buttons.next_page.disabled = true;
-		}
-		else {
-			this._buttons.previous_page.disabled = this.#selected_tab.previousElementSibling === null;
-			this._buttons.next_page.disabled = this.#selected_tab.nextElementSibling === null;
+		if (dashboard_page !== null) {
+			const tab = this._dashboard_pages.get(dashboard_page).tab;
+
+			this._buttons.previous_page.disabled = tab.previousElementSibling === null;
+			this._buttons.next_page.disabled = tab.nextElementSibling === null;
 		}
 	}
 
@@ -1999,7 +2058,7 @@ class CDashboard {
 	 *
 	 * @returns {string}
 	 */
-	createReference({references = null} = {}) {
+	_createReference({references = null} = {}) {
 		if (references === null) {
 			references = this._getReferences();
 		}
@@ -2086,7 +2145,7 @@ class CDashboard {
 					fields,
 					widgetid: widget.getWidgetId(),
 					is_new: false,
-					is_configured: true
+					messages: []
 				});
 			}
 		}
@@ -2162,7 +2221,7 @@ class CDashboard {
 					return;
 				}
 
-				ZABBIX.EventHub.publish(new CEventHubEvent({
+				ZABBIX.EventHub.publish({
 					data: CWidgetsData.getDefault(e.detail.type),
 					descriptor: {
 						context: 'dashboard',
@@ -2173,7 +2232,7 @@ class CDashboard {
 						reference: e.detail.reference,
 						type: e.detail.type
 					}
-				}));
+				});
 
 				console.log('Could not require referred data source', `${e.detail.reference}.${e.detail.type}`);
 			},
@@ -2195,7 +2254,7 @@ class CDashboard {
 							items: [
 								{
 									label: t('Add widget'),
-									clickCallback: () => this.editWidget({new_widget_pos})
+									clickCallback: () => this.editWidgetProperties({}, {new_widget_pos})
 								},
 								{
 									label: t('Paste widget'),
@@ -2212,19 +2271,23 @@ class CDashboard {
 
 					jQuery(placeholder).menuPopup(menu, placeholder_event, {
 						closeCallback: () => {
-							if (!this.#isWidgetEditing()) {
+							if (!this._isEditingWidgetProperties()) {
 								dashboard_page.resetWidgetPlaceholder();
 							}
 						}
 					});
 				}
 				else {
-					this.editWidget({new_widget_pos});
+					this.editWidgetProperties({}, {new_widget_pos});
+
+					if (!this._isEditingWidgetProperties()) {
+						dashboard_page.resetWidgetPlaceholder();
+					}
 				}
 			},
 
 			dashboardPageWidgetAddNew: () => {
-				this.editWidget();
+				this.editWidgetProperties();
 			},
 
 			dashboardPageWidgetDelete: () => {
@@ -2233,11 +2296,7 @@ class CDashboard {
 				this.#validateFieldsReferences({dashboard_page: this._selected_dashboard_page});
 			},
 
-			dashboardPageWidgetResize: () => {
-				this._clearWarnings();
-			},
-
-			dashboardPageWidgetDrag: () => {
+			dashboardPageWidgetPosition: () => {
 				this._clearWarnings();
 			},
 
@@ -2258,7 +2317,14 @@ class CDashboard {
 				const dashboard_page = e.detail.target;
 				const widget = e.detail.widget;
 
-				this.editWidget({dashboard_page, widget});
+				this.editWidgetProperties({
+					type: widget.getType(),
+					name: widget.getName(),
+					view_mode: widget.getViewMode(),
+					fields: widget.getFields(),
+					unique_id: widget.getUniqueId(),
+					dashboard_page_unique_id: dashboard_page.getUniqueId()
+				});
 			},
 
 			dashboardPageWidgetCopy: e => {
@@ -2291,11 +2357,11 @@ class CDashboard {
 			},
 
 			tabsResize: () => {
-				this._updateTabsNavigationButtons();
+				this._updateNavigationButtons();
 			},
 
 			tabsDragEnd: () => {
-				this._updateTabsNavigationButtons();
+				this._updateNavigationButtons();
 			},
 
 			tabsSort: () => {
@@ -2413,22 +2479,8 @@ class CDashboard {
 				);
 			},
 
-			referredUpdate: ({descriptor}) => {
-				if (!('type' in descriptor) || !this.#broadcast_cache.has(descriptor.type)) {
-					return;
-				}
-
-				const is_referred = ZABBIX.EventHub.hasSubscribers({
-					context: 'dashboard',
-					event_type: 'broadcast',
-					reference: CDashboard.REFERENCE_DASHBOARD,
-					type: descriptor.type
-				});
-
-				this.fire(CDashboard.EVENT_REFERRED_UPDATE, {
-					type: descriptor.type,
-					is_referred
-				});
+			editWidgetPropertiesClose: () => {
+				this._selected_dashboard_page.resetWidgetPlaceholder();
 			},
 
 			feedback: ({data, descriptor}) => {
@@ -2445,7 +2497,7 @@ class CDashboard {
 					});
 
 					if (this.#broadcast_options[descriptor.type].rebroadcast) {
-						ZABBIX.EventHub.publish(new CEventHubEvent({
+						ZABBIX.EventHub.publish({
 							data,
 							descriptor: {
 								context: 'dashboard',
@@ -2456,7 +2508,7 @@ class CDashboard {
 								reference: CDashboard.REFERENCE_DASHBOARD,
 								type: descriptor.type
 							}
-						}));
+						});
 					}
 				}
 			}
@@ -2497,26 +2549,13 @@ class CDashboard {
 			}
 		}
 
-		for (const require_type of [CEventHubEvent.TYPE_SUBSCRIBE, CEventHubEvent.TYPE_UNSUBSCRIBE]) {
-			ZABBIX.EventHub.subscribe({
-				require: {
-					context: 'dashboard',
-					event_type: 'broadcast',
-					reference: CDashboard.REFERENCE_DASHBOARD
-				},
-				require_type,
-				callback: this._events.referredUpdate
-			});
-		}
-
 		ZABBIX.EventHub.subscribe({
 			require: {
 				context: 'dashboard',
 				event_type: 'feedback',
 				reference: CDashboard.REFERENCE_DASHBOARD
 			},
-			callback: this._events.feedback,
-			accept_cached: true
+			callback: this._events.feedback
 		});
 	}
 

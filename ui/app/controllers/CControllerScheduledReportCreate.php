@@ -37,15 +37,15 @@ class CControllerScheduledReportCreate extends CController {
 		];
 
 		$ret = $this->validateInput($fields);
-		$result = $this->getValidationResult();
+		$error = $this->getValidationError();
 
 		if ($ret && !$this->validateWeekdays()) {
-			$result = self::VALIDATION_ERROR;
+			$error = self::VALIDATION_ERROR;
 			$ret = false;
 		}
 
 		if (!$ret) {
-			switch ($result) {
+			switch ($error) {
 				case self::VALIDATION_ERROR:
 					$response = new CControllerResponseRedirect(
 						(new CUrl('zabbix.php'))->setArgument('action', 'scheduledreport.edit')

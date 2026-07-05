@@ -23,84 +23,91 @@
 	const view = new class {
 
 		init() {
-			this.#initActions();
-			this.#initPopupListeners();
+			this._initActions();
 		}
 
-		#initActions() {
-			document.querySelector('.js-create-connector').addEventListener('click', () => {
-				ZABBIX.PopupManager.open('connector.edit');
-			});
+		_initActions() {
+			document.querySelector('.js-create-connector').addEventListener('click', () => this._edit());
 
 			const form = document.getElementById('connector-list');
 
 			form.addEventListener('click', (e) => {
-				if (e.target.classList.contains('js-enable-connector')) {
-					this.#enable(e.target, [e.target.dataset.connectorid]);
+				if (e.target.classList.contains('js-edit-connector')) {
+					this._edit({connectorid: e.target.dataset.connectorid});
+				}
+				else if (e.target.classList.contains('js-enable-connector')) {
+					this._enable(e.target, [e.target.dataset.connectorid]);
 				}
 				else if (e.target.classList.contains('js-disable-connector')) {
-					this.#disable(e.target, [e.target.dataset.connectorid]);
+					this._disable(e.target, [e.target.dataset.connectorid]);
 				}
 			});
 
 			form.querySelector('.js-massenable-connector').addEventListener('click', (e) => {
-				this.#enable(e.target, Object.keys(chkbxRange.getSelectedIds()), true);
+				this._enable(e.target, Object.keys(chkbxRange.getSelectedIds()));
 			});
 
 			form.querySelector('.js-massdisable-connector').addEventListener('click', (e) => {
-				this.#disable(e.target, Object.keys(chkbxRange.getSelectedIds()), true);
+				this._disable(e.target, Object.keys(chkbxRange.getSelectedIds()));
 			});
 
 			form.querySelector('.js-massdelete-connector').addEventListener('click', (e) => {
-				this.#delete(e.target, Object.keys(chkbxRange.getSelectedIds()));
+				this._delete(e.target, Object.keys(chkbxRange.getSelectedIds()));
 			});
 		}
 
-		#initPopupListeners() {
-			ZABBIX.EventHub.subscribe({
-				require: {
-					context: CPopupManager.EVENT_CONTEXT,
-					event: CPopupManagerEvent.EVENT_SUBMIT
-				},
-				callback: () => uncheckTableRows('connector')
+		_edit(parameters = {}) {
+			const overlay = PopUp('connector.edit', parameters, {
+				dialogueid: 'connector_edit',
+				dialogue_class: 'modal-popup-static',
+				prevent_navigation: true
 			});
-		}
 
-		#enable(target, connectorids, massenable = false) {
-			if (massenable) {
-				const confirmation = connectorids.length > 1
-					? <?= json_encode(_('Enable selected connectors?')) ?>
-					: <?= json_encode(_('Enable selected connector?')) ?>;
+			const dialogue = overlay.$dialogue[0];
 
-				if (!window.confirm(confirmation)) {
-					return;
+			dialogue.addEventListener('dialogue.submit', (e) => {
+				uncheckTableRows('connector');
+				postMessageOk(e.detail.title);
+
+				if ('messages' in e.detail) {
+					postMessageDetails('success', e.detail.messages);
 				}
+
+				location.href = location.href;
+			});
+		}
+
+		_enable(target, connectorids) {
+			const confirmation = connectorids.length > 1
+				? <?= json_encode(_('Enable selected connectors?')) ?>
+				: <?= json_encode(_('Enable selected connector?')) ?>;
+
+			if (!window.confirm(confirmation)) {
+				return;
 			}
 
 			const curl = new Curl('zabbix.php');
 			curl.setArgument('action', 'connector.enable');
 
-			this.#post(target, connectorids, curl);
+			this._post(target, connectorids, curl);
 		}
 
-		#disable(target, connectorids, massdisable = false) {
-			if (massdisable) {
-				const confirmation = connectorids.length > 1
-					? <?= json_encode(_('Disable selected connectors?')) ?>
-					: <?= json_encode(_('Disable selected connector?')) ?>;
+		_disable(target, connectorids) {
+			const confirmation = connectorids.length > 1
+				? <?= json_encode(_('Disable selected connectors?')) ?>
+				: <?= json_encode(_('Disable selected connector?')) ?>;
 
-				if (!window.confirm(confirmation)) {
-					return;
-				}
+			if (!window.confirm(confirmation)) {
+				return;
 			}
 
 			const curl = new Curl('zabbix.php');
 			curl.setArgument('action', 'connector.disable');
 
-			this.#post(target, connectorids, curl);
+			this._post(target, connectorids, curl);
 		}
 
-		#delete(target, connectorids) {
+		_delete(target, connectorids) {
 			const confirmation = connectorids.length > 1
 				? <?= json_encode(_('Delete selected connectors?')) ?>
 				: <?= json_encode(_('Delete selected connector?')) ?>;
@@ -112,10 +119,10 @@
 			const curl = new Curl('zabbix.php');
 			curl.setArgument('action', 'connector.delete');
 
-			this.#post(target, connectorids, curl);
+			this._post(target, connectorids, curl);
 		}
 
-		#post(target, connectorids, url) {
+		_post(target, connectorids, url) {
 			url.setArgument(CSRF_TOKEN_NAME, <?= json_encode(CCsrfTokenHelper::get('connector')) ?>);
 
 			target.classList.add('is-loading');

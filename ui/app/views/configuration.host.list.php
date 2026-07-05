@@ -19,6 +19,9 @@
  * @var array $data
  */
 
+$this->addJsFile('class.tagfilteritem.js');
+$this->addJsFile('items.js');
+$this->addJsFile('multilineinput.js');
 $this->includeJsFile('configuration.host.list.js.php');
 
 if ($data['uncheck']) {
@@ -28,28 +31,24 @@ if ($data['uncheck']) {
 $html_page = (new CHtmlPage())
 	->setTitle(_('Hosts'))
 	->setDocUrl(CDocHelper::getUrl(CDocHelper::DATA_COLLECTION_HOST_LIST))
-	->setControls(
-		(new CTag('nav', true,
-			(new CList())
-				->addItem(
-					(new CSimpleButton(_('Host Wizard')))->addClass('js-host-wizard')
-				)
-				->addItem(
-					(new CSimpleButton(_('Create host')))->addClass('js-create-host')
-				)
-				->addItem(
-					(new CButton('form', _('Import')))
-						->onClick(
-							'return PopUp("popup.import", {
-								rules_preset: "host", '.
-								CSRF_TOKEN_NAME.': "'.CCsrfTokenHelper::get('import').
-							'"}, {
-								dialogueid: "popup_import",
-								dialogue_class: "modal-popup-generic"
-							});'
-						)
-						->removeId()
-				)
+	->setControls((new CTag('nav', true, (new CList())
+			->addItem(
+				(new CSimpleButton(_('Create host')))
+					->onClick('view.createHost()')
+			)
+			->addItem(
+				(new CButton('form', _('Import')))
+					->onClick(
+						'return PopUp("popup.import", {
+							rules_preset: "host", '.
+							CSRF_TOKEN_NAME.': "'.CCsrfTokenHelper::get('import').
+						'"}, {
+							dialogueid: "popup_import",
+							dialogue_class: "modal-popup-generic"
+						});'
+					)
+					->removeId()
+			)
 		))->setAttribute('aria-label', _('Content controls'))
 	);
 
@@ -217,7 +216,6 @@ $header_sortable_status = make_sorting_header(_('Status'), 'status', $data['sort
 $table = (new CTableInfo())
 	->setHeader([
 		(new CColHeader($header_checkbox))->addClass(ZBX_STYLE_CELL_WIDTH),
-		'',
 		$header_sortable_name,
 		_('Items'),
 		_('Triggers'),
@@ -265,7 +263,7 @@ foreach ($data['hosts'] as $host) {
 					(new CUrl('host_prototypes.php'))
 						->setArgument('form', 'update')
 						->setArgument('parent_discoveryid', $host['discoveryRule']['itemid'])
-						->setArgument('hostid', $host['discoveryData']['parent_hostid'])
+						->setArgument('hostid', $host['hostDiscovery']['parent_hostid'])
 						->setArgument('context', 'host')
 				))
 					->addClass(ZBX_STYLE_LINK_ALT)
@@ -282,13 +280,13 @@ foreach ($data['hosts'] as $host) {
 		$description[] = NAME_DELIMITER;
 	}
 
-	$host_url = (new CUrl('zabbix.php'))
-		->setArgument('action', 'popup')
-		->setArgument('popup', 'host.edit')
-		->setArgument('hostid', $host['hostid'])
-		->getUrl();
-
-	$description[] = new CLink($host['name'], $host_url);
+	$description[] = (new CLink($host['name'],
+		(new CUrl('zabbix.php'))
+			->setArgument('action', 'host.edit')
+			->setArgument('hostid', $host['hostid'])
+	))
+		->setAttribute('data-hostid', $host['hostid'])
+		->onClick('view.editHost(event, this.dataset.hostid);');
 
 	$maintenance_icon = false;
 
@@ -337,14 +335,10 @@ foreach ($data['hosts'] as $host) {
 
 		if (array_key_exists($template['templateid'], $data['writable_templates'])
 				&& $data['user']['can_edit_templates']) {
-			$template_url = (new CUrl('zabbix.php'))
-				->setArgument('action', 'popup')
-				->setArgument('popup', 'template.edit')
-				->setArgument('templateid', $template['templateid'])
-				->getUrl();
-
 			$caption = [
-				(new CLink($template['name'], $template_url))
+				(new CLink($template['name']))
+					->addClass('js-edit-template')
+					->setAttribute('data-templateid', $template['templateid'])
 					->addClass(ZBX_STYLE_LINK_ALT)
 					->addClass(ZBX_STYLE_GREY)
 			];
@@ -365,13 +359,9 @@ foreach ($data['hosts'] as $host) {
 			foreach ($parent_templates as $parent_template) {
 				if (array_key_exists($parent_template['templateid'], $data['writable_templates'])
 						&& $data['user']['can_edit_templates']) {
-					$parent_template_url = (new CUrl('zabbix.php'))
-						->setArgument('action', 'popup')
-						->setArgument('popup', 'template.edit')
-						->setArgument('templateid', $parent_template['templateid'])
-						->getUrl();
-
-					$caption[] = (new CLink($parent_template['name'], $parent_template_url))
+					$caption[] = (new CLink($parent_template['name']))
+						->addClass('js-edit-template')
+						->setAttribute('data-templateid', $parent_template['templateid'])
 						->addClass(ZBX_STYLE_LINK_ALT)
 						->addClass(ZBX_STYLE_GREY);
 				}
@@ -395,13 +385,13 @@ foreach ($data['hosts'] as $host) {
 
 	$info_icons = [];
 
-	$disable_source = $host['status'] == HOST_STATUS_NOT_MONITORED && $host['discoveryData']
-		? $host['discoveryData']['disable_source']
+	$disable_source = $host['status'] == HOST_STATUS_NOT_MONITORED && $host['hostDiscovery']
+		? $host['hostDiscovery']['disable_source']
 		: '';
 
-	if ($host['flags'] == ZBX_FLAG_DISCOVERY_CREATED && $host['discoveryData']['status'] == ZBX_LLD_STATUS_LOST) {
-		$info_icons[] = getLldLostEntityIndicator($current_time, $host['discoveryData']['ts_delete'],
-			$host['discoveryData']['ts_disable'], $disable_source, $host['status'] == HOST_STATUS_NOT_MONITORED,
+	if ($host['flags'] == ZBX_FLAG_DISCOVERY_CREATED && $host['hostDiscovery']['status'] == ZBX_LLD_STATUS_LOST) {
+		$info_icons[] = getLldLostEntityIndicator($current_time, $host['hostDiscovery']['ts_delete'],
+			$host['hostDiscovery']['ts_disable'], $disable_source, $host['status'] == HOST_STATUS_NOT_MONITORED,
 			_('host')
 		);
 	}
@@ -457,37 +447,29 @@ foreach ($data['hosts'] as $host) {
 	$monitored_by = null;
 
 	if ($show_monitored_by) {
-		$proxy_url = (new CUrl('zabbix.php'))
-			->setArgument('action', 'popup')
-			->setArgument('popup', 'proxy.edit');
-
 		if ($host['monitored_by'] == ZBX_MONITORED_BY_PROXY) {
 			$monitored_by = $data['user']['can_edit_proxies']
-				? (new CLink($data['proxies'][$host['proxyid']]['name'],
-					$proxy_url->setArgument('proxyid', $host['proxyid'])
-				))
+				? (new CLink($data['proxies'][$host['proxyid']]['name']))
+					->addClass('js-edit-proxy')
+					->setAttribute('data-proxyid', $host['proxyid'])
 				: $data['proxies'][$host['proxyid']]['name'];
 		}
 		elseif ($host['monitored_by'] == ZBX_MONITORED_BY_PROXY_GROUP) {
-			$proxy_group_url = (new CUrl('zabbix.php'))
-				->setArgument('action', 'popup')
-				->setArgument('popup', 'proxygroup.edit')
-				->setArgument('proxy_groupid', $host['proxy_groupid'])
-				->getUrl();
-
 			$monitored_by = $data['user']['can_edit_proxy_groups']
-				? (new CLink($data['proxy_groups'][$host['proxy_groupid']]['name'], $proxy_group_url))
+				? (new CLink($data['proxy_groups'][$host['proxy_groupid']]['name']))
 					->addClass(ZBX_STYLE_LINK_ALT)
 					->addClass(ZBX_STYLE_GREY)
+					->addClass('js-edit-proxy-group')
+					->setAttribute('data-proxy_groupid', $host['proxy_groupid'])
 				: $data['proxy_groups'][$host['proxy_groupid']]['name'];
 
 			if ($host['assigned_proxyid'] != 0) {
 				$monitored_by = [$monitored_by];
 				$monitored_by[] = NAME_DELIMITER;
 				$monitored_by[] = $data['user']['can_edit_proxies']
-					? (new CLink($data['proxies'][$host['assigned_proxyid']]['name'],
-						$proxy_url->setArgument('proxyid', $host['assigned_proxyid'])
-					))
+					? (new CLink($data['proxies'][$host['assigned_proxyid']]['name']))
+						->addClass('js-edit-proxy')
+						->setAttribute('data-proxyid', $host['assigned_proxyid'])
 					: $data['proxies'][$host['assigned_proxyid']]['name'];
 			}
 		}
@@ -500,10 +482,6 @@ foreach ($data['hosts'] as $host) {
 
 	$table->addRow([
 		new CCheckBox('hostids['.$host['hostid'].']', $host['hostid']),
-		(new CButtonIcon(ZBX_ICON_MORE))
-			->setMenuPopup(
-				CMenuPopupHelper::getHost($host['hostid'])
-			),
 		(new CCol($description))->addClass(ZBX_STYLE_NOWRAP),
 		[
 			new CLink(_('Items'),
@@ -527,8 +505,7 @@ foreach ($data['hosts'] as $host) {
 		],
 		[
 			new CLink(_('Graphs'),
-				(new CUrl('zabbix.php'))
-					->setArgument('action', 'graph.list')
+				(new CUrl('graphs.php'))
 					->setArgument('filter_set', '1')
 					->setArgument('filter_hostids', [$host['hostid']])
 					->setArgument('context', 'host')
@@ -542,7 +519,7 @@ foreach ($data['hosts'] as $host) {
 					->setArgument('filter_hostids', [$host['hostid']])
 					->setArgument('context', 'host')
 			),
-			CViewHelper::showNum($host['discoveryRules'])
+			CViewHelper::showNum($host['discoveries'])
 		],
 		[
 			new CLink(_('Web'),
@@ -567,7 +544,7 @@ foreach ($data['hosts'] as $host) {
 	]);
 }
 
-$status_toggle_url = (new CUrl('zabbix.php'))
+$status_toggle_url =  (new CUrl('zabbix.php'))
 	->setArgument('action', 'popup.massupdate.host')
 	->setArgument(CSRF_TOKEN_NAME, $csrf_token)
 	->setArgument('visible[status]', 1)

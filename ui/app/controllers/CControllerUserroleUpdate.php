@@ -84,8 +84,6 @@ class CControllerUserroleUpdate extends CControllerUserroleEditGeneral {
 			'actions_manage_sla' => 						'in 0,1',
 			'actions_invoke_execute_now' =>					'in 0,1',
 			'actions_change_problem_ranking' =>				'in 0,1',
-			'actions_edit_own_media' =>						'in 0,1',
-			'actions_edit_user_media' =>					'in 0,1',
 			'ui_default_access' => 							'in 0,1',
 			'modules_default_access' => 					'in 0,1',
 			'actions_default_access' => 					'in 0,1',
@@ -105,10 +103,10 @@ class CControllerUserroleUpdate extends CControllerUserroleEditGeneral {
 		];
 
 		$ret = $this->validateInput($fields);
-		$result = $this->getValidationResult();
+		$error = $this->getValidationError();
 
 		if (!$ret) {
-			switch ($result) {
+			switch ($error) {
 				case self::VALIDATION_ERROR:
 					$response = new CControllerResponseRedirect(
 						(new CUrl('zabbix.php'))->setArgument('action', 'userrole.edit')

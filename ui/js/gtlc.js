@@ -43,15 +43,10 @@ jQuery(function($) {
 	endpoint.setArgument('action', 'timeselector.update');
 	endpoint.setArgument('type', PAGE_TYPE_TEXT_RETURN_JSON);
 
-	$.subscribe(`
-		timeselector.rangechange
-		timeselector.decrement
-		timeselector.increment
-		timeselector.zoomout
-		timeselector.rangeoffset
-	`, timeSelectorEventHandler);
-
-	$.subscribe('timeselector.update-ui', checkDisableTimeSelectorUI);
+	$.subscribe('timeselector.rangechange timeselector.decrement timeselector.increment timeselector.zoomout' +
+		' timeselector.rangeoffset',
+		timeSelectorEventHandler
+	);
 
 	element.from.keydown(submitChangeHandler);
 	element.to.keydown(submitChangeHandler);
@@ -586,7 +581,7 @@ jQuery(function($) {
 			});
 	}
 
-	if (!$container.data('manual-setup')) {
+	if (!$container.data('disable-initial-check')) {
 		checkDisableTimeSelectorUI();
 	}
 });
@@ -797,6 +792,15 @@ var timeControl = {
 		this.objectList[id].processed = 0;
 		this.objectList[id].refresh = true;
 		this.processObjects();
+	},
+
+	disableAllSBox: function() {
+		jQuery.each(this.objectList, function(i, obj) {
+			if (obj.loadSBox == 1) {
+				jQuery('#'+obj.containerid).removeClass('dashboard-widget-graph-link');
+			}
+		});
+		jQuery(document).off('dblclick mousedown', 'img');
 	},
 
 	/**

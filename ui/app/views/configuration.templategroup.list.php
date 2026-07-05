@@ -69,6 +69,8 @@ $table = (new CTableInfo())
 	])
 	->setPageNavigation($data['paging']);
 
+$current_time = time();
+
 foreach ($data['groups'] as $group) {
 	$templates_output = [];
 	$n = 0;
@@ -87,13 +89,9 @@ foreach ($data['groups'] as $group) {
 		}
 
 		if ($data['allowed_ui_conf_templates']) {
-			$template_url = (new CUrl('zabbix.php'))
-				->setArgument('action', 'popup')
-				->setArgument('popup', 'template.edit')
-				->setArgument('templateid', $template['templateid'])
-				->getUrl();
-
-			$templates_output[] = (new CLink($template['name'], $template_url))
+			$templates_output[] = (new CLink($template['name']))
+				->addClass('js-edit-template')
+				->setAttribute('data-templateid', $template['templateid'])
 				->addClass(ZBX_STYLE_LINK_ALT)
 				->addClass(ZBX_STYLE_GREY);
 		}
@@ -104,13 +102,13 @@ foreach ($data['groups'] as $group) {
 
 	$template_count = $data['groupCounts'][$group['groupid']]['templates'];
 
-	$templategroup_url = (new CUrl('zabbix.php'))
-		->setArgument('action', 'popup')
-		->setArgument('popup', 'templategroup.edit')
-		->setArgument('groupid', $group['groupid'])
-		->getUrl();
-
-	$name = new CLink($group['name'], $templategroup_url);
+	$name = (new CLink($group['name'],
+		(new CUrl('zabbix.php'))
+			->setArgument('action', 'templategroup.edit')
+			->setArgument('groupid', $group['groupid'])
+	))
+		->addClass('js-edit-templategroup')
+		->setAttribute('data-groupid', $group['groupid']);
 
 	$count = '';
 	if ($template_count > 0) {

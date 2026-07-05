@@ -63,9 +63,11 @@ class CHost extends CHostGeneral {
 	 * @param bool          $options['tags']                               Select hosts by given tags.
 	 * @param bool          $options['severities']                         Select hosts that have only problems with given severities.
 	 * @param bool          $options['inheritedTags']                      Select hosts that have given tags also in their linked templates.
+	 * @param string|array  $options['selectGroups']                       Deprecated! Return a "groups" property with host groups data that the host belongs to.
 	 * @param string|array  $options['selectHostGroups']                   Return a "hostgroups" property with host groups data that the host belongs to.
 	 * @param string|array  $options['selectParentTemplates']              Return a "parentTemplates" property with templates that the host is linked to.
 	 * @param string|array  $options['selectItems']                        Return an "items" property with host items.
+	 * @param string|array  $options['selectDiscoveries']                  Return a "discoveries" property with host low-level discovery rules.
 	 * @param string|array  $options['selectTriggers']                     Return a "triggers" property with host triggers.
 	 * @param string|array  $options['selectGraphs']                       Return a "graphs" property with host graphs.
 	 * @param string|array  $options['selectMacros']                       Return a "macros" property with host macros.
@@ -73,13 +75,17 @@ class CHost extends CHostGeneral {
 	 * @param string|array  $options['selectInterfaces']                   Return an "interfaces" property with host interfaces.
 	 * @param string|array  $options['selectInventory']                    Return an "inventory" property with host inventory data.
 	 * @param string|array  $options['selectHttpTests']                    Return an "httpTests" property with host web scenarios.
+	 * @param string|array  $options['selectDiscoveryRule']                Return a "discoveryRule" property with the low-level discovery rule that created the host (from host prototype in VMware monitoring).
+	 * @param string|array  $options['selectHostDiscovery']                Return a "hostDiscovery" property with host discovery object data.
 	 * @param string|array  $options['selectTags']                         Return a "tags" property with host tags.
+	 * @param string|array  $options['selectInheritedTags']                Return an "inheritedTags" property with tags that are on templates which are linked to host.
 	 * @param bool          $options['countOutput']                        Return host count as output.
 	 * @param bool          $options['groupCount']                         Group the host count.
 	 * @param bool          $options['preservekeys']                       Return host IDs as array keys.
 	 * @param string        $options['sortfield']                          Field to sort by.
 	 * @param string        $options['sortorder']                          Sort order.
 	 * @param int           $options['limit']                              Limit selection.
+	 * @param int           $options['limitSelects']                       Limits the number of records returned by subselects.
 	 *
 	 * @return array|boolean Host data as array or false if error
 	 */
@@ -138,27 +144,36 @@ class CHost extends CHostGeneral {
 			'searchWildcardsEnabled'			=> false,
 			// output
 			'output'							=> API_OUTPUT_EXTEND,
+			'selectGroups'						=> null,
 			'selectHostGroups'					=> null,
 			'selectParentTemplates'				=> null,
 			'selectItems'						=> null,
+			'selectDiscoveries'					=> null,
 			'selectTriggers'					=> null,
 			'selectGraphs'						=> null,
+			'selectMacros'						=> null,
 			'selectDashboards'					=> null,
 			'selectInterfaces'					=> null,
 			'selectInventory'					=> null,
 			'selectHttpTests'					=> null,
+			'selectDiscoveryRule'				=> null,
+			'selectHostDiscovery'				=> null,
 			'selectTags'						=> null,
+			'selectInheritedTags'				=> null,
 			'selectValueMaps'					=> null,
 			'countOutput'						=> false,
 			'groupCount'						=> false,
 			'preservekeys'						=> false,
 			'sortfield'							=> '',
 			'sortorder'							=> '',
-			'limit'								=> null
+			'limit'								=> null,
+			'limitSelects'						=> null
 		];
 		$options = zbx_array_merge($defOptions, $options);
 
-		self::validateGet($options);
+		$this->validateGet($options);
+
+		$this->checkDeprecatedParam($options, 'selectGroups');
 
 		// editable + PERMISSION CHECK
 		if (self::$userData['type'] != USER_TYPE_SUPER_ADMIN && !$options['nopermissions']) {
@@ -425,6 +440,9 @@ class CHost extends CHostGeneral {
 
 		// search
 		if (is_array($options['search'])) {
+			unset($options['search']['tls_psk_identity']);
+			unset($options['search']['tls_psk']);
+
 			zbx_db_search('hosts h', $options, $sqlParts);
 
 			if (zbx_db_search('interface hi', $options, $sqlParts)) {
@@ -452,6 +470,9 @@ class CHost extends CHostGeneral {
 
 		// filter
 		if (is_array($options['filter'])) {
+			unset($options['filter']['tls_psk_identity']);
+			unset($options['filter']['tls_psk']);
+
 			$this->dbFilter('hosts h', $options, $sqlParts);
 
 			if (array_key_exists('hostid', $options['filter'])) {
@@ -536,16 +557,18 @@ class CHost extends CHostGeneral {
 			foreach ($result as &$row) {
 				unset($row['discover']);
 			}
+
 			unset($row);
 		}
 
 		if ($result) {
 			$result = $this->addRelatedObjects($options, $result);
 			$result = $this->unsetExtraFields($result, ['name_upper'], $options['output']);
+		}
 
-			if (!$options['preservekeys']) {
-				$result = array_values($result);
-			}
+		// removing keys (hash -> array)
+		if (!$options['preservekeys']) {
+			$result = zbx_cleanHashes($result);
 		}
 
 		return $result;
@@ -690,7 +713,7 @@ class CHost extends CHostGeneral {
 		$this->updateGroups($hosts);
 		$this->updateHgSets($hosts);
 		$this->updateTags($hosts);
-		self::updateMacros($hosts);
+		$this->updateMacros($hosts);
 
 		$hosts_rtdata = [];
 		$hosts_interfaces = [];
@@ -792,7 +815,7 @@ class CHost extends CHostGeneral {
 
 	public function updateForce(array $hosts, array $db_hosts): void {
 		$this->updateTags($hosts, $db_hosts);
-		self::updateMacros($hosts, $db_hosts);
+		$this->updateMacros($hosts, $db_hosts);
 
 		$inventories = [];
 		foreach ($hosts as &$host) {
@@ -1684,7 +1707,7 @@ class CHost extends CHostGeneral {
 
 		// delete the discovery rules first
 		$db_lld_rules = DB::select('items', [
-			'output' => ['itemid', 'name', 'flags'],
+			'output' => ['itemid', 'name'],
 			'filter' => [
 				'hostid' => $hostids,
 				'flags' => ZBX_FLAG_DISCOVERY_RULE
@@ -1728,8 +1751,6 @@ class CHost extends CHostGeneral {
 			'elementid' => $hostids
 		]);
 
-		self::deleteHgSets($db_hosts);
-
 		// delete host
 		DB::delete('host_proxy', ['hostid' => $hostids]);
 		DB::delete('host_tag', ['hostid' => $hostids]);
@@ -1749,8 +1770,9 @@ class CHost extends CHostGeneral {
 	protected function addRelatedObjects(array $options, array $result) {
 		$result = parent::addRelatedObjects($options, $result);
 
-		self::addRelatedMacros($options, $result);
-		$this->addRelatedHostGroups($options, $result);
+		// adding groups
+		$this->addRelatedGroups($options, $result, 'selectGroups');
+		$this->addRelatedGroups($options, $result, 'selectHostGroups');
 
 		$hostids = array_keys($result);
 
@@ -1778,12 +1800,12 @@ class CHost extends CHostGeneral {
 				// we need to order interfaces for proper linkage and viewing
 				order_result($interfaces, 'interfaceid', ZBX_SORT_UP);
 
-				$relation_map = $this->createRelationMap($interfaces, 'hostid', 'interfaceid');
+				$relationMap = $this->createRelationMap($interfaces, 'hostid', 'interfaceid');
 
 				$interfaces = $this->unsetExtraFields($interfaces, ['hostid', 'interfaceid'],
 					$options['selectInterfaces']
 				);
-				$result = $relation_map->mapMany($result, $interfaces, 'interfaces', $options['limitSelects']);
+				$result = $relationMap->mapMany($result, $interfaces, 'interfaces', $options['limitSelects']);
 			}
 			else {
 				$interfaces = API::HostInterface()->get([
@@ -1840,11 +1862,37 @@ class CHost extends CHostGeneral {
 			}
 		}
 
-		self::addRelatedDiscoveryRules($options, $result);
-		self::addRelatedHostDiscovery($options, $result);
-		self::addRelatedDiscoveryData($options, $result);
-		self::addRelatedChildDiscoveries($options, $result);
-		self::addRelatedChildDiscoveryRules($options, $result);
+		if ($options['selectDiscoveryRule'] !== null && $options['selectDiscoveryRule'] != API_OUTPUT_COUNT) {
+			// discovered items
+			$discoveryRules = DBFetchArray(DBselect(
+				'SELECT hd.hostid,hd2.parent_itemid'.
+					' FROM host_discovery hd,host_discovery hd2'.
+					' WHERE '.dbConditionInt('hd.hostid', $hostids).
+					' AND hd.parent_hostid=hd2.hostid'
+			));
+			$relationMap = $this->createRelationMap($discoveryRules, 'hostid', 'parent_itemid');
+
+			$discoveryRules = API::DiscoveryRule()->get([
+				'output' => $options['selectDiscoveryRule'],
+				'itemids' => $relationMap->getRelatedIds(),
+				'preservekeys' => true
+			]);
+			$result = $relationMap->mapOne($result, $discoveryRules, 'discoveryRule');
+		}
+
+		if ($options['selectHostDiscovery'] !== null) {
+			$hostDiscoveries = API::getApiService()->select('host_discovery', [
+				'output' => $this->outputExtend($options['selectHostDiscovery'], ['hostid']),
+				'filter' => ['hostid' => $hostids],
+				'preservekeys' => true
+			]);
+			$relationMap = $this->createRelationMap($hostDiscoveries, 'hostid', 'hostid');
+
+			$hostDiscoveries = $this->unsetExtraFields($hostDiscoveries, ['hostid'],
+				$options['selectHostDiscovery']
+			);
+			$result = $relationMap->mapOne($result, $hostDiscoveries, 'hostDiscovery');
+		}
 
 		if ($options['selectTags'] !== null) {
 			foreach ($result as &$row) {
@@ -1874,7 +1922,7 @@ class CHost extends CHostGeneral {
 			}
 		}
 
-		if ($options['selectInheritedTags'] !== null) {
+		if ($options['selectInheritedTags'] !== null && $options['selectInheritedTags'] != API_OUTPUT_COUNT) {
 			[$hosts_templates, $templateids] = CApiHostHelper::getParentTemplates($hostids);
 
 			$templates = API::Template()->get([
@@ -1902,77 +1950,63 @@ class CHost extends CHostGeneral {
 					}
 				}
 
-				foreach ($tags as &$tag) {
-					$tag = CArrayHelper::getByKeys($tag, $options['selectInheritedTags']);
-				}
-				unset($tag);
-
-				$host['inheritedTags'] = $tags;
+				$host['inheritedTags'] = $this->unsetExtraFields($tags, ['tag', 'value'],
+					$options['selectInheritedTags']
+				);
 			}
 		}
 
 		return $result;
 	}
 
-	private function addRelatedHostGroups(array $options, array &$result): void {
-		if ($options['selectHostGroups'] === null || $options['selectHostGroups'] === API_OUTPUT_COUNT) {
+	/**
+	 * Adds related host groups requested by "select*" options to the resulting object set.
+	 *
+	 * @param array  $options  [IN] Original input options.
+	 * @param array  $result   [IN/OUT] Result output.
+	 * @param string $option   [IN] Possible values:
+	 *                                - "selectGroups" (deprecated);
+	 *                                - "selectHostGroups" (or any other value).
+	 */
+	private function addRelatedGroups(array $options, array &$result, string $option): void {
+		if ($options[$option] === null || $options[$option] === API_OUTPUT_COUNT) {
 			return;
 		}
 
-		$relation_map = $this->createRelationMap($result, 'hostid', 'groupid', 'hosts_groups');
+		$relationMap = $this->createRelationMap($result, 'hostid', 'groupid', 'hosts_groups');
 		$groups = API::HostGroup()->get([
-			'output' => $options['selectHostGroups'],
-			'groupids' => $relation_map->getRelatedIds(),
+			'output' => $options[$option],
+			'groupids' => $relationMap->getRelatedIds(),
 			'preservekeys' => true
 		]);
 
-		$result = $relation_map->mapMany($result, $groups, 'hostgroups');
+		$output_tag = $option === 'selectGroups' ? 'groups' : 'hostgroups';
+		$result = $relationMap->mapMany($result, $groups, $output_tag);
 	}
 
-	private static function addRelatedHostDiscovery(array $options, array &$result): void {
-		if ($options['selectHostDiscovery'] === null) {
-			return;
-		}
-
-		foreach ($result as &$host) {
-			$host['hostDiscovery'] = [];
-		}
-		unset($host);
-
-		$_options = [
-			'output' => array_merge(['hostid'], $options['selectHostDiscovery']),
-			'hostids' => array_keys($result)
-		];
-		$resource = DBselect(DB::makeSql('host_discovery', $_options));
-
-		while ($host_discovery = DBfetch($resource)) {
-			$result[$host_discovery['hostid']]['hostDiscovery'] =
-				array_diff_key($host_discovery, array_flip(['hostid']));
-		}
-	}
-
-	private static function validateGet(array &$options) {
-		$api_input_rules = ['type' => API_OBJECT, 'flags' => API_ALLOW_UNEXPECTED, 'fields' => [
-			// Filters.
-			'inheritedTags' =>			['type' => API_BOOLEAN, 'default' => false],
-			'selectInheritedTags' =>	['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_NORMALIZE, 'in' => implode(',', ['tag', 'value']), 'default' => null],
-			'severities' =>				['type' => API_INTS32, 'flags' => API_ALLOW_NULL | API_NORMALIZE | API_NOT_EMPTY, 'in' => implode(',', range(TRIGGER_SEVERITY_NOT_CLASSIFIED, TRIGGER_SEVERITY_COUNT - 1)), 'uniq' => true],
-			'withProblemsSuppressed' =>	['type' => API_BOOLEAN, 'flags' => API_ALLOW_NULL],
-			// Output.
-			'selectTags' =>				['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', ['tag', 'value', 'automatic'])],
-			'selectValueMaps' =>		['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', ['valuemapid', 'name', 'mappings'])],
-			'selectParentTemplates' =>	['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_ALLOW_COUNT, 'in' => implode(',', ['templateid', 'host', 'name', 'description', 'uuid', 'link_type'])],
-			'selectMacros' =>			['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_NORMALIZE, 'in' => implode(',', CUserMacro::getOutputFieldsOnHost()), 'default' => null],
-			'selectDiscoveryRule' => 	['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_NORMALIZE, 'in' => implode(',', CDiscoveryRule::getOutputFieldsOnHost()), 'default' => null],
-			'selectHostDiscovery' =>	['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_NORMALIZE | API_DEPRECATED, 'in' => implode(',', self::DISCOVERY_DATA_OUTPUT_FIELDS), 'default' => null],
-			'selectDiscoveryData' =>	['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_NORMALIZE, 'in' => implode(',', self::DISCOVERY_DATA_OUTPUT_FIELDS), 'default' => null],
-			'selectDiscoveries' =>		['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_ALLOW_COUNT | API_NORMALIZE | API_DEPRECATED, 'in' => implode(',', array_diff(CDiscoveryRule::getOutputFieldsOnHost(), ['hostid'])), 'default' => null],
-			'selectDiscoveryRules' =>	['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_ALLOW_COUNT | API_NORMALIZE, 'in' => implode(',', array_diff(CDiscoveryRule::getOutputFieldsOnHost(), ['hostid'])), 'default' => null],
-			// Sort and limit.
-			'limitSelects' =>			['type' => API_INT32, 'flags' => API_ALLOW_NULL, 'in' => '1:'.ZBX_MAX_INT32, 'default' => null]
+	/**
+	 * Validates the input parameters for the get() method.
+	 *
+	 * @param array $options
+	 *
+	 * @throws APIException if the input is invalid
+	 */
+	protected function validateGet(array $options) {
+		// Validate input parameters.
+		$api_input_rules = ['type' => API_OBJECT, 'fields' => [
+			'inheritedTags' =>				['type' => API_BOOLEAN, 'default' => false],
+			'selectInheritedTags' =>		['type' => API_STRINGS_UTF8, 'flags' => API_ALLOW_NULL | API_NORMALIZE],
+			'severities' =>					['type' => API_INTS32, 'flags' => API_ALLOW_NULL | API_NORMALIZE | API_NOT_EMPTY, 'in' => implode(',', range(TRIGGER_SEVERITY_NOT_CLASSIFIED, TRIGGER_SEVERITY_COUNT - 1)), 'uniq' => true],
+			'withProblemsSuppressed' =>		['type' => API_BOOLEAN, 'flags' => API_ALLOW_NULL],
+			'selectTags' =>					['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', ['tag', 'value', 'automatic'])],
+			'selectValueMaps' =>			['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', ['valuemapid', 'name', 'mappings'])],
+			'selectParentTemplates' =>		['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL | API_ALLOW_COUNT, 'in' => implode(',', ['templateid', 'host', 'name', 'description', 'uuid', 'link_type'])],
+			'selectMacros' =>				['type' => API_OUTPUT, 'flags' => API_ALLOW_NULL, 'in' => implode(',', ['hostmacroid', 'macro', 'value', 'type', 'description', 'automatic'])]
 		]];
 
-		if (!CApiInputValidator::validate($api_input_rules, $options, '/', $error)) {
+		$options_filter = array_intersect_key($options, $api_input_rules['fields']);
+
+		if (!CApiInputValidator::validate($api_input_rules, $options_filter, '/', $error)) {
 			self::exception(ZBX_API_ERROR_PARAMETERS, $error);
 		}
 	}
@@ -2624,11 +2658,11 @@ class CHost extends CHostGeneral {
 		}
 	}
 
-	private function addAffectedObjects(array $hosts, array &$db_hosts): void {
+	protected function addAffectedObjects(array $hosts, array &$db_hosts): void {
 		$this->addAffectedGroups($hosts, $db_hosts);
 		$this->addAffectedTemplates($hosts, $db_hosts);
 		$this->addAffectedTags($hosts, $db_hosts);
-		self::addAffectedMacros($hosts, $db_hosts);
+		$this->addAffectedMacros($hosts, $db_hosts);
 	}
 
 	/**

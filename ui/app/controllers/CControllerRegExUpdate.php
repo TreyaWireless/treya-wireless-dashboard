@@ -28,7 +28,7 @@ class CControllerRegExUpdate extends CController {
 		$ret = $this->validateInput($fields);
 
 		if (!$ret) {
-			switch ($this->getValidationResult()) {
+			switch ($this->getValidationError()) {
 				case self::VALIDATION_ERROR:
 					$response = new CControllerResponseRedirect(
 						(new CUrl('zabbix.php'))

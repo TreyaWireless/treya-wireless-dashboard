@@ -63,15 +63,4 @@ class CWidgetFieldTextBoxView extends CWidgetFieldView {
 
 		return $view;
 	}
-
-	public function getJavaScript(): string {
-		return '
-			CWidgetForm.addField(
-				new CWidgetFieldTextBox('.json_encode([
-					'name' => $this->field->getName(),
-					'form_name' => $this->form_name
-				]).')
-			);
-		';
-	}
 }

@@ -28,11 +28,10 @@
 		init() {
 			this.#initActions();
 			this.#initFilter();
-			this.#initPopupListeners();
 		}
 
 		#initActions() {
-			document.addEventListener('click', e => {
+			document.addEventListener('click', (e) => {
 				if (e.target.classList.contains('js-massupdate')) {
 					openMassupdatePopup('template.massupdate', {
 						[CSRF_TOKEN_NAME]: <?= json_encode(CCsrfTokenHelper::get('template')) ?>
@@ -47,10 +46,13 @@
 				else if (e.target.classList.contains('js-massdelete-clear')) {
 					this.#delete(e.target, Object.keys(chkbxRange.getSelectedIds()), true);
 				}
+				else if (e.target.classList.contains('js-edit')) {
+					this.#edit({templateid: e.target.dataset.templateid})
+				}
 			});
 
-			document.getElementById('js-create').addEventListener('click', e => {
-				ZABBIX.PopupManager.open('template.edit', {groupids: JSON.parse(e.target.dataset.groupids)});
+			document.getElementById('js-create').addEventListener('click', (e) => {
+				this.#edit({groupids: JSON.parse(e.target.dataset.groupids)})
 			});
 
 			document.getElementById('js-import').addEventListener('click', () => {
@@ -85,13 +87,26 @@
 			})
 		}
 
-		#initPopupListeners() {
-			ZABBIX.EventHub.subscribe({
-				require: {
-					context: CPopupManager.EVENT_CONTEXT,
-					event: CPopupManagerEvent.EVENT_SUBMIT
-				},
-				callback: () => uncheckTableRows('templates')
+		#edit(parameters) {
+			const overlay = PopUp('template.edit', parameters, {
+				dialogueid: 'templates-form',
+				dialogue_class: 'modal-popup-large',
+				prevent_navigation: true
+			});
+
+			overlay.$dialogue[0].addEventListener('dialogue.submit', (e) => {
+				uncheckTableRows('templates');
+				postMessageOk(e.detail.title);
+
+				if ('success' in e.detail) {
+					postMessageOk(e.detail.success.title);
+
+					if ('messages' in e.detail.success) {
+						postMessageDetails('success', e.detail.success.messages);
+					}
+				}
+
+				location.href = location.href;
 			});
 		}
 

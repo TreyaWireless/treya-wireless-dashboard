@@ -75,19 +75,20 @@
 
 		$("#resetDefaults").click(function() {
 			overlayDialogue({
-				title: <?= json_encode(_('Reset confirmation')) ?>,
-				content: $('<span>').text(<?= json_encode(_('Reset all fields to default values?')) ?>),
-				buttons: [
+				'title': <?= json_encode(_('Reset confirmation')) ?>,
+				'class': 'position-middle',
+				'content': $('<span>').text(<?= json_encode(_('Reset all fields to default values?')) ?>),
+				'buttons': [
 					{
-						title: <?= json_encode(_('Cancel')) ?>,
-						cancel: true,
-						class: '<?= ZBX_STYLE_BTN_ALT ?>',
-						action: function() {}
+						'title': <?= json_encode(_('Cancel')) ?>,
+						'cancel': true,
+						'class': '<?= ZBX_STYLE_BTN_ALT ?>',
+						'action': function() {}
 					},
 					{
-						title: <?= json_encode(_('Reset defaults')) ?>,
-						focused: true,
-						action: function() {
+						'title': <?= json_encode(_('Reset defaults')) ?>,
+						'focused': true,
+						'action': function() {
 							$('main')
 								.prev('.msg-bad')
 								.remove();
@@ -95,65 +96,62 @@
 							// events and alerts
 							$('#hk_events_mode')
 								.prop('checked',
-									<?= json_encode((bool) CSettingsSchema::getDefault('hk_events_mode')) ?>
+									<?= (DB::getDefault('config', 'hk_events_mode') == 1) ? 'true' : 'false' ?>
 								)
 								.change();
-							$('#hk_events_trigger').val("<?= CSettingsSchema::getDefault('hk_events_trigger') ?>");
-							$('#hk_events_service').val("<?= CSettingsSchema::getDefault('hk_events_service') ?>");
-							$('#hk_events_internal').val("<?= CSettingsSchema::getDefault('hk_events_internal') ?>");
-							$('#hk_events_discovery').val("<?= CSettingsSchema::getDefault('hk_events_discovery') ?>");
-							$('#hk_events_autoreg').val("<?= CSettingsSchema::getDefault('hk_events_autoreg') ?>");
+							$('#hk_events_trigger').val("<?= DB::getDefault('config', 'hk_events_trigger') ?>");
+							$('#hk_events_service').val("<?= DB::getDefault('config', 'hk_events_service') ?>");
+							$('#hk_events_internal').val("<?= DB::getDefault('config', 'hk_events_internal') ?>");
+							$('#hk_events_discovery').val("<?= DB::getDefault('config', 'hk_events_discovery') ?>");
+							$('#hk_events_autoreg').val("<?= DB::getDefault('config', 'hk_events_autoreg') ?>");
 							$('#hk_services_mode')
 								.prop('checked',
-									<?= json_encode((bool) CSettingsSchema::getDefault('hk_services_mode')) ?>
+									<?= (DB::getDefault('config', 'hk_services_mode') == 1) ? 'true' : 'false' ?>
 								)
 								.change();
-							$('#hk_services').val("<?= CSettingsSchema::getDefault('hk_services') ?>");
+							$('#hk_services').val("<?= DB::getDefault('config', 'hk_services') ?>");
 
 							// user sessions
 							$('#hk_sessions_mode')
 								.prop('checked',
-									<?= json_encode((bool) CSettingsSchema::getDefault('hk_sessions_mode')) ?>
+									<?= (DB::getDefault('config', 'hk_sessions_mode') == 1) ? 'true' : 'false' ?>
 								)
 								.change();
-							$('#hk_sessions').val("<?= CSettingsSchema::getDefault('hk_sessions') ?>");
+							$('#hk_sessions').val("<?= DB::getDefault('config', 'hk_sessions') ?>");
 
 							// history
 							$('#hk_history_mode').prop('checked',
-								<?= json_encode((bool) CSettingsSchema::getDefault('hk_history_mode')) ?>
+								<?= (DB::getDefault('config', 'hk_history_mode') == 1) ? 'true' : 'false' ?>
 							);
 							$('#hk_history_global')
 								.prop('checked',
-									<?= json_encode((bool) CSettingsSchema::getDefault('hk_history_global')) ?>
+									<?= (DB::getDefault('config', 'hk_history_global') == 1) ? 'true' : 'false' ?>
 								)
 								.change();
-							$('#hk_history').val("<?= CSettingsSchema::getDefault('hk_history') ?>");
+							$('#hk_history').val("<?= DB::getDefault('config', 'hk_history') ?>");
 
 							// trends
 							$('#hk_trends_mode').prop('checked',
-								<?= json_encode((bool) CSettingsSchema::getDefault('hk_trends_mode')) ?>
+								<?= (DB::getDefault('config', 'hk_trends_mode') == 1) ? 'true' : 'false' ?>
 							);
 							$('#hk_trends_global')
 								.prop('checked',
-									<?= json_encode((bool) CSettingsSchema::getDefault('hk_trends_global')) ?>
+									<?= (DB::getDefault('config', 'hk_trends_global') == 1) ? 'true' : 'false' ?>
 								)
 								.change();
-							$('#hk_trends').val("<?= CSettingsSchema::getDefault('hk_trends') ?>");
+							$('#hk_trends').val("<?= DB::getDefault('config', 'hk_trends') ?>");
 
 							// history and trends compression
 							$('#compression_status')
 								.prop('checked',
-									<?= json_encode((bool) CSettingsSchema::getDefault('compression_status')) ?>
+									<?= (DB::getDefault('config', 'compression_status') == 1) ? 'true' : 'false' ?>
 								)
 								.change();
-							$('#compress_older').val("<?= CSettingsSchema::getDefault('compress_older') ?>");
+							$('#compress_older').val("<?= DB::getDefault('config', 'compress_older') ?>");
 						}
 					}
 				]
-			}, {
-				position: Overlay.prototype.POSITION_CENTER,
-				trigger_element: this
-			});
+			}, this);
 		});
 	});
 </script>

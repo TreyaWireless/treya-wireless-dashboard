@@ -41,7 +41,7 @@ abstract class CWidgetFieldPatternSelectView extends CWidgetFieldView {
 		return $this->getId().'_ms';
 	}
 
-	public function getView(): CPatternSelect {
+	public function getView(): CMultiSelect {
 		return $this->getPatternSelect();
 	}
 
@@ -78,15 +78,7 @@ abstract class CWidgetFieldPatternSelectView extends CWidgetFieldView {
 	}
 
 	public function getJavaScript(): string {
-		return '
-			CWidgetForm.addField(
-				new CWidgetFieldPatternSelect('.json_encode([
-					'name' => $this->field->getName(),
-					'form_name' => $this->form_name,
-					'id' => $this->getId()
-				]).')
-			);
-		';
+		return 'jQuery("#'.$this->getId().'").multiSelect();';
 	}
 
 	public function setFilterPreselect(array $filter_preselect): self {
