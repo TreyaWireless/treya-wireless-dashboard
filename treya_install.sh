@@ -124,8 +124,8 @@ EOF
 
 cp /etc/treya/web/treya.conf.php /etc/treya-wireless/web/treya.conf.php 2>/dev/null || true
 chmod 644 /etc/treya/web/treya.conf.php /etc/treya-wireless/web/treya.conf.php 2>/dev/null || true
-chown -R nginx:nginx /etc/treya/web /etc/treya-wireless/web 2>/dev/null || \
-chown -R apache:apache /etc/treya/web /etc/treya-wireless/web 2>/dev/null || true
+chown -R nginx:nginx /etc/treya /etc/treya-wireless 2>/dev/null || \
+chown -R apache:apache /etc/treya /etc/treya-wireless 2>/dev/null || true
 
 # Symlink it to the conf directories so the web app can read it
 ln -sf /etc/treya/web/treya.conf.php /usr/share/zabbix/conf/treya.conf.php 2>/dev/null || true
@@ -190,6 +190,15 @@ fi
 if command -v setsebool &>/dev/null; then
     setsebool -P httpd_can_network_connect 1 2>/dev/null || true
     setsebool -P httpd_can_connect_zabbix 1 2>/dev/null || true
+fi
+
+# Configure SELinux contexts for the custom Treya config directories
+if command -v semanage &>/dev/null; then
+    semanage fcontext -a -t httpd_sys_rw_content_t "/etc/treya(/.*)?" 2>/dev/null || true
+    semanage fcontext -a -t httpd_sys_rw_content_t "/etc/treya-wireless(/.*)?" 2>/dev/null || true
+    restorecon -R /etc/treya /etc/treya-wireless 2>/dev/null || true
+else
+    chcon -R -t httpd_sys_rw_content_t /etc/treya /etc/treya-wireless 2>/dev/null || true
 fi
 
 # ── STEP 12: Python Packages ───────────────────────────────
