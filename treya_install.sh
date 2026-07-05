@@ -167,9 +167,11 @@ if [ -n "$CONF_FILE" ]; then
     sed -i "s/^# DBPassword=/DBPassword=/" "$CONF_FILE"
     sed -i "s/^DBPassword=.*/DBPassword=${DB_PASS}/" "$CONF_FILE"
     
-    # Configure correct PID and LogFile path permissions
+    # Configure correct PID, LogFile, and ExternalScripts path permissions
     sed -i "s|^PidFile=.*|PidFile=/var/run/treya-wireless/treya_server.pid|" "$CONF_FILE"
     sed -i "s|^LogFile=.*|LogFile=/var/log/treya-wireless/treya_server.log|" "$CONF_FILE"
+    sed -i "s|^# ExternalScripts=.*|ExternalScripts=/usr/lib/treya-wireless/externalscripts|" "$CONF_FILE"
+    sed -i "s|^ExternalScripts=.*|ExternalScripts=/usr/lib/treya-wireless/externalscripts|" "$CONF_FILE"
     
     # Ensure ownership is correct
     chown treya_wireless:treya_wireless "$CONF_FILE" 2>/dev/null || true
@@ -193,6 +195,10 @@ echo ""
 echo "[STEP 9] Fixing Web Directory Permissions..."
 chown -R nginx:nginx /usr/share/zabbix /usr/share/treya-wireless 2>/dev/null || \
 chown -R apache:apache /usr/share/zabbix /usr/share/treya-wireless 2>/dev/null || true
+
+# Create standard externalscripts fallback symlink
+mkdir -p /usr/lib/zabbix
+ln -sf /usr/lib/treya-wireless/externalscripts /usr/lib/zabbix/externalscripts 2>/dev/null || true
 
 # ── STEP 10: Start Services ────────────────────────────────
 echo ""
