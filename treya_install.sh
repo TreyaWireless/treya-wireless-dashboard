@@ -109,8 +109,7 @@ elif [ -f /usr/share/zabbix-sql-scripts/mysql/server.sql.gz ]; then
         mysql --default-character-set=utf8mb4 -u${DB_USER} -p${DB_PASS} ${DB_NAME} 2>/dev/null || true
 fi
 
-# Set custom Web Login: Username = treya, Password = redhat (using Bcrypt hash)
-mysql -u${DB_USER} -p${DB_PASS} ${DB_NAME} -e "UPDATE users SET username='${WEB_USER}', passwd='\\$2b\\$10\\$4JXmvJmGQ/V.OKADfUpXFOMFKHz8Ed8EZsy5hBGt2aqJ3OZkWmAJK' WHERE userid=1 OR username='Admin';" 2>/dev/null || true
+mysql -u${DB_USER} -p${DB_PASS} ${DB_NAME} -e "UPDATE users SET username='${WEB_USER}', passwd='\$2b\$10\$4JXmvJmGQ/V.OKADfUpXFOMFKHz8Ed8EZsy5hBGt2aqJ3OZkWmAJK' WHERE userid=1 OR username='Admin';" 2>/dev/null || true
 
 mysql -uroot -e "SET GLOBAL log_bin_trust_function_creators = 0;" 2>/dev/null || true
 
