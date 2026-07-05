@@ -24,27 +24,42 @@ git clone https://github.com/TreyaWireless/treya-wireless-dashboard.git $TMP_DIR
 
 # 3. UI files copy करा
 echo "Copying updated files to web directory..."
-rsync -av --delete \
-    $TMP_DIR/repo/ui/ \
-    $WEB_DIR/
+for DIR in "/usr/share/zabbix" "/usr/share/treya-wireless"; do
+    if [ -d "$DIR" ]; then
+        echo "Updating directory: $DIR"
+        rsync -av --delete \
+            $TMP_DIR/repo/ui/ \
+            $DIR/
+        
+        # Ensure configuration directory and file symlinks exist
+        mkdir -p /etc/treya/web /etc/treya-wireless/web
+        if [ "$DIR" = "/usr/share/zabbix" ]; then
+            ln -sf /etc/treya/web/treya.conf.php $DIR/conf/treya.conf.php 2>/dev/null || true
+        else
+            ln -sf /etc/treya-wireless/web/treya.conf.php $DIR/conf/treya.conf.php 2>/dev/null || true
+        fi
+
+        # Permissions fix
+        chown -R nginx:nginx $DIR 2>/dev/null || \
+        chown -R apache:apache $DIR 2>/dev/null || true
+        find $DIR -type f -exec chmod 644 {} \; 2>/dev/null || true
+        find $DIR -type d -exec chmod 755 {} \; 2>/dev/null || true
+    fi
+done
 
 # 4. omada_monitor.py update करा (असेल तर)
 if [ -f "$TMP_DIR/repo/omada_monitor.py" ]; then
-    cp $TMP_DIR/repo/omada_monitor.py /usr/lib/zabbix/externalscripts/omada_monitor.py
-    chmod +x /usr/lib/zabbix/externalscripts/omada_monitor.py
+    cp $TMP_DIR/repo/omada_monitor.py /usr/lib/zabbix/externalscripts/omada_monitor.py 2>/dev/null || true
+    cp $TMP_DIR/repo/omada_monitor.py /usr/lib/treya-wireless/externalscripts/omada_monitor.py 2>/dev/null || true
+    chmod +x /usr/lib/zabbix/externalscripts/omada_monitor.py 2>/dev/null || true
+    chmod +x /usr/lib/treya-wireless/externalscripts/omada_monitor.py 2>/dev/null || true
     echo "omada_monitor.py updated."
 fi
 
-# 5. Permissions fix & Configuration symlinks restore
-chown -R nginx:nginx $WEB_DIR 2>/dev/null || \
-chown -R apache:apache $WEB_DIR 2>/dev/null || true
-find $WEB_DIR -type f -exec chmod 644 {} \;
-find $WEB_DIR -type d -exec chmod 755 {} \;
-
-# Ensure treya.conf.php configuration symlink exists
-ln -sf /etc/treya/web/treya.conf.php /usr/share/zabbix/conf/treya.conf.php 2>/dev/null || true
-ln -sf /etc/treya-wireless/web/treya.conf.php /usr/share/treya-wireless/conf/treya.conf.php 2>/dev/null || true
+# Ensure conf files are readable
 chmod 644 /etc/treya/web/treya.conf.php /etc/treya-wireless/web/treya.conf.php 2>/dev/null || true
+chown -R nginx:nginx /etc/treya /etc/treya-wireless 2>/dev/null || \
+chown -R apache:apache /etc/treya /etc/treya-wireless 2>/dev/null || true
 
 # 6. PHP Cache clear
 php -r "opcache_reset();" 2>/dev/null || true
