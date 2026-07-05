@@ -111,7 +111,7 @@ fi
 
 mysql -u${DB_USER} -p${DB_PASS} ${DB_NAME} -e "UPDATE users SET username='${WEB_USER}', passwd='\$2b\$10\$4JXmvJmGQ/V.OKADfUpXFOMFKHz8Ed8EZsy5hBGt2aqJ3OZkWmAJK' WHERE userid=1 OR username='Admin';" 2>/dev/null || true
 
-mysql -u${DB_USER} -p${DB_PASS} ${DB_NAME} -e "UPDATE host_inventory SET location_lat='19.15263', location_lon='24.16553' WHERE hostid=10084;" 2>/dev/null || true
+mysql -u${DB_USER} -p${DB_PASS} ${DB_NAME} -e "UPDATE host_inventory SET location_lat='19.2505', location_lon='73.3987' WHERE hostid=10084;" 2>/dev/null || true
 
 mysql -uroot -e "SET GLOBAL log_bin_trust_function_creators = 0;" 2>/dev/null || true
 
