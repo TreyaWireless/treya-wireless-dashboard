@@ -102,9 +102,9 @@ mysql -uroot -e "SET GLOBAL log_bin_trust_function_creators = 0;" 2>/dev/null ||
 # ── STEP 6: Pre-generate Web Configuration (No Setup Wizard Needed) ─
 echo ""
 echo "[STEP 6] Generating Web Application Configuration..."
-mkdir -p /etc/zabbix/web /etc/treya-wireless/web
+mkdir -p /etc/treya/web /etc/treya-wireless/web
 
-cat <<EOF > /etc/zabbix/web/treya.conf.php
+cat <<EOF > /etc/treya/web/treya.conf.php
 <?php
 // Treya Wireless Web GUI configuration file.
 \$DB['TYPE']     = 'MYSQL';
@@ -122,13 +122,13 @@ cat <<EOF > /etc/zabbix/web/treya.conf.php
 \$IMAGE_FORMAT_DEFAULT = IMAGE_FORMAT_PNG;
 EOF
 
-cp /etc/zabbix/web/treya.conf.php /etc/treya-wireless/web/treya.conf.php 2>/dev/null || true
-chmod 644 /etc/zabbix/web/treya.conf.php /etc/treya-wireless/web/treya.conf.php 2>/dev/null || true
-chown -R nginx:nginx /etc/zabbix/web /etc/treya-wireless/web 2>/dev/null || \
-chown -R apache:apache /etc/zabbix/web /etc/treya-wireless/web 2>/dev/null || true
+cp /etc/treya/web/treya.conf.php /etc/treya-wireless/web/treya.conf.php 2>/dev/null || true
+chmod 644 /etc/treya/web/treya.conf.php /etc/treya-wireless/web/treya.conf.php 2>/dev/null || true
+chown -R nginx:nginx /etc/treya/web /etc/treya-wireless/web 2>/dev/null || \
+chown -R apache:apache /etc/treya/web /etc/treya-wireless/web 2>/dev/null || true
 
 # Symlink it to the conf directories so the web app can read it
-ln -sf /etc/zabbix/web/treya.conf.php /usr/share/zabbix/conf/treya.conf.php 2>/dev/null || true
+ln -sf /etc/treya/web/treya.conf.php /usr/share/zabbix/conf/treya.conf.php 2>/dev/null || true
 ln -sf /etc/treya-wireless/web/treya.conf.php /usr/share/treya-wireless/conf/treya.conf.php 2>/dev/null || true
 
 # ── STEP 7: Server Config - DB Password ────────────────────

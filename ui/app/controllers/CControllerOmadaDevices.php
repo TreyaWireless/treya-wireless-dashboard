@@ -450,7 +450,7 @@ class CControllerOmadaDevices extends CController {
 			}
 			
 			if ($needs_update) {
-				$cmd = "php /usr/share/zabbix/update_lldp_cache.php " . escapeshellarg($hostid) . " > /dev/null 2>&1 &";
+				$cmd = "php " . APP::getRootDir() . "/update_lldp_cache.php " . escapeshellarg($hostid) . " > /dev/null 2>&1 &";
 				exec($cmd);
 			}
 			
