@@ -23,11 +23,21 @@ echo "Creating source tarball..."
 TMP_DIR=$(mktemp -d)
 mkdir -p "${TMP_DIR}/${NAME}-${VERSION}/ui"
 
-# Clone the repository temporarily to get the latest ui/ files
-REPO_DIR=$(mktemp -d)
-git clone https://github.com/TreyaWireless/treya-wireless-dashboard.git "${REPO_DIR}"
-cp -r "${REPO_DIR}/ui"/* "${TMP_DIR}/${NAME}-${VERSION}/ui/"
-rm -rf "${REPO_DIR}"
+# Use local ui/ directory if present, otherwise clone
+if [ -d "${ORIG_DIR}/ui" ]; then
+    echo "Using local ui/ directory..."
+    cp -r "${ORIG_DIR}/ui"/* "${TMP_DIR}/${NAME}-${VERSION}/ui/"
+else
+    echo "Cloning the repository temporarily..."
+    REPO_DIR=$(mktemp -d)
+    if [ -n "$GITHUB_TOKEN" ]; then
+        git clone "https://${GITHUB_TOKEN}@github.com/TreyaWireless/treya-wireless-dashboard.git" "${REPO_DIR}"
+    else
+        git clone "https://github.com/TreyaWireless/treya-wireless-dashboard.git" "${REPO_DIR}"
+    fi
+    cp -r "${REPO_DIR}/ui"/* "${TMP_DIR}/${NAME}-${VERSION}/ui/"
+    rm -rf "${REPO_DIR}"
+fi
 
 # Create tar.gz in SOURCES
 cd "${TMP_DIR}"
