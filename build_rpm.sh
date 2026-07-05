@@ -20,8 +20,12 @@ TARBALL="${NAME}-${VERSION}.tar.gz"
 echo "Creating source tarball..."
 TMP_DIR=$(mktemp -d)
 mkdir -p "${TMP_DIR}/${NAME}-${VERSION}/ui"
-# Copy ui directory contents to tmp
-cp -r ui/* "${TMP_DIR}/${NAME}-${VERSION}/ui/"
+
+# Clone the repository temporarily to get the latest ui/ files
+REPO_DIR=$(mktemp -d)
+git clone https://github.com/TreyaWireless/treya-wireless-dashboard.git "${REPO_DIR}"
+cp -r "${REPO_DIR}/ui"/* "${TMP_DIR}/${NAME}-${VERSION}/ui/"
+rm -rf "${REPO_DIR}"
 
 # Create tar.gz in SOURCES
 cd "${TMP_DIR}"
