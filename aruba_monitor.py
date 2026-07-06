@@ -365,8 +365,13 @@ def main():
                         c_os = cols[3] or ""
                         c_ssid = cols[4] or ""
                         c_ap = cols[5] or ""
-                        c_sig = int(cols[10]) if cols[10] and cols[10].isdigit() else 0
-                        c_spd = int(cols[11]) if cols[11] and cols[11].isdigit() else 0
+                        c_sig_raw = cols[10] or "0"
+                        c_sig_match = re.search(r'^\d+', c_sig_raw)
+                        c_sig = int(c_sig_match.group(0)) if c_sig_match else 0
+
+                        c_spd_raw = cols[11] or "0"
+                        c_spd_match = re.search(r'^\d+', c_spd_raw)
+                        c_spd = int(c_spd_match.group(0)) if c_spd_match else 0
 
                         clients.append({
                             "name": c_name,

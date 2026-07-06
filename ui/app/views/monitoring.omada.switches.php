@@ -71,20 +71,20 @@ $filter_html = <<<HTML
 				<span id="filter-arrow" style="transform: rotate(90deg); display: inline-block; transition: transform 0.2s;">▶</span> Filter
 			</span>
 		</div>
-		<div id="filter-content" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; align-items: end;">
-			<div>
+		<div id="filter-content" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: end;">
+			<div style="flex: 1 1 300px; min-width: 250px; max-width: 100%;">
 				<label style="display: block; font-weight: bold; font-size: 11px; text-transform: uppercase; color: var(--font-alt-color); margin-bottom: 5px;">Host groups</label>
 				{$groups_html}
 			</div>
-			<div>
+			<div style="flex: 1 1 300px; min-width: 250px; max-width: 100%;">
 				<label style="display: block; font-weight: bold; font-size: 11px; text-transform: uppercase; color: var(--font-alt-color); margin-bottom: 5px;">Hosts</label>
 				{$hosts_html}
 			</div>
-			<div>
+			<div style="flex: 1 1 200px; min-width: 180px; max-width: 100%;">
 				<label style="display: block; font-weight: bold; font-size: 11px; text-transform: uppercase; color: var(--font-alt-color); margin-bottom: 5px;">Switch Name / MAC / IP</label>
 				<input type="text" id="filter-search" placeholder="Search by name, mac or IP..." style="width: 100%; height: 24px; box-sizing: border-box; padding: 4px 8px; border: 1px solid var(--border-color); background: var(--form-bg-color); color: var(--font-color); border-radius: 4px;">
 			</div>
-			<div>
+			<div style="flex: 1 1 200px; min-width: 180px; max-width: 100%;">
 				<label style="display: block; font-weight: bold; font-size: 11px; text-transform: uppercase; color: var(--font-alt-color); margin-bottom: 5px;">Status</label>
 				<select id="filter-status" style="width: 100%; height: 24px; box-sizing: border-box; padding: 2px; border: 1px solid var(--border-color); background: var(--form-bg-color); color: var(--font-color); border-radius: 4px;">
 					<option value="all">All</option>
@@ -92,7 +92,7 @@ $filter_html = <<<HTML
 					<option value="offline">Offline</option>
 				</select>
 			</div>
-			<div style="display: flex; gap: 10px;">
+			<div style="flex: 1 1 150px; min-width: 140px; display: flex; gap: 10px;">
 				<button type="submit" id="btn-apply-filter" class="btn" style="flex: 1; height: 24px; display: inline-flex; align-items: center; justify-content: center; line-height: 1; padding: 0 15px; background: #0275d8; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; text-align: center;">Apply</button>
 				<button type="button" id="btn-reset-filter" class="btn-alt" style="flex: 1; height: 24px; display: inline-flex; align-items: center; justify-content: center; line-height: 1; padding: 0 15px; border: 1px solid var(--border-color); background: var(--ui-bg-color); color: var(--font-color); border-radius: 4px; cursor: pointer; font-weight: bold; text-align: center;">Reset</button>
 			</div>
@@ -158,7 +158,7 @@ function toggleFilterCollapse() {
 	const content = document.getElementById("filter-content");
 	const arrow = document.getElementById("filter-arrow");
 	if (content.style.display === "none") {
-		content.style.display = "grid";
+		content.style.display = "flex";
 		arrow.style.transform = "rotate(90deg)";
 	} else {
 		content.style.display = "none";
