@@ -131,13 +131,14 @@ def main():
                 json.loads(cache_data)  # Validate JSON
                 print(cache_data)
                 
-                # If cache is older than 120 seconds, spawn background process to update it
+                # If cache is older than 30 seconds, spawn background process to update it
                 mtime = os.path.getmtime(cache_file)
-                if time.time() - mtime >= 120:
+                if time.time() - mtime >= 30:
                     if not os.path.exists(lock_file):
                         import subprocess
+                        script_file = os.path.abspath(__file__)
                         subprocess.Popen(
-                            [sys.executable, sys.argv[0], ip, port, arg3, arg4, omadac_id, "--update-cache"],
+                            [sys.executable, script_file, ip, port, arg3, arg4, omadac_id, "--update-cache"],
                             stdout=subprocess.DEVNULL,
                             stderr=subprocess.DEVNULL,
                             start_new_session=True
