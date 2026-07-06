@@ -27,10 +27,18 @@ class CUrl {
 	 * @param string|null $url
 	 */
 	public function __construct($url = null) {
+		if ($url === 'zabbix.php') {
+			$url = 'treya.php';
+		}
+		elseif (is_string($url) && strpos($url, 'zabbix.php') === 0) {
+			$url = 'treya.php'.substr($url, 10);
+		}
+
 		if (empty($url)) {
 			$this->formatGetArguments();
 
-			$this->url = basename($_SERVER['SCRIPT_NAME']);
+			$script_name = basename($_SERVER['SCRIPT_NAME']);
+			$this->url = ($script_name === 'zabbix.php') ? 'treya.php' : $script_name;
 		}
 		else {
 			$this->url = $url;
@@ -50,6 +58,9 @@ class CUrl {
 			}
 
 			$this->formatArguments();
+		}
+		if ($this->url === 'zabbix.php') {
+			$this->url = 'treya.php';
 		}
 	}
 
@@ -99,7 +110,7 @@ class CUrl {
 	public function getUrl() {
 		$this->formatQuery();
 
-		$url = $this->url;
+		$url = ($this->url === 'zabbix.php') ? 'treya.php' : $this->url;
 		$url .= $this->query ? '?'.$this->query : '';
 		$url .= $this->reference ? '#'.urlencode($this->reference) : '';
 

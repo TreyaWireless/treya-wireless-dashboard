@@ -29,6 +29,9 @@ class CControllerResponseRedirect extends CControllerResponse {
 			throw new CAccessDeniedException();
 		}
 
+		if (is_string($url) && strpos($url, 'zabbix.php') !== false) {
+			$url = str_replace('zabbix.php', 'treya.php', $url);
+		}
 		$this->location = $url;
 	}
 

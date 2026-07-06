@@ -62,7 +62,7 @@ $resolved_hostids_json = json_encode($data['resolved_hostids']);
 
 // Collapsible Filter HTML matching Zabbix look-and-feel
 $filter_html = <<<HTML
-<form method="get" action="zabbix.php" name="switches_filter_form" id="switches_filter_form">
+<form method="get" action="treya.php" name="switches_filter_form" id="switches_filter_form">
 	<input type="hidden" name="action" value="omada.switches">
 	
 	<div id="switches-filter-box" class="filter-container" style="background: var(--ui-bg-color); border: 1px solid var(--border-color); padding: 15px; border-radius: 4px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
@@ -186,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		
 		// Query API for selected hosts
 		const promises = hostIds.map(hid => 
-			fetch('zabbix.php?action=omada.devices&hostid=' + hid)
+			fetch('treya.php?action=omada.devices&hostid=' + hid)
 				.then(response => response.json())
 				.catch(err => {
 					console.error("Failed to fetch host " + hid, err);
@@ -354,7 +354,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	
 	// Event Listeners
 	document.getElementById("btn-reset-filter").addEventListener("click", () => {
-		window.location.href = 'zabbix.php?action=omada.switches';
+		window.location.href = 'treya.php?action=omada.switches';
 	});
 	
 	// Real-time filtering

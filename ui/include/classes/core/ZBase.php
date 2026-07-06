@@ -177,7 +177,7 @@ class ZBase {
 		switch ($mode) {
 			case self::EXEC_MODE_DEFAULT:
 				$file = basename($_SERVER['SCRIPT_NAME']);
-				$action_name = ($file === 'zabbix.php') ? getRequest('action', '') : $file;
+				$action_name = ($file === 'zabbix.php' || $file === 'treya.php') ? getRequest('action', '') : $file;
 
 				if ($action_name === 'notifications.get') {
 					CWebUser::disableSessionExtension();
@@ -206,7 +206,7 @@ class ZBase {
 						['type' => 'error', 'messages' => $errors]
 					)));
 
-					redirect('zabbix.php?action=system.warning');
+					redirect('treya.php?action=system.warning');
 				}
 
 				$router->setAction($action_name);

@@ -33,7 +33,10 @@ class CForm extends CTag {
 		global $page;
 
 		if (is_null($value)) {
-			$value = isset($page['file']) ? $page['file'] : 'zabbix.php';
+			$value = isset($page['file']) ? $page['file'] : 'treya.php';
+		}
+		if ($value === 'zabbix.php') {
+			$value = 'treya.php';
 		}
 		$this->attributes['action'] = $value;
 		return $this;

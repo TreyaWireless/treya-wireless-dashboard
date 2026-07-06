@@ -104,7 +104,7 @@ $html = <<<'TOPO'
 </style>
 
 <div id="topo-wrap">
-<form method="get" action="zabbix.php" name="topo_form" id="topo_form">
+<form method="get" action="treya.php" name="topo_form" id="topo_form">
 <input type="hidden" name="action" value="omada.topology">
 <div id="topo-filter-bar">
   <div id="topo-filter-toggle" onclick="topoToggleFilter()">
@@ -121,7 +121,7 @@ $html = <<<'TOPO'
     </div>
     <div style="display:flex;gap:8px;align-items:flex-end">
       <button type="submit" style="padding:4px 14px;background:#0275d8;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">Apply</button>
-      <button type="button" onclick="location.href='zabbix.php?action=omada.topology'" style="padding:4px 14px;border:1px solid var(--border-color);background:var(--ui-bg-color);color:var(--font-color);border-radius:4px;cursor:pointer;font-size:12px">Reset</button>
+      <button type="button" onclick="location.href='treya.php?action=omada.topology'" style="padding:4px 14px;border:1px solid var(--border-color);background:var(--ui-bg-color);color:var(--font-color);border-radius:4px;cursor:pointer;font-size:12px">Reset</button>
     </div>
   </div>
 </div>
@@ -270,7 +270,7 @@ function fetchData(first){
     return;
   }
   var p=new URLSearchParams({action:'omada.devices',hostid:HIDS[0]||0});
-  fetch('zabbix.php?'+p.toString(),{headers:{'X-Requested-With':'XMLHttpRequest'}})
+  fetch('treya.php?'+p.toString(),{headers:{'X-Requested-With':'XMLHttpRequest'}})
   .then(function(r){return r.json();})
   .then(function(j){
     if(!j){$('topo-status-msg').textContent='Error: No response';return;}
