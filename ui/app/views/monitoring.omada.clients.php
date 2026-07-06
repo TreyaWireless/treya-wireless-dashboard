@@ -240,6 +240,9 @@ document.addEventListener("DOMContentLoaded", () => {
 		let color = '#26c281'; // green
 		let quality = 'Excellent';
 		if (rssi <= -80) {
+			color = '#e33734'; // red
+			quality = 'Poor';
+		} else if (rssi <= -70) {
 			color = '#f24f1d'; // orange
 			quality = 'Fair';
 		} else if (rssi <= -60) {
@@ -486,13 +489,15 @@ document.addEventListener("DOMContentLoaded", () => {
 				
 			const signalHtml = isWireless ? getSignalBadge(c.rssi) : '<span style="color: var(--font-alt-color);">--</span>';
 			let trafficHtml;
-		if (c.trafficDown != null || c.trafficUp != null) {
-			trafficHtml = 'Down: ' + formatBytes(c.trafficDown || 0) + '<br>Up: ' + formatBytes(c.trafficUp || 0);
-		} else if (c.currentSpeedMbps != null && c.currentSpeedMbps > 0) {
-			trafficHtml = '<span style="color:var(--font-alt-color); font-size:11px;">Link Speed</span><br><b>' + c.currentSpeedMbps + ' Mbps</b>';
-		} else {
-			trafficHtml = '<span style="color:var(--font-alt-color);">--</span>';
-		}
+			if (c.trafficDown !== null && c.trafficDown !== undefined && c.trafficDown > 0) {
+				trafficHtml = 'Down: ' + formatBytes(c.trafficDown) + '<br>Up: ' + formatBytes(c.trafficUp || 0);
+			} else if (c.currentSpeedMbps != null && c.currentSpeedMbps > 0) {
+				trafficHtml = '<span style="color:var(--font-alt-color); font-size:11px;">Link Speed</span><br><b>' + c.currentSpeedMbps + ' Mbps</b>';
+			} else if (c.trafficDown !== null && c.trafficDown !== undefined) {
+				trafficHtml = 'Down: ' + formatBytes(c.trafficDown) + '<br>Up: ' + formatBytes(c.trafficUp || 0);
+			} else {
+				trafficHtml = '<span style="color:var(--font-alt-color);">--</span>';
+			}
 
 			
 			let uptimeStr = '--';

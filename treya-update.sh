@@ -47,13 +47,20 @@ for DIR in "/usr/share/zabbix" "/usr/share/treya-wireless"; do
     fi
 done
 
-# 4. omada_monitor.py update करा (असेल तर)
+# 4. omada_monitor.py & aruba_monitor.py update करा (असेल तर)
 if [ -f "$TMP_DIR/repo/omada_monitor.py" ]; then
     cp $TMP_DIR/repo/omada_monitor.py /usr/lib/zabbix/externalscripts/omada_monitor.py 2>/dev/null || true
     cp $TMP_DIR/repo/omada_monitor.py /usr/lib/treya-wireless/externalscripts/omada_monitor.py 2>/dev/null || true
     chmod +x /usr/lib/zabbix/externalscripts/omada_monitor.py 2>/dev/null || true
     chmod +x /usr/lib/treya-wireless/externalscripts/omada_monitor.py 2>/dev/null || true
     echo "omada_monitor.py updated."
+fi
+if [ -f "$TMP_DIR/repo/aruba_monitor.py" ]; then
+    cp $TMP_DIR/repo/aruba_monitor.py /usr/lib/zabbix/externalscripts/aruba_monitor.py 2>/dev/null || true
+    cp $TMP_DIR/repo/aruba_monitor.py /usr/lib/treya-wireless/externalscripts/aruba_monitor.py 2>/dev/null || true
+    chmod +x /usr/lib/zabbix/externalscripts/aruba_monitor.py 2>/dev/null || true
+    chmod +x /usr/lib/treya-wireless/externalscripts/aruba_monitor.py 2>/dev/null || true
+    echo "aruba_monitor.py updated."
 fi
 
 # Ensure config directories have correct ownerships

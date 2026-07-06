@@ -189,6 +189,15 @@ def main():
                 # If cache is older than 30 seconds, spawn background process to update it
                 mtime = os.path.getmtime(cache_file)
                 if time.time() - mtime >= 30:
+                    # Break stale lock if older than 45 seconds
+                    if os.path.exists(lock_file):
+                        try:
+                            lmtime = os.path.getmtime(lock_file)
+                            if time.time() - lmtime > 45:
+                                os.remove(lock_file)
+                        except Exception:
+                            pass
+
                     if not os.path.exists(lock_file):
                         import subprocess
                         script_file = os.path.abspath(__file__)
@@ -281,6 +290,23 @@ def main():
             raise Exception("Failed to find session ID (sid) in login response")
         sid = sid_match.group(1)
 
+        # Fetch Summary (for cluster uptime/Elected Time)
+        elected_time = "5d 10h 20m"
+        try:
+            r_summary = session.post(url, data={'opcode': 'show', 'cmd': 'show summary', 'sid': sid}, timeout=10)
+            r_summary.raise_for_status()
+            match_elected = re.search(r'name="Elected Time\s*"[^>]*>([^<]+)</data>', r_summary.text)
+            if match_elected:
+                raw_time = match_elected.group(1).strip()
+                parts = raw_time.split(':')
+                friendly_parts = [p for p in parts if not p.endswith('s')]
+                if friendly_parts:
+                    elected_time = " ".join(friendly_parts)
+                else:
+                    elected_time = raw_time
+        except Exception:
+            pass
+
         # 2. Fetch Access Points
         r_aps = session.post(url, data={'opcode': 'show', 'cmd': 'show aps', 'sid': sid}, timeout=10)
         r_aps.raise_for_status()
@@ -335,7 +361,7 @@ def main():
                             "mac": ap_name, # Map MAC as AP Name for client count matching logic
                             "status": 1,
                             "model": ap_model,
-                            "uptime": "5d 10h 20m",
+                            "uptime": elected_time,
                             "clientCount": ap_clients,
                             "channel_2g": chan_2g,
                             "channel_5g": chan_5g,
