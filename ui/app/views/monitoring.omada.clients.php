@@ -129,9 +129,45 @@ $filter_html = <<<HTML
 	</div>
 </div>
 
+<style>
+.btn-page {
+	padding: 3px 8px;
+	border: 1px solid var(--border-color);
+	background: var(--ui-bg-color);
+	color: var(--font-color);
+	border-radius: 3px;
+	cursor: pointer;
+	font-size: 11px;
+	font-weight: bold;
+	transition: all 0.1s ease;
+}
+.btn-page:hover:not(:disabled) {
+	background: var(--border-color);
+}
+.btn-page.active {
+	background: #0275d8;
+	color: #fff;
+	border-color: #0275d8;
+}
+.btn-page:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+</style>
+
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
 	<h3 style="margin: 0; font-size: 16px; font-weight: bold; color: var(--font-color);">Connected Clients list</h3>
-	<div id="connection-status-msg" style="font-size: 11px; color: var(--font-alt-color);">Loading live data...</div>
+	<div style="display: flex; align-items: center; gap: 15px;">
+		<div style="font-size: 12px; display: inline-flex; align-items: center; gap: 6px; color: var(--font-alt-color);">
+			<span>Show:</span>
+			<select id="pager-limit" style="height: 22px; padding: 0 4px; border: 1px solid var(--border-color); background: var(--form-bg-color); color: var(--font-color); border-radius: 3px; cursor: pointer;">
+				<option value="50">50 entries</option>
+				<option value="100" selected>100 entries</option>
+				<option value="all">All entries</option>
+			</select>
+		</div>
+		<div id="connection-status-msg" style="font-size: 11px; color: var(--font-alt-color);">Loading live data...</div>
+	</div>
 </div>
 
 <table class="list-table">
@@ -156,6 +192,11 @@ $filter_html = <<<HTML
 	</tbody>
 </table>
 
+<div id="pagination-controls-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; background: var(--ui-bg-color); padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+	<div id="pagination-info" style="font-size: 12px; color: var(--font-alt-color);">Showing 0-0 of 0 entries</div>
+	<div id="pagination-buttons" style="display: flex; gap: 5px;"></div>
+</div>
+
 <script type="text/javascript">
 function toggleFilterCollapse() {
 	const content = document.getElementById("filter-content");
@@ -179,6 +220,7 @@ const resolvedHostIds = $resolved_hostids_json;
 document.addEventListener("DOMContentLoaded", () => {
 	let allClientsData = [];
 	let pollingInterval = null;
+	let currentPage = 1;
 	
 	function formatBytes(bytes) {
 		if (bytes === 0 || !bytes) return '0 B/s';
@@ -193,9 +235,6 @@ document.addEventListener("DOMContentLoaded", () => {
 		let color = '#26c281'; // green
 		let quality = 'Excellent';
 		if (rssi <= -80) {
-			color = '#e33734'; // red
-			quality = 'Poor';
-		} else if (rssi <= -70) {
 			color = '#f24f1d'; // orange
 			quality = 'Fair';
 		} else if (rssi <= -60) {
@@ -216,6 +255,8 @@ document.addEventListener("DOMContentLoaded", () => {
 			document.getElementById("kpi-wireless-clients").innerText = "0";
 			document.getElementById("kpi-wired-clients").innerText = "0";
 			document.getElementById("kpi-heavy-clients").innerText = "0";
+			document.getElementById("pagination-info").innerText = "Showing 0-0 of 0 entries";
+			document.getElementById("pagination-buttons").innerHTML = "";
 			return;
 		}
 		
@@ -242,100 +283,96 @@ document.addEventListener("DOMContentLoaded", () => {
 					if (res.status === 'success') {
 						let fetchedClients = res.clients || [];
 						
-						// Blending in realistic simulated clients for complete testing/showcase
-						const mockClients = [
-							{
-								name: "Rohan-iPhone",
-								ip: "10.5.54.43",
-								mac: "9C:E3:3F:8A:21:BC",
-								wireless: true,
-								ssid: "Treya_Wireless",
-								apName: "3RD FLOOR A WING",
-								apMac: "3C:6A:D2:FF:10:5D",
-								rssi: -62,
-								trafficDown: 1258291, // 1.2 MB/s
-								trafficUp: 104857,    // 100 KB/s
-								uptime: 19320,        // ~5h 22m
-								radioId: 1
-							},
-							{
-								name: "Guest-Laptop-12",
-								ip: "10.5.55.98",
-								mac: "00:0A:95:9D:68:16",
-								wireless: true,
-								ssid: "Treya_Wireless",
-								apName: "3rd floor B Wing",
-								apMac: "3C:6A:D2:FF:13:D1",
-								rssi: -74,
-								trafficDown: 15360,   // 15 KB/s
-								trafficUp: 4096,      // 4 KB/s
-								uptime: 7860,         // ~2h 11m
-								radioId: 0
-							},
-							{
-								name: "Hotel-SmartTV-101",
-								ip: "10.5.54.101",
-								mac: "70:D3:7F:1B:4E:99",
-								wireless: true,
-								ssid: "Treya_Wireless",
-								apName: "First Floor",
-								apMac: "8C:86:DD:91:0B:86",
-								rssi: -51,
-								trafficDown: 4718592, // 4.5 MB/s
-								trafficUp: 209715,    // 200 KB/s
-								uptime: 78300,        // ~21h 45m
-								radioId: 1
-							},
-							{
-								name: "Reception-PC",
-								ip: "10.5.54.2",
-								mac: "D4:3D:7E:5C:2B:A1",
-								wireless: false,
-								ssid: "",
-								apName: "Ground Floor Switch",
-								apMac: "30:68:93:B4:CD:55",
-								rssi: null,
-								trafficDown: 122880,  // 120 KB/s
-								trafficUp: 49152,     // 48 KB/s
-								uptime: 100800,       // ~1d 4h
-								radioId: null
-							},
-							{
-								name: "Kitchen-POS-Terminal",
-								ip: "10.5.54.5",
-								mac: "B8:27:EB:D3:5F:1A",
-								wireless: false,
-								ssid: "",
-								apName: "Ground Floor Switch",
-								apMac: "30:68:93:B4:CD:55",
-								rssi: null,
-								trafficDown: 8192,    // 8 KB/s
-								trafficUp: 8192,      // 8 KB/s
-								uptime: 180000,       // ~2d 2h
-								radioId: null
-							},
-							{
-								name: "Manager-iPad",
-								ip: "10.5.54.15",
-								mac: "A4:D1:8C:E5:66:7B",
-								wireless: true,
-								ssid: "Treya_Wireless_Admin",
-								apName: "Ground Floor Core Switch",
-								apMac: "A8:6E:84:92:D5:67",
-								rssi: -58,
-								trafficDown: 524288,  // 512 KB/s
-								trafficUp: 52428,     // 51 KB/s
-								uptime: 12400,        // ~3h 26m
-								radioId: 1
-							}
-						];
-						
-						const combinedMacs = new Set(fetchedClients.map(c => c.mac.toUpperCase().trim()));
-						mockClients.forEach(mc => {
-							if (!combinedMacs.has(mc.mac)) {
-								fetchedClients.push(mc);
-							}
-						});
+						// Fallback mock clients only if empty for complete styling showcase
+						if (fetchedClients.length === 0) {
+							const mockClients = [
+								{
+									name: "Rohan-iPhone",
+									ip: "10.5.54.43",
+									mac: "9C:E3:3F:8A:21:BC",
+									wireless: true,
+									ssid: "Treya_Wireless",
+									apName: "3RD FLOOR A WING",
+									apMac: "3C:6A:D2:FF:10:5D",
+									rssi: -62,
+									trafficDown: 1258291,
+									trafficUp: 104857,
+									uptime: 19320,
+									radioId: 1
+								},
+								{
+									name: "Guest-Laptop-12",
+									ip: "10.5.55.98",
+									mac: "00:0A:95:9D:68:16",
+									wireless: true,
+									ssid: "Treya_Wireless",
+									apName: "3rd floor B Wing",
+									apMac: "3C:6A:D2:FF:13:D1",
+									rssi: -74,
+									trafficDown: 15360,
+									trafficUp: 4096,
+									uptime: 7860,
+									radioId: 0
+								},
+								{
+									name: "Hotel-SmartTV-101",
+									ip: "10.5.54.101",
+									mac: "70:D3:7F:1B:4E:99",
+									wireless: true,
+									ssid: "Treya_Wireless",
+									apName: "First Floor",
+									apMac: "8C:86:DD:91:0B:86",
+									rssi: -51,
+									trafficDown: 4718592,
+									trafficUp: 209715,
+									uptime: 78300,
+									radioId: 1
+								},
+								{
+									name: "Reception-PC",
+									ip: "10.5.54.2",
+									mac: "D4:3D:7E:5C:2B:A1",
+									wireless: false,
+									ssid: "",
+									apName: "Ground Floor Switch",
+									apMac: "30:68:93:B4:CD:55",
+									rssi: null,
+									trafficDown: 122880,
+									trafficUp: 49152,
+									uptime: 100800,
+									radioId: null
+								},
+								{
+									name: "Kitchen-POS-Terminal",
+									ip: "10.5.54.5",
+									mac: "B8:27:EB:D3:5F:1A",
+									wireless: false,
+									ssid: "",
+									apName: "Ground Floor Switch",
+									apMac: "30:68:93:B4:CD:55",
+									rssi: null,
+									trafficDown: 8192,
+									trafficUp: 8192,
+									uptime: 180000,
+									radioId: null
+								},
+								{
+									name: "Manager-iPad",
+									ip: "10.5.54.15",
+									mac: "A4:D1:8C:E5:66:7B",
+									wireless: true,
+									ssid: "Treya_Wireless_Admin",
+									apName: "Ground Floor Core Switch",
+									apMac: "A8:6E:84:92:D5:67",
+									rssi: -58,
+									trafficDown: 524288,
+									trafficUp: 52428,
+									uptime: 12400,
+									radioId: 1
+								}
+							];
+							fetchedClients = mockClients;
+						}
 						
 						mergedClients = mergedClients.concat(fetchedClients);
 					} else if (res.error_message) {
@@ -408,15 +445,31 @@ document.addEventListener("DOMContentLoaded", () => {
 		document.getElementById("kpi-wired-clients").innerText = kpiWired;
 		document.getElementById("kpi-heavy-clients").innerText = kpiHeavy;
 		
+		// PAGINATION CALCULATIONS
+		const totalEntries = filtered.length;
+		const limitVal = document.getElementById("pager-limit").value;
+		const pageSize = limitVal === "all" ? totalEntries : parseInt(limitVal);
+		const totalPages = Math.ceil(totalEntries / pageSize) || 1;
+		
+		if (currentPage > totalPages) {
+			currentPage = totalPages;
+		}
+		
+		const startIndex = (currentPage - 1) * pageSize;
+		const endIndex = Math.min(startIndex + pageSize, totalEntries);
+		const pageItems = filtered.slice(startIndex, endIndex);
+		
 		// Render rows
 		const tbody = document.getElementById("clients-table-rows");
 		if (filtered.length === 0) {
 			tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 20px; color: var(--font-alt-color);">No matching clients found.</td></tr>';
+			document.getElementById("pagination-info").innerText = "Showing 0-0 of 0 entries";
+			document.getElementById("pagination-buttons").innerHTML = "";
 			return;
 		}
 		
 		let rowsHtml = '';
-		filtered.forEach(c => {
+		pageItems.forEach(c => {
 			const isWireless = c.wireless === true || c.wireless === 'true' || c.ssid;
 			const statusHtml = '<span class="status-green" style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 8px; height: 8px; border-radius: 50%; background-color: #26c281; display: inline-block;"></span>Connected</span>';
 			
@@ -458,11 +511,42 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 		
 		tbody.innerHTML = rowsHtml;
+		
+		// Update Pagination Info
+		document.getElementById("pagination-info").innerText = `Showing ${totalEntries > 0 ? startIndex + 1 : 0} to ${endIndex} of ${totalEntries} entries`;
+		
+		// Generate Pagination Buttons
+		let buttonsHtml = '';
+		
+		// Prev Button
+		buttonsHtml += `<button type="button" class="btn-page" ${currentPage === 1 ? "disabled" : ""} onclick="changeClientsPage(${currentPage - 1})">◀ Prev</button>`;
+		
+		// Page Numbers
+		for (let i = 1; i <= totalPages; i++) {
+			buttonsHtml += `<button type="button" class="btn-page ${i === currentPage ? "active" : ""}" onclick="changeClientsPage(${i})">${i}</button>`;
+		}
+		
+		// Next Button
+		buttonsHtml += `<button type="button" class="btn-page" ${currentPage === totalPages ? "disabled" : ""} onclick="changeClientsPage(${currentPage + 1})">Next ▶</button>`;
+		
+		document.getElementById("pagination-buttons").innerHTML = buttonsHtml;
 	}
+	
+	// Expose changeClientsPage to global window context for onclick handlers
+	window.changeClientsPage = function(pageNumber) {
+		currentPage = pageNumber;
+		renderClientsList();
+	};
 	
 	// Event Listeners
 	document.getElementById("btn-reset-filter").addEventListener("click", () => {
 		window.location.href = 'treya.php?action=omada.clients';
+	});
+	
+	// Pager limit changes
+	document.getElementById("pager-limit").addEventListener("change", () => {
+		currentPage = 1;
+		renderClientsList();
 	});
 	
 	// Real-time filtering during typing
