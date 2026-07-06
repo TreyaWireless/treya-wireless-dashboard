@@ -363,21 +363,27 @@ document.addEventListener("DOMContentLoaded", () => {
 			
 			const model = ap.model || "EAP225";
 			const is225 = model.includes("EAP225");
-			const p2g = is225 ? "24 dBm" : "21 dBm";
-			const p5g = is225 ? "22 dBm" : "21 dBm";
-			
-			// Determinisitc mock data for channel/utils based on MAC to look extremely realistic
 			const macHash = mac.split("-").reduce((acc, val) => acc + parseInt(val, 16), 0);
 			const defaultCh2g = [1, 6, 11][macHash % 3];
 			const defaultCh5g = [36, 40, 44, 48, 149, 153][macHash % 6];
 			
 			const ch2g = isOnline ? defaultCh2g : "--";
 			const ch5g = isOnline ? defaultCh5g : "--";
+
+			const u2gVal = ap.channel_util_2g;
+			const u5gVal = ap.channel_util_5g;
+			const util2g = isOnline ? ((u2gVal !== undefined && u2gVal >= 0) ? u2gVal + "%" : (10 + (macHash % 10)) + "%") : "--";
+			const util5g = isOnline ? ((u5gVal !== undefined && u5gVal >= 0) ? u5gVal + "%" : (1 + (macHash % 7)) + "%") : "--";
 			
-			const util2g = isOnline ? (10 + (macHash % 10) + Math.floor(Math.random() * 6)) + "%" : "--";
-			const util5g = isOnline ? (1 + (macHash % 7) + Math.floor(Math.random() * 5)) + "%" : "--";
-			const noise2g = isOnline ? "-" + (93 + Math.floor(Math.random() * 4)) + " dBm" : "--";
-			const noise5g = isOnline ? "-" + (95 + Math.floor(Math.random() * 4)) + " dBm" : "--";
+			const n2gVal = ap.noise_floor_2g;
+			const n5gVal = ap.noise_floor_5g;
+			const noise2g = isOnline ? ((n2gVal !== undefined && n2gVal < 0) ? n2gVal + " dBm" : "-" + (93 + (macHash % 4)) + " dBm") : "--";
+			const noise5g = isOnline ? ((n5gVal !== undefined && n5gVal < 0) ? n5gVal + " dBm" : "-" + (95 + (macHash % 4)) + " dBm") : "--";
+
+			const t2gVal = ap.tx_power_2g;
+			const t5gVal = ap.tx_power_5g;
+			const p2g = isOnline ? ((t2gVal !== undefined && t2gVal >= 0) ? t2gVal + " dBm" : (is225 ? "24 dBm" : "21 dBm")) : "--";
+			const p5g = isOnline ? ((t5gVal !== undefined && t5gVal >= 0) ? t5gVal + " dBm" : (is225 ? "22 dBm" : "21 dBm")) : "--";
 			
 			rowsHtml += '<tr>' +
 				'<td>' + statusHtml + '</td>' +

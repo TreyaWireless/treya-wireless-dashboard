@@ -1,4 +1,46 @@
 <?php
+ob_start(function($buffer) {
+	$script = isset($_SERVER['SCRIPT_NAME']) ? basename($_SERVER['SCRIPT_NAME']) : '';
+	$is_ui_request = ($script === 'zabbix.php' || $script === 'treya.php');
+
+	$is_json = false;
+	foreach (headers_list() as $header) {
+		if (stripos($header, 'Content-Type:') !== false) {
+			if (stripos($header, 'application/json') !== false || 
+				stripos($header, 'application/javascript') !== false || 
+				stripos($header, 'application/json-rpc') !== false ||
+				stripos($header, 'image/') !== false) {
+				$is_json = true;
+				break;
+			}
+		}
+	}
+
+	// Only skip JSON/JS/Images if this is NOT a direct UI request from zabbix.php/treya.php
+	if ($is_json && !$is_ui_request) {
+		return $buffer;
+	}
+
+	$placeholders = [
+		'zabbix.php' => '___ZABBIX_PHP_URL___',
+		'zabbix_server.conf' => '___ZABBIX_SERVER_CONF___',
+		'zabbix.conf.php' => '___ZABBIX_CONF_PHP___',
+		'zabbix-server' => '___ZABBIX_SERVER_SVC___',
+		'zabbix.com' => '___ZABBIX_COM_URL___',
+		'zabbix.org' => '___ZABBIX_ORG_URL___',
+		'zbx_session' => '___ZBX_SESSION_COOKIE___',
+	];
+	foreach ($placeholders as $original => $placeholder) {
+		$buffer = str_replace($original, $placeholder, $buffer);
+	}
+	$buffer = str_replace('Zabbix', 'Treya', $buffer);
+	foreach ($placeholders as $original => $placeholder) {
+		$buffer = str_replace($placeholder, $original, $buffer);
+	}
+	return $buffer;
+});
+
+
 /*
 ** Copyright (C) 2001-2026 Zabbix SIA
 **
