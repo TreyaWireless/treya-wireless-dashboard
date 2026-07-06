@@ -1,0 +1,267 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: 8df96b18c230490a9a0a9e230722d625
+      name: Templates/Applications
+  templates:
+    - uuid: d61c7d89b1c0490a9a0a9e230722d625
+      template: 'Aruba Controller Custom API'
+      name: 'Aruba Controller Custom API'
+      groups:
+        - name: Templates/Applications
+      items:
+        - uuid: 2f9a2b8e3d0c490a9a0a9e230722d625
+          name: 'Aruba: Get Controller Data'
+          type: EXTERNAL
+          key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+          delay: 30s
+          history: 1d
+          trends: '0'
+          value_type: TEXT
+          description: 'Runs the Python script to fetch raw JSON metrics from Aruba Controller Virtual Controller via swarm.cgi.'
+        - uuid: 3f9a2b8e3d0c490a9a0a9e230722d625
+          name: 'Aruba APs: Online'
+          type: DEPENDENT
+          key: aruba.online_aps
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          master_item:
+            key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.online_aps
+        - uuid: 4f9a2b8e3d0c490a9a0a9e230722d625
+          name: 'Aruba APs: Offline'
+          type: DEPENDENT
+          key: aruba.offline_aps
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          master_item:
+            key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.offline_aps
+        - uuid: 5f9a2b8e3d0c490a9a0a9e230722d625
+          name: 'Aruba APs: Total'
+          type: DEPENDENT
+          key: aruba.total_aps
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          master_item:
+            key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.total_aps
+        - uuid: 6f9a2b8e3d0c490a9a0a9e230722d625
+          name: 'Aruba Clients: Total'
+          type: DEPENDENT
+          key: aruba.total_clients
+          delay: '0'
+          history: 7d
+          value_type: FLOAT
+          master_item:
+            key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.total_clients
+      discovery_rules:
+        - uuid: b93baad4ca71472894c9b9d08e46218d
+          name: 'Access Points Discovery'
+          type: DEPENDENT
+          key: aruba.eaps.discovery
+          delay: '0'
+          master_item:
+            key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+          lld_macro_paths:
+            - lld_macro: '{#AP_NAME}'
+              path: $.name
+            - lld_macro: '{#AP_IP}'
+              path: $.ip
+            - lld_macro: '{#AP_MAC}'
+              path: $.mac
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.eaps
+          item_prototypes:
+            - uuid: 99b76505df4d4bb4b3db13b785616805
+              name: 'AP {#AP_NAME}: Status'
+              type: DEPENDENT
+              key: 'aruba.ap.status[{#AP_NAME}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              master_item:
+                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.eaps[?(@.name=="{#AP_NAME}")].status.first()'
+              trigger_prototypes:
+                - uuid: 4ce242c7dfd44664815534f05007570f
+                  expression: 'last(/Aruba Controller Custom API/aruba.ap.status[{#AP_NAME}])=0'
+                  name: 'AP {#AP_NAME} is Offline on {HOST.NAME}'
+                  priority: WARNING
+                  description: 'Access Point {#AP_NAME} has disconnected from the controller.'
+            - uuid: ebec5b20227345db8c2d4a935c44678f
+              name: 'AP {#AP_NAME}: 2.4GHz Channel Utilization'
+              type: DEPENDENT
+              key: 'aruba.ap.chan_util_2g[{#AP_NAME}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              units: '%'
+              description: '2.4 GHz channel utilization percentage.'
+              master_item:
+                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.eaps[?(@.name=="{#AP_NAME}")].channel_util_2g.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 3600s
+              trigger_prototypes:
+                - uuid: ec2f0bdb190e4508a7c8166730b69f2b
+                  expression: 'last(/Aruba Controller Custom API/aruba.ap.chan_util_2g[{#AP_NAME}])>70 and last(/Aruba Controller Custom API/aruba.ap.chan_util_2g[{#AP_NAME}])>=0'
+                  name: 'High 2.4GHz Channel Interference on AP {#AP_NAME} on {HOST.NAME} (>{$ARUBA_CHAN_UTIL_WARN}%)'
+                  priority: WARNING
+                  description: 'AP {#AP_NAME} 2.4 GHz channel utilization is high.'
+            - uuid: 73247eb6bcf34b5e95ecfe640ca98899
+              name: 'AP {#AP_NAME}: 5GHz Channel Utilization'
+              type: DEPENDENT
+              key: 'aruba.ap.chan_util_5g[{#AP_NAME}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              units: '%'
+              description: '5 GHz channel utilization percentage.'
+              master_item:
+                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.eaps[?(@.name=="{#AP_NAME}")].channel_util_5g.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 3600s
+              trigger_prototypes:
+                - uuid: df0828b767404c148ca9c89c95e9e7b0
+                  expression: 'last(/Aruba Controller Custom API/aruba.ap.chan_util_5g[{#AP_NAME}])>70 and last(/Aruba Controller Custom API/aruba.ap.chan_util_5g[{#AP_NAME}])>=0'
+                  name: 'High 5GHz Channel Interference on AP {#AP_NAME} on {HOST.NAME} (>{$ARUBA_CHAN_UTIL_WARN}%)'
+                  priority: WARNING
+                  description: 'AP {#AP_NAME} 5 GHz channel utilization is high.'
+            - uuid: f0a4f9fc1a34481dbf03cc6acdd23592
+              name: 'AP {#AP_NAME}: 2.4GHz Noise Floor'
+              type: DEPENDENT
+              key: 'aruba.ap.noise_2g[{#AP_NAME}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              units: dBm
+              description: '2.4 GHz Noise Floor.'
+              master_item:
+                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.eaps[?(@.name=="{#AP_NAME}")].noise_floor_2g.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 3600s
+              trigger_prototypes:
+                - uuid: cc69931de8164508ba764b9b2d474b8f
+                  expression: 'last(/Aruba Controller Custom API/aruba.ap.noise_2g[{#AP_NAME}])>-65 and last(/Aruba Controller Custom API/aruba.ap.noise_2g[{#AP_NAME}])<0'
+                  name: 'High RF Noise on AP {#AP_NAME} 2.4GHz on {HOST.NAME} (Noise > {$ARUBA_NOISE_THRESHOLD} dBm)'
+                  priority: WARNING
+                  description: 'AP {#AP_NAME} 2.4 GHz RF Noise is high.'
+            - uuid: 83a9e20e7ecb46e9bef0e72bc6544bca
+              name: 'AP {#AP_NAME}: 5GHz Noise Floor'
+              type: DEPENDENT
+              key: 'aruba.ap.noise_5g[{#AP_NAME}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              units: dBm
+              description: '5 GHz Noise Floor.'
+              master_item:
+                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.eaps[?(@.name=="{#AP_NAME}")].noise_floor_5g.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 3600s
+              trigger_prototypes:
+                - uuid: 2256760ae1a44e5193ccd07970a01741
+                  expression: 'last(/Aruba Controller Custom API/aruba.ap.noise_5g[{#AP_NAME}])>-65 and last(/Aruba Controller Custom API/aruba.ap.noise_5g[{#AP_NAME}])<0'
+                  name: 'High RF Noise on AP {#AP_NAME} 5GHz on {HOST.NAME} (Noise > {$ARUBA_NOISE_THRESHOLD} dBm)'
+                  priority: WARNING
+                  description: 'AP {#AP_NAME} 5 GHz RF Noise is high.'
+            - uuid: bd2c8839257a4b44b66e51c7f9c19819
+              name: 'AP {#AP_NAME}: 2.4GHz TX Power'
+              type: DEPENDENT
+              key: 'aruba.ap.tx_power_2g[{#AP_NAME}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              units: dBm
+              description: '2.4 GHz Transmit Power (dBm).'
+              master_item:
+                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.eaps[?(@.name=="{#AP_NAME}")].tx_power_2g.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 3600s
+            - uuid: dfd0ae3ff8a24465805c2607f90b3207
+              name: 'AP {#AP_NAME}: 5GHz TX Power'
+              type: DEPENDENT
+              key: 'aruba.ap.tx_power_5g[{#AP_NAME}]'
+              delay: '0'
+              history: 7d
+              value_type: FLOAT
+              units: dBm
+              description: '5 GHz Transmit Power (dBm).'
+              master_item:
+                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.eaps[?(@.name=="{#AP_NAME}")].tx_power_5g.first()'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 3600s
+      macros:
+        - macro: '{$ARUBA_USER}'
+          value: 'admin'
+          description: 'Aruba Controller admin username'
+        - macro: '{$ARUBA_PASS}'
+          type: SECRET_TEXT
+          value: '2iM5a5Pjq!lp2yUjV1U1'
+          description: 'Aruba Controller admin password'
+        - macro: '{$ARUBA_PORT}'
+          value: '4253'
+          description: 'Aruba Controller API Port'
+        - macro: '{$ARUBA_CHAN_UTIL_WARN}'
+          value: '70'
+          description: 'Channel Utilization WARNING threshold (%)'
+        - macro: '{$ARUBA_NOISE_THRESHOLD}'
+          value: '-65'
+          description: 'RF Noise Floor WARNING threshold (dBm)'
+  triggers:
+    - uuid: e61c7d89b1c0490a9a0a9e230722d625
+      expression: 'last(/Aruba Controller Custom API/aruba.online_aps)=0'
+      name: 'Aruba: VC controller offline or connection failed'
+      priority: HIGH
+      description: 'Aruba monitoring failed or returned no active APs.'

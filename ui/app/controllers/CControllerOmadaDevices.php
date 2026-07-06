@@ -48,6 +48,71 @@ class CControllerOmadaDevices extends CController {
 		}
 
 		if ($vendor !== 'omada') {
+			if ($vendor === 'aruba') {
+				// Fetch host interface IP to read local cache
+				$db_interfaces = API::HostInterface()->get([
+					'output' => ['ip'],
+					'hostids' => $hostid,
+					'main' => 1
+				]);
+				$ip = $db_interfaces ? reset($db_interfaces)['ip'] : '';
+				
+				// 1. Try local cache file
+				$cache_file = "/tmp/aruba_cache_{$ip}.json";
+				if ($ip && file_exists($cache_file)) {
+					$cache_content = file_get_contents($cache_file);
+					$json_data = json_decode($cache_content, true);
+					if (is_array($json_data) && ($json_data['status'] ?? '') === 'success') {
+						$this->setResponse(new CControllerResponseData(['main_block' => json_encode($json_data)]));
+						return;
+					}
+				}
+				
+				// 2. Try Zabbix history cache
+				try {
+					$db_items = API::Item()->get([
+						'output' => ['itemid'],
+						'hostids' => $hostid,
+						'filter' => [
+							'key_' => 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+						]
+					]);
+					
+					$item = reset($db_items);
+					if ($item) {
+						$db_history = API::History()->get([
+							'output' => ['value'],
+							'itemids' => $item['itemid'],
+							'history' => 4, // ITEM_VALUE_TYPE_TEXT
+							'sortfield' => 'clock',
+							'sortorder' => ZBX_SORT_DOWN,
+							'limit' => 1
+						]);
+						if (!$db_history) {
+							$db_history = API::History()->get([
+								'output' => ['value'],
+								'itemids' => $item['itemid'],
+								'history' => 1, // ITEM_VALUE_TYPE_STR
+								'sortfield' => 'clock',
+								'sortorder' => ZBX_SORT_DOWN,
+								'limit' => 1
+							]);
+						}
+						
+						$hist = reset($db_history);
+						if ($hist) {
+							$json_data = json_decode($hist['value'], true);
+							if (is_array($json_data) && ($json_data['status'] ?? '') === 'success') {
+								$this->setResponse(new CControllerResponseData(['main_block' => json_encode($json_data)]));
+								return;
+							}
+						}
+					}
+				} catch (Exception $e) {
+					// ignore and fallback
+				}
+			}
+
 			$devices = [];
 			$clients = [];
 			$lldp_count = 8;
