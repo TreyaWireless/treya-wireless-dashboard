@@ -257,6 +257,9 @@ if command -v semanage &>/dev/null; then
     semanage fcontext -a -t httpd_sys_content_t "/etc/treya-wireless/web(/.*)?" 2>/dev/null || true
     restorecon -R -v /etc/treya-wireless/web 2>/dev/null || true
     
+    # Web UI files RHEL security context
+    restorecon -R -v /usr/share/treya-wireless 2>/dev/null || true
+    
     # Network connections boolean
     setsebool -P httpd_can_network_connect 1 2>/dev/null || true
     setsebool -P httpd_can_connect_zabbix 1 2>/dev/null || true
