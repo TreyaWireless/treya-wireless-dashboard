@@ -113,6 +113,9 @@ mysql -u${DB_USER} -p${DB_PASS} ${DB_NAME} -e "UPDATE users SET username='${WEB_
 
 mysql -u${DB_USER} -p${DB_PASS} ${DB_NAME} -e "UPDATE host_inventory SET location_lat='19.2505', location_lon='73.3987' WHERE hostid=10084;" 2>/dev/null || true
 
+# Optimize history text/log columns to prevent truncation of large JSON payloads
+mysql -u${DB_USER} -p${DB_PASS} ${DB_NAME} -e "ALTER TABLE history_text MODIFY value MEDIUMTEXT NOT NULL; ALTER TABLE history_log MODIFY value MEDIUMTEXT NOT NULL;" 2>/dev/null || true
+
 mysql -uroot -e "SET GLOBAL log_bin_trust_function_creators = 0;" 2>/dev/null || true
 
 # ── STEP 6: Pre-generate Web Configuration (No Setup Wizard Needed) ─
