@@ -130,6 +130,11 @@ $filter_html = <<<HTML
 </div>
 
 <style>
+.multiselect-control, .multiselect, .multiselect-wrapper, .multiselect-list {
+	width: 100% !important;
+	max-width: 100% !important;
+	box-sizing: border-box;
+}
 .btn-page {
 	padding: 3px 8px;
 	border: 1px solid var(--border-color);

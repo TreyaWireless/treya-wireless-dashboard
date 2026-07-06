@@ -119,6 +119,14 @@ $filter_html = <<<HTML
 	</div>
 </div>
 
+<style>
+.multiselect-control, .multiselect, .multiselect-wrapper, .multiselect-list {
+	width: 100% !important;
+	max-width: 100% !important;
+	box-sizing: border-box;
+}
+</style>
+
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
 	<h3 style="margin: 0; font-size: 16px; font-weight: bold; color: var(--font-color);">Access Points list</h3>
 	<div id="connection-status-msg" style="font-size: 11px; color: var(--font-alt-color);">Loading live data...</div>
