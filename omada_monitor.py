@@ -170,10 +170,14 @@ def main():
             fd = os.open(lock_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             os.write(fd, str(os.getpid()).encode())
             os.close(fd)
+            try:
+                os.chmod(lock_file, 0o666)
+            except Exception:
+                pass
             acquired_lock = True
             atexit.register(cleanup_lock)
             break
-        except FileExistsError:
+        except (FileExistsError, PermissionError):
             time.sleep(1.0)
             if os.path.exists(cache_file):
                 try:
@@ -619,12 +623,24 @@ def main():
         }
         json_str = json.dumps(result_data, separators=(',', ':'))
         try:
-            temp_cache = cache_file + ".tmp"
+            temp_cache = cache_file + f".tmp.{os.getpid()}"
             with open(temp_cache, "w") as f:
                 f.write(json_str)
+            try:
+                os.chmod(temp_cache, 0o666)
+            except Exception:
+                pass
             os.replace(temp_cache, cache_file)
+            try:
+                os.chmod(cache_file, 0o666)
+            except Exception:
+                pass
         except Exception:
-            pass
+            try:
+                if os.path.exists(temp_cache):
+                    os.remove(temp_cache)
+            except Exception:
+                pass
         print(json_str)
 
     except Exception as e:
