@@ -596,7 +596,12 @@ def main():
                 "ssid": c.get("ssid", ""),
                 "apMac": c.get("apMac", c.get("ap_mac", "")),
                 "apName": c.get("apName", c.get("ap_name", "")),
-                "rssi": c.get("rssi", None)
+                "rssi": c.get("rssi", None),
+                "trafficDown": c.get("trafficDown", c.get("download", None)),
+                "trafficUp": c.get("trafficUp", c.get("upload", None)),
+                "uptime": c.get("uptime", None),
+                "radioId": c.get("radioId", None),
+                "currentSpeedMbps": None
             })
 
         result_data = {

@@ -442,7 +442,9 @@ document.addEventListener("DOMContentLoaded", () => {
 		const kpiHeavy = allClientsData.filter(c => {
 			const down = c.trafficDown || 0;
 			const up = c.trafficUp || 0;
-			return (down + up) > 524288;
+			const speedMbps = c.currentSpeedMbps || 0;
+			// Bytes-based threshold (>512 KB total) for Omada, OR speed-based (>100 Mbps) for Aruba
+			return (down + up) > 524288 || speedMbps > 100;
 		}).length;
 		
 		document.getElementById("kpi-total-clients").innerText = kpiTotal;
@@ -483,7 +485,15 @@ document.addEventListener("DOMContentLoaded", () => {
 				: '<span style="color: #26c281; font-weight: bold;">Ethernet</span>';
 				
 			const signalHtml = isWireless ? getSignalBadge(c.rssi) : '<span style="color: var(--font-alt-color);">--</span>';
-			const trafficHtml = 'Down: ' + formatBytes(c.trafficDown) + '<br>Up: ' + formatBytes(c.trafficUp);
+			let trafficHtml;
+		if (c.trafficDown != null || c.trafficUp != null) {
+			trafficHtml = 'Down: ' + formatBytes(c.trafficDown || 0) + '<br>Up: ' + formatBytes(c.trafficUp || 0);
+		} else if (c.currentSpeedMbps != null && c.currentSpeedMbps > 0) {
+			trafficHtml = '<span style="color:var(--font-alt-color); font-size:11px;">Link Speed</span><br><b>' + c.currentSpeedMbps + ' Mbps</b>';
+		} else {
+			trafficHtml = '<span style="color:var(--font-alt-color);">--</span>';
+		}
+
 			
 			let uptimeStr = '--';
 			if (c.uptime) {

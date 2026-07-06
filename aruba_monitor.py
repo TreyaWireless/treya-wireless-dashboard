@@ -383,7 +383,10 @@ def main():
                             "apMac": c_ap, # Map AP MAC as AP Name for matching
                             "rssi": - (100 - c_sig) if c_sig <= 100 else -70,
                             "signal": c_sig,
-                            "speed": c_spd
+                            "speed": c_spd,
+                            "currentSpeedMbps": c_spd,
+                            "trafficDown": None,
+                            "trafficUp": None
                         })
         except Exception as ex_cl:
             pass
