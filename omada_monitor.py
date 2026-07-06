@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
 import sys
 import json
-import urllib.request
-import urllib.parse
-import ssl
+import requests
+import urllib3
 import re
+import os
+import time
+import atexit
 from concurrent.futures import ThreadPoolExecutor
 
 
-def make_request(url, method="GET", data=None, token=None):
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+session = requests.Session()
+session.verify = False
+adapter = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=120)
+session.mount('http://', adapter)
+session.mount('https://', adapter)
+
+def make_request(url, method="GET", data=None, token=None):
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -25,15 +31,13 @@ def make_request(url, method="GET", data=None, token=None):
         else:
             headers["Token"] = token
 
-    req_data = None
-    if data:
-        req_data = json.dumps(data).encode("utf-8")
-
-    req = urllib.request.Request(url, method=method, data=req_data, headers=headers)
     try:
-        with urllib.request.urlopen(req, context=ctx) as response:
-            res_data = response.read().decode("utf-8")
-            return json.loads(res_data)
+        if method == "POST":
+            response = session.post(url, json=data, headers=headers, timeout=3)
+        else:
+            response = session.get(url, headers=headers, timeout=3)
+        response.raise_for_status()
+        return response.json()
     except Exception as e:
         raise Exception(f"HTTP request to {url} failed: {e}")
 
@@ -85,6 +89,12 @@ def normalize_port(port_str):
     return port_str
 
 def main():
+    script_start_time = time.time()
+    import signal
+    def sigterm_handler(signum, frame):
+        sys.exit(1)
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
     if len(sys.argv) < 5:
         print(json.dumps({
             "status": "error",
@@ -102,6 +112,67 @@ def main():
         print(json.dumps({
             "status": "error",
             "error_message": "Host interface IP is empty or unknown. Please define Agent interface on the host."
+        }))
+        sys.exit(0)
+
+    cache_file = f"/tmp/omada_cache_{ip}.json"
+    if os.path.exists(cache_file):
+        try:
+            mtime = os.path.getmtime(cache_file)
+            if time.time() - mtime < 240:  # 240 seconds cache TTL
+                with open(cache_file, "r") as f:
+                    cache_data = f.read()
+                    json.loads(cache_data)  # Validate JSON
+                    print(cache_data)
+                    sys.exit(0)
+        except Exception:
+            pass
+
+    # Try to acquire lock
+    acquired_lock = False
+    lock_file = f"/tmp/omada_lock_{ip}.lock"
+
+    # Break stale lock if older than 35 seconds
+    if os.path.exists(lock_file):
+        try:
+            mtime = os.path.getmtime(lock_file)
+            if time.time() - mtime > 35:
+                os.remove(lock_file)
+        except Exception:
+            pass
+
+    def cleanup_lock():
+        try:
+            os.remove(lock_file)
+        except Exception:
+            pass
+
+    for attempt in range(28):
+        try:
+            fd = os.open(lock_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(os.getpid()).encode())
+            os.close(fd)
+            acquired_lock = True
+            atexit.register(cleanup_lock)
+            break
+        except FileExistsError:
+            time.sleep(1.0)
+            if os.path.exists(cache_file):
+                try:
+                    mtime = os.path.getmtime(cache_file)
+                    if time.time() - mtime < 240:
+                        with open(cache_file, "r") as f:
+                            cache_data = f.read()
+                            json.loads(cache_data)
+                            print(cache_data)
+                            sys.exit(0)
+                except Exception:
+                    pass
+
+    if not acquired_lock:
+        print(json.dumps({
+            "status": "error",
+            "error_message": "Timed out waiting for another instance to populate cache"
         }))
         sys.exit(0)
 
@@ -206,6 +277,8 @@ def main():
             
             if online_ap_macs:
                 def fetch_one(mac):
+                    if time.time() - script_start_time > 10.0:
+                        return mac, None
                     url = f"{base_url}/openapi/v1/{omadac_id}/sites/{site_id}/aps/{mac}/radios"
                     try:
                         res = make_request(url, token=f"AccessToken={token}")
@@ -215,7 +288,7 @@ def main():
                         pass
                     return mac, None
 
-                with ThreadPoolExecutor(max_workers=35) as executor:
+                with ThreadPoolExecutor(max_workers=60) as executor:
                     futures = [executor.submit(fetch_one, m) for m in online_ap_macs]
                     for fut in futures:
                         mac, r_data = fut.result()
@@ -339,6 +412,8 @@ def main():
         try:
             if omadac_id:
                 for sw in switches:
+                    if time.time() - script_start_time > 10.0:
+                        break
                     sw_mac = sw.get("mac", "")
                     lldp_url = f"{base_url}/openapi/v1/{omadac_id}/sites/{site_id}/switches/{sw_mac}/lldp-neighbors?page=1&pageSize=100"
                     try:
@@ -502,7 +577,7 @@ def main():
                 "rssi": c.get("rssi", None)
             })
 
-        print(json.dumps({
+        result_data = {
             "status": "success",
             "online_aps": online_aps,
             "offline_aps": offline_aps,
@@ -523,7 +598,16 @@ def main():
             "switches": switches,
             "clients": formatted_clients,
             "error_message": ""
-        }, separators=(',', ':')))
+        }
+        json_str = json.dumps(result_data, separators=(',', ':'))
+        try:
+            temp_cache = cache_file + ".tmp"
+            with open(temp_cache, "w") as f:
+                f.write(json_str)
+            os.replace(temp_cache, cache_file)
+        except Exception:
+            pass
+        print(json_str)
 
     except Exception as e:
         print(json.dumps({
