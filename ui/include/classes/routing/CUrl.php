@@ -27,11 +27,8 @@ class CUrl {
 	 * @param string|null $url
 	 */
 	public function __construct($url = null) {
-		if ($url === 'zabbix.php') {
-			$url = 'treya.php';
-		}
-		elseif (is_string($url) && strpos($url, 'zabbix.php') === 0) {
-			$url = 'treya.php'.substr($url, 10);
+		if (is_string($url) && strpos($url, 'zabbix.php') !== false) {
+			$url = str_replace('zabbix.php', 'treya.php', $url);
 		}
 
 		if (empty($url)) {
@@ -59,8 +56,8 @@ class CUrl {
 
 			$this->formatArguments();
 		}
-		if ($this->url === 'zabbix.php') {
-			$this->url = 'treya.php';
+		if (is_string($this->url) && strpos($this->url, 'zabbix.php') !== false) {
+			$this->url = str_replace('zabbix.php', 'treya.php', $this->url);
 		}
 	}
 
@@ -110,9 +107,16 @@ class CUrl {
 	public function getUrl() {
 		$this->formatQuery();
 
-		$url = ($this->url === 'zabbix.php') ? 'treya.php' : $this->url;
+		$url = $this->url;
+		if (is_string($url) && strpos($url, 'zabbix.php') !== false) {
+			$url = str_replace('zabbix.php', 'treya.php', $url);
+		}
 		$url .= $this->query ? '?'.$this->query : '';
 		$url .= $this->reference ? '#'.urlencode($this->reference) : '';
+
+		if (is_string($url) && strpos($url, 'zabbix.php') !== false) {
+			$url = str_replace('zabbix.php', 'treya.php', $url);
+		}
 
 		return $url;
 	}

@@ -2571,6 +2571,12 @@ function generateUuidV4($seed = '') {
  */
 function getTileProviders(): array {
 	return [
+		'GoogleMaps.Hybrid' => [
+			'name' => 'Google Maps Satellite Hybrid',
+			'geomaps_tile_url' => 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+			'geomaps_max_zoom' => '20',
+			'geomaps_attribution' => '&copy; <a href="https://maps.google.com">Google Maps</a>'
+		],
 		'OpenStreetMap.Mapnik' => [
 			'name' => 'OpenStreetMap Mapnik',
 			'geomaps_tile_url' => 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
