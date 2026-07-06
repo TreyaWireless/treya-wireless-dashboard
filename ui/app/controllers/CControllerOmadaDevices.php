@@ -379,7 +379,23 @@ class CControllerOmadaDevices extends CController {
 				if ($hist) {
 					$json_data = json_decode($hist['value'], true);
 					if (is_array($json_data) && ($json_data['status'] ?? '') === 'success') {
-						$this->setResponse(new CControllerResponseData(['main_block' => $hist['value']]));
+						if (!isset($json_data['devices'])) {
+							$devices = [];
+							if (isset($json_data['eaps'])) {
+								foreach ($json_data['eaps'] as $ap) {
+									$ap['type'] = 'ap';
+									$devices[] = $ap;
+								}
+							}
+							if (isset($json_data['switches'])) {
+								foreach ($json_data['switches'] as $sw) {
+									$sw['type'] = 'switch';
+									$devices[] = $sw;
+								}
+							}
+							$json_data['devices'] = $devices;
+						}
+						$this->setResponse(new CControllerResponseData(['main_block' => json_encode($json_data)]));
 						return;
 					}
 				}
