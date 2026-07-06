@@ -513,21 +513,21 @@ document.addEventListener("DOMContentLoaded", () => {
 		tbody.innerHTML = rowsHtml;
 		
 		// Update Pagination Info
-		document.getElementById("pagination-info").innerText = `Showing ${totalEntries > 0 ? startIndex + 1 : 0} to ${endIndex} of ${totalEntries} entries`;
+		document.getElementById("pagination-info").innerText = `Showing \${totalEntries > 0 ? startIndex + 1 : 0} to \${endIndex} of \${totalEntries} entries`;
 		
 		// Generate Pagination Buttons
 		let buttonsHtml = '';
 		
 		// Prev Button
-		buttonsHtml += `<button type="button" class="btn-page" ${currentPage === 1 ? "disabled" : ""} onclick="changeClientsPage(${currentPage - 1})">◀ Prev</button>`;
+		buttonsHtml += `<button type="button" class="btn-page" \${currentPage === 1 ? "disabled" : ""} onclick="changeClientsPage(\${currentPage - 1})">◀ Prev</button>`;
 		
 		// Page Numbers
 		for (let i = 1; i <= totalPages; i++) {
-			buttonsHtml += `<button type="button" class="btn-page ${i === currentPage ? "active" : ""}" onclick="changeClientsPage(${i})">${i}</button>`;
+			buttonsHtml += `<button type="button" class="btn-page \${i === currentPage ? "active" : ""}" onclick="changeClientsPage(\${i})">\${i}</button>`;
 		}
 		
 		// Next Button
-		buttonsHtml += `<button type="button" class="btn-page" ${currentPage === totalPages ? "disabled" : ""} onclick="changeClientsPage(${currentPage + 1})">Next ▶</button>`;
+		buttonsHtml += `<button type="button" class="btn-page" \${currentPage === totalPages ? "disabled" : ""} onclick="changeClientsPage(\${currentPage + 1})">Next ▶</button>`;
 		
 		document.getElementById("pagination-buttons").innerHTML = buttonsHtml;
 	}
