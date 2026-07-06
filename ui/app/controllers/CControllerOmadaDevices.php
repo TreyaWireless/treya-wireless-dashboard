@@ -119,7 +119,7 @@ class CControllerOmadaDevices extends CController {
 						'output' => ['itemid'],
 						'hostids' => $hostid,
 						'filter' => [
-							'key_' => 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+							'key_' => 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}","{$ARUBA_SSH_PASS}","{$ARUBA_FW_PASS}","{$ARUBA_SWITCH_IPS}"]'
 						]
 					]);
 					

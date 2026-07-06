@@ -8,8 +8,129 @@ import os
 import time
 import atexit
 import xml.etree.ElementTree as ET
+import paramiko
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+def recv_until(chan, pattern, timeout=10):
+    buf = ""
+    start = time.time()
+    while time.time() - start < timeout:
+        if chan.recv_ready():
+            chunk = chan.recv(4096).decode('utf-8', errors='ignore')
+            buf += chunk
+            if isinstance(pattern, list):
+                if any(p in buf for p in pattern):
+                    return buf
+            elif pattern in buf:
+                return buf
+        time.sleep(0.1)
+    return buf
+
+def fetch_switches_info(fw_ip, fw_user, fw_pass, sw_pass, sw_ips):
+    switches = []
+    if not sw_ips:
+        return switches
+
+    ip_list = [ip.strip() for ip in sw_ips.split(",") if ip.strip()]
+    if not ip_list:
+        return switches
+
+    for sw_ip in ip_list:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            # 1. Connect to Firewall SSH
+            ssh.connect(fw_ip, port=22, username=fw_user, password=fw_pass, timeout=8)
+            chan = ssh.invoke_shell()
+            
+            # Wait for banner and accept
+            recv_until(chan, ["Press 'a' to accept", "(Press 'a' to accept):"], timeout=8)
+            chan.send("a")
+            time.sleep(0.5)
+            
+            # Wait for firewall prompt
+            recv_until(chan, ["# "], timeout=8)
+            
+            # 2. SSH to Switch
+            chan.send(f"execute ssh admin@{sw_ip}\n")
+            out = recv_until(chan, ["Are you sure you want to continue connecting", "password:", "Password:"], timeout=10)
+            
+            if "Are you sure you want to continue connecting" in out:
+                chan.send("yes\n")
+                out = recv_until(chan, ["password:", "Password:"], timeout=8)
+                
+            chan.send(f"{sw_pass}\n")
+            prompt = recv_until(chan, [">", "#"], timeout=12)
+            
+            if "#" not in prompt and ">" not in prompt:
+                raise Exception("Switch login failed or timed out")
+                
+            # 3. Run version and system commands
+            chan.send("show version\n")
+            time.sleep(1.0)
+            chan.send("show system\n")
+            time.sleep(1.0)
+            
+            output = recv_until(chan, "never_matches", timeout=3)
+            ssh.close()
+            
+            # Parse fields
+            hostname = sw_ip
+            model = "Aruba Switch"
+            serial = ""
+            mac = ""
+            os_ver = ""
+            uptime = ""
+            
+            for line in output.splitlines():
+                line_str = line.strip()
+                if not line_str:
+                    continue
+                if "Hostname" in line_str and ":" in line_str:
+                    hostname = line_str.split(":", 1)[1].strip()
+                elif "Product Name" in line_str and ":" in line_str:
+                    model = line_str.split(":", 1)[1].strip()
+                elif "Chassis Serial Nbr" in line_str and ":" in line_str:
+                    serial = line_str.split(":", 1)[1].strip()
+                elif "Base MAC Address" in line_str and ":" in line_str:
+                    mac = line_str.split(":", 1)[1].strip()
+                elif "ArubaOS-CX Version" in line_str and ":" in line_str:
+                    os_ver = line_str.split(":", 1)[1].strip()
+                elif "Up Time" in line_str and ":" in line_str:
+                    uptime = line_str.split(":", 1)[1].strip()
+            
+            switches.append({
+                "name": hostname,
+                "ip": sw_ip,
+                "mac": mac or sw_ip,
+                "status": 1,
+                "model": model,
+                "sn": serial,
+                "firmwareVersion": os_ver,
+                "uptime": uptime or "Unknown",
+                "lastSeen": None
+            })
+            
+        except Exception as e:
+            # Switch is offline or failed
+            switches.append({
+                "name": f"Switch-{sw_ip}",
+                "ip": sw_ip,
+                "mac": sw_ip,
+                "status": 0,
+                "model": "Aruba Switch",
+                "sn": "",
+                "firmwareVersion": "",
+                "uptime": "--",
+                "lastSeen": int(time.time() * 1000)
+            })
+            try:
+                ssh.close()
+            except Exception:
+                pass
+                
+    return switches
 
 def main():
     script_start_time = time.time()
@@ -20,6 +141,7 @@ def main():
     signal.signal(signal.SIGTERM, sigterm_handler)
 
     is_update_task = False
+    # Check if this is the background cache updater run
     if "--update-cache" in sys.argv:
         is_update_task = True
         sys.argv.remove("--update-cache")
@@ -27,7 +149,7 @@ def main():
     if len(sys.argv) < 5:
         print(json.dumps({
             "status": "error",
-            "error_message": "Usage: aruba_monitor.py <ip> <port> <username> <password>"
+            "error_message": "Usage: aruba_monitor.py <ip> <port> <username> <password> [<sw_ssh_pass> <fw_pass> <sw_ips>]"
         }))
         sys.exit(1)
 
@@ -35,6 +157,16 @@ def main():
     port = sys.argv[2]
     username = sys.argv[3]
     password = sys.argv[4]
+    
+    # Extra parameters for switch SSH hop
+    sw_ssh_pass = sys.argv[5] if len(sys.argv) > 5 else ""
+    fw_pass = sys.argv[6] if len(sys.argv) > 6 else ""
+    sw_ips = sys.argv[7] if len(sys.argv) > 7 else ""
+    
+    # Sanitize inputs that could be empty macros passed literally by Zabbix
+    if sw_ssh_pass.startswith("{$"): sw_ssh_pass = ""
+    if fw_pass.startswith("{$"): fw_pass = ""
+    if sw_ips.startswith("{$") or sw_ips == "" or sw_ips == "*UNKNOWN*": sw_ips = ""
 
     if ip == "{HOST.CONN}" or ip == "" or ip == "*UNKNOWN*":
         print(json.dumps({
@@ -60,8 +192,15 @@ def main():
                     if not os.path.exists(lock_file):
                         import subprocess
                         script_file = os.path.abspath(__file__)
+                        
+                        # Forward all extra parameters to background runner
+                        args = [sys.executable, script_file, ip, port, username, password]
+                        if len(sys.argv) > 5:
+                            args.extend(sys.argv[5:])
+                        args.append("--update-cache")
+                        
                         subprocess.Popen(
-                            [sys.executable, script_file, ip, port, username, password, "--update-cache"],
+                            args,
                             stdout=subprocess.DEVNULL,
                             stderr=subprocess.DEVNULL,
                             start_new_session=True
@@ -244,29 +383,38 @@ def main():
         except Exception as ex_cl:
             pass
 
+        # 4. Fetch switches info via SSH hop through firewall
+        switches = []
+        if sw_ips and sw_ssh_pass and fw_pass:
+            switches = fetch_switches_info(ip, username, fw_pass, sw_ssh_pass, sw_ips)
+
         # Generate summary numbers
         total_aps = len(eaps)
         online_aps = len(eaps)
         offline_aps = 0
         total_clients = len(clients)
+        
+        online_switches = len([s for s in switches if s["status"] == 1])
+        offline_switches = len([s for s in switches if s["status"] == 0])
+        total_switches = len(switches)
 
         result_data = {
             "status": "success",
             "online_aps": online_aps,
             "offline_aps": offline_aps,
             "total_aps": total_aps,
-            "online_switches": 0,
-            "offline_switches": 0,
-            "total_switches": 0,
+            "online_switches": online_switches,
+            "offline_switches": offline_switches,
+            "total_switches": total_switches,
             "online_gateways": 0,
             "offline_gateways": 0,
             "total_gateways": 0,
-            "total_devices": total_aps,
+            "total_devices": total_aps + total_switches,
             "total_clients": total_clients,
             "active_loops": 0,
             "loop_status_text": "No loops detected.",
             "eaps": eaps,
-            "switches": [],
+            "switches": switches,
             "clients": clients,
             "error_message": ""
         }

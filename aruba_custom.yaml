@@ -13,12 +13,12 @@ zabbix_export:
         - uuid: 2f9a2b8e3d0c490a9a0a9e230722d625
           name: 'Aruba: Get Controller Data'
           type: EXTERNAL
-          key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+          key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}","{$ARUBA_SSH_PASS}","{$ARUBA_FW_PASS}","{$ARUBA_SWITCH_IPS}"]'
           delay: 30s
           history: 1d
           trends: '0'
           value_type: TEXT
-          description: 'Runs the Python script to fetch raw JSON metrics from Aruba Controller Virtual Controller via swarm.cgi.'
+          description: 'Runs the Python script to fetch raw JSON metrics from Aruba Controller Virtual Controller via swarm.cgi and switches via SSH hop.'
         - uuid: 3f9a2b8e3d0c490a9a0a9e230722d625
           name: 'Aruba APs: Online'
           type: DEPENDENT
@@ -27,7 +27,7 @@ zabbix_export:
           history: 7d
           value_type: FLOAT
           master_item:
-            key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+            key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}","{$ARUBA_SSH_PASS}","{$ARUBA_FW_PASS}","{$ARUBA_SWITCH_IPS}"]'
           preprocessing:
             - type: JSONPATH
               parameters:
@@ -40,7 +40,7 @@ zabbix_export:
           history: 7d
           value_type: FLOAT
           master_item:
-            key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+            key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}","{$ARUBA_SSH_PASS}","{$ARUBA_FW_PASS}","{$ARUBA_SWITCH_IPS}"]'
           preprocessing:
             - type: JSONPATH
               parameters:
@@ -53,7 +53,7 @@ zabbix_export:
           history: 7d
           value_type: FLOAT
           master_item:
-            key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+            key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}","{$ARUBA_SSH_PASS}","{$ARUBA_FW_PASS}","{$ARUBA_SWITCH_IPS}"]'
           preprocessing:
             - type: JSONPATH
               parameters:
@@ -66,7 +66,7 @@ zabbix_export:
           history: 7d
           value_type: FLOAT
           master_item:
-            key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+            key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}","{$ARUBA_SSH_PASS}","{$ARUBA_FW_PASS}","{$ARUBA_SWITCH_IPS}"]'
           preprocessing:
             - type: JSONPATH
               parameters:
@@ -78,7 +78,7 @@ zabbix_export:
           key: aruba.eaps.discovery
           delay: '0'
           master_item:
-            key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+            key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}","{$ARUBA_SSH_PASS}","{$ARUBA_FW_PASS}","{$ARUBA_SWITCH_IPS}"]'
           lld_macro_paths:
             - lld_macro: '{#AP_NAME}'
               path: $.name
@@ -99,7 +99,7 @@ zabbix_export:
               history: 7d
               value_type: FLOAT
               master_item:
-                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}","{$ARUBA_SSH_PASS}","{$ARUBA_FW_PASS}","{$ARUBA_SWITCH_IPS}"]'
               preprocessing:
                 - type: JSONPATH
                   parameters:
@@ -120,7 +120,7 @@ zabbix_export:
               units: '%'
               description: '2.4 GHz channel utilization percentage.'
               master_item:
-                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}","{$ARUBA_SSH_PASS}","{$ARUBA_FW_PASS}","{$ARUBA_SWITCH_IPS}"]'
               preprocessing:
                 - type: JSONPATH
                   parameters:
@@ -144,7 +144,7 @@ zabbix_export:
               units: '%'
               description: '5 GHz channel utilization percentage.'
               master_item:
-                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}","{$ARUBA_SSH_PASS}","{$ARUBA_FW_PASS}","{$ARUBA_SWITCH_IPS}"]'
               preprocessing:
                 - type: JSONPATH
                   parameters:
@@ -168,7 +168,7 @@ zabbix_export:
               units: dBm
               description: '2.4 GHz Noise Floor.'
               master_item:
-                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}","{$ARUBA_SSH_PASS}","{$ARUBA_FW_PASS}","{$ARUBA_SWITCH_IPS}"]'
               preprocessing:
                 - type: JSONPATH
                   parameters:
@@ -192,7 +192,7 @@ zabbix_export:
               units: dBm
               description: '5 GHz Noise Floor.'
               master_item:
-                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}","{$ARUBA_SSH_PASS}","{$ARUBA_FW_PASS}","{$ARUBA_SWITCH_IPS}"]'
               preprocessing:
                 - type: JSONPATH
                   parameters:
@@ -216,7 +216,7 @@ zabbix_export:
               units: dBm
               description: '2.4 GHz Transmit Power (dBm).'
               master_item:
-                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}","{$ARUBA_SSH_PASS}","{$ARUBA_FW_PASS}","{$ARUBA_SWITCH_IPS}"]'
               preprocessing:
                 - type: JSONPATH
                   parameters:
@@ -234,7 +234,7 @@ zabbix_export:
               units: dBm
               description: '5 GHz Transmit Power (dBm).'
               master_item:
-                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}"]'
+                key: 'aruba_monitor.py["{HOST.CONN}","{$ARUBA_PORT}","{$ARUBA_USER}","{$ARUBA_PASS}","{$ARUBA_SSH_PASS}","{$ARUBA_FW_PASS}","{$ARUBA_SWITCH_IPS}"]'
               preprocessing:
                 - type: JSONPATH
                   parameters:
@@ -259,6 +259,17 @@ zabbix_export:
         - macro: '{$ARUBA_NOISE_THRESHOLD}'
           value: '-65'
           description: 'RF Noise Floor WARNING threshold (dBm)'
+        - macro: '{$ARUBA_SSH_PASS}'
+          type: SECRET_TEXT
+          value: '7I8IPJk1WhnexicG'
+          description: 'Aruba Switches SSH Password'
+        - macro: '{$ARUBA_FW_PASS}'
+          type: SECRET_TEXT
+          value: 'P2d25vh4m!WNuMfihO24'
+          description: 'Firewall Web UI Password'
+        - macro: '{$ARUBA_SWITCH_IPS}'
+          value: '10.0.3.253,10.0.3.252,10.0.3.251,10.0.3.250,10.0.3.249'
+          description: 'Aruba Switch Local IPs (comma-separated)'
   triggers:
     - uuid: e61c7d89b1c0490a9a0a9e230722d625
       expression: 'last(/Aruba Controller Custom API/aruba.online_aps)=0'
