@@ -89,7 +89,7 @@ class CMenuItem extends CTag {
 	 * @return CMenuItem
 	 */
 	public function setAction(string $action_name): self {
-		return $this->setUrl((new CUrl('zabbix.php'))->setArgument('action', $action_name), $action_name);
+		return $this->setUrl((new CUrl('treya.php'))->setArgument('action', $action_name), $action_name);
 	}
 
 	/**

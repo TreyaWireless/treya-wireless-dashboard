@@ -33,9 +33,9 @@ def make_request(url, method="GET", data=None, token=None):
 
     try:
         if method == "POST":
-            response = session.post(url, json=data, headers=headers, timeout=3)
+            response = session.post(url, json=data, headers=headers, timeout=10)
         else:
-            response = session.get(url, headers=headers, timeout=3)
+            response = session.get(url, headers=headers, timeout=10)
         response.raise_for_status()
         return response.json()
     except Exception as e:
@@ -294,7 +294,7 @@ def main():
             
             if online_ap_macs:
                 def fetch_one(mac):
-                    if time.time() - script_start_time > 10.0:
+                    if not is_update_task and time.time() - script_start_time > 25.0:
                         return mac, None
                     url = f"{base_url}/openapi/v1/{omadac_id}/sites/{site_id}/aps/{mac}/radios"
                     try:
@@ -429,7 +429,7 @@ def main():
         try:
             if omadac_id:
                 for sw in switches:
-                    if time.time() - script_start_time > 10.0:
+                    if not is_update_task and time.time() - script_start_time > 25.0:
                         break
                     sw_mac = sw.get("mac", "")
                     lldp_url = f"{base_url}/openapi/v1/{omadac_id}/sites/{site_id}/switches/{sw_mac}/lldp-neighbors?page=1&pageSize=100"
