@@ -95,6 +95,11 @@ def main():
         sys.exit(1)
     signal.signal(signal.SIGTERM, sigterm_handler)
 
+    is_update_task = False
+    if "--update-cache" in sys.argv:
+        is_update_task = True
+        sys.argv.remove("--update-cache")
+
     if len(sys.argv) < 5:
         print(json.dumps({
             "status": "error",
@@ -116,21 +121,33 @@ def main():
         sys.exit(0)
 
     cache_file = f"/tmp/omada_cache_{ip}.json"
-    if os.path.exists(cache_file):
-        try:
-            mtime = os.path.getmtime(cache_file)
-            if time.time() - mtime < 240:  # 240 seconds cache TTL
+    lock_file = f"/tmp/omada_lock_{ip}.lock"
+
+    if not is_update_task:
+        if os.path.exists(cache_file):
+            try:
                 with open(cache_file, "r") as f:
                     cache_data = f.read()
-                    json.loads(cache_data)  # Validate JSON
-                    print(cache_data)
-                    sys.exit(0)
-        except Exception:
-            pass
+                json.loads(cache_data)  # Validate JSON
+                print(cache_data)
+                
+                # If cache is older than 120 seconds, spawn background process to update it
+                mtime = os.path.getmtime(cache_file)
+                if time.time() - mtime >= 120:
+                    if not os.path.exists(lock_file):
+                        import subprocess
+                        subprocess.Popen(
+                            [sys.executable, sys.argv[0], ip, port, arg3, arg4, omadac_id, "--update-cache"],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                            start_new_session=True
+                        )
+                sys.exit(0)
+            except Exception:
+                pass
 
     # Try to acquire lock
     acquired_lock = False
-    lock_file = f"/tmp/omada_lock_{ip}.lock"
 
     # Break stale lock if older than 35 seconds
     if os.path.exists(lock_file):
