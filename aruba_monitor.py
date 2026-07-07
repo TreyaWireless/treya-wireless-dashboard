@@ -36,84 +36,121 @@ def fetch_switches_info(fw_ip, fw_user, fw_pass, sw_pass, sw_ips):
     if not ip_list:
         return switches
 
-    for sw_ip in ip_list:
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        try:
-            # 1. Connect to Firewall SSH
-            ssh.connect(fw_ip, port=22, username=fw_user, password=fw_pass, timeout=8)
-            chan = ssh.invoke_shell()
-            
-            # Wait for banner and accept
-            recv_until(chan, ["Press 'a' to accept", "(Press 'a' to accept):"], timeout=8)
-            chan.send("a")
-            time.sleep(0.5)
-            
-            # Wait for firewall prompt
-            recv_until(chan, ["# "], timeout=8)
-            
-            # 2. SSH to Switch
-            chan.send(f"execute ssh admin@{sw_ip}\n")
-            out = recv_until(chan, ["Are you sure you want to continue connecting", "password:", "Password:"], timeout=10)
-            
-            if "Are you sure you want to continue connecting" in out:
-                chan.send("yes\n")
-                out = recv_until(chan, ["password:", "Password:"], timeout=8)
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        ssh.connect(fw_ip, port=22, username=fw_user, password=fw_pass, timeout=8)
+        chan = ssh.invoke_shell()
+        
+        recv_until(chan, ["Press 'a' to accept", "(Press 'a' to accept):"], timeout=8)
+        chan.send("a")
+        time.sleep(0.5)
+        
+        # Determine dynamic firewall prompt
+        fw_init_output = recv_until(chan, ["# "], timeout=8)
+        lines = fw_init_output.splitlines()
+        fw_prompt = "# "
+        for line in reversed(lines):
+            if "#" in line:
+                fw_prompt = line.strip()
+                break
+        
+        for sw_ip in ip_list:
+            try:
+                chan.send(f"execute ssh admin@{sw_ip}\n")
+                out = recv_until(chan, ["Are you sure you want to continue connecting", "password:", "Password:"], timeout=10)
                 
-            chan.send(f"{sw_pass}\n")
-            prompt = recv_until(chan, [">", "#"], timeout=12)
-            
-            if "#" not in prompt and ">" not in prompt:
-                raise Exception("Switch login failed or timed out")
+                if "Are you sure you want to continue connecting" in out:
+                    chan.send("yes\n")
+                    out = recv_until(chan, ["password:", "Password:"], timeout=8)
+                    
+                chan.send(f"{sw_pass}\n")
                 
-            # 3. Run version and system commands
-            chan.send("show version\n")
-            time.sleep(1.0)
-            chan.send("show system\n")
-            time.sleep(1.0)
-            
-            output = recv_until(chan, "never_matches", timeout=3)
-            ssh.close()
-            
-            # Parse fields
-            hostname = sw_ip
-            model = "Aruba Switch"
-            serial = ""
-            mac = ""
-            os_ver = ""
-            uptime = ""
-            
-            for line in output.splitlines():
-                line_str = line.strip()
-                if not line_str:
-                    continue
-                if "Hostname" in line_str and ":" in line_str:
-                    hostname = line_str.split(":", 1)[1].strip()
-                elif "Product Name" in line_str and ":" in line_str:
-                    model = line_str.split(":", 1)[1].strip()
-                elif "Chassis Serial Nbr" in line_str and ":" in line_str:
-                    serial = line_str.split(":", 1)[1].strip()
-                elif "Base MAC Address" in line_str and ":" in line_str:
-                    mac = line_str.split(":", 1)[1].strip()
-                elif "ArubaOS-CX Version" in line_str and ":" in line_str:
-                    os_ver = line_str.split(":", 1)[1].strip()
-                elif "Up Time" in line_str and ":" in line_str:
-                    uptime = line_str.split(":", 1)[1].strip()
-            
-            switches.append({
-                "name": hostname,
-                "ip": sw_ip,
-                "mac": mac or sw_ip,
-                "status": 1,
-                "model": model,
-                "sn": serial,
-                "firmwareVersion": os_ver,
-                "uptime": uptime or "Unknown",
-                "lastSeen": None
-            })
-            
-        except Exception as e:
-            # Switch is offline or failed
+                # Wait for switch prompt (make sure it doesn't contain fw_prompt)
+                prompt = recv_until(chan, [">", "#"], timeout=12)
+                if fw_prompt in prompt:
+                    raise Exception("Returned to firewall prompt prematurely or login failed")
+                
+                # Deduce clean switch prompt from the last line
+                sw_prompt = "#"
+                prompt_lines = prompt.splitlines()
+                for line in reversed(prompt_lines):
+                    if "#" in line or ">" in line:
+                        sw_prompt = line.strip()
+                        break
+                        
+                chan.send("show version\n")
+                time.sleep(1.0)
+                chan.send("show system\n")
+                time.sleep(1.0)
+                
+                output = recv_until(chan, sw_prompt, timeout=5)
+                
+                hostname = sw_ip
+                model = "Aruba Switch"
+                serial = ""
+                mac = ""
+                os_ver = ""
+                uptime = ""
+                
+                for line in output.splitlines():
+                    line_str = line.strip()
+                    if not line_str:
+                        continue
+                    if "Hostname" in line_str and ":" in line_str:
+                        hostname = line_str.split(":", 1)[1].strip()
+                    elif "Product Name" in line_str and ":" in line_str:
+                        model = line_str.split(":", 1)[1].strip()
+                    elif "Chassis Serial Nbr" in line_str and ":" in line_str:
+                        serial = line_str.split(":", 1)[1].strip()
+                    elif "Base MAC Address" in line_str and ":" in line_str:
+                        mac = line_str.split(":", 1)[1].strip()
+                    elif "ArubaOS-CX Version" in line_str and ":" in line_str:
+                        os_ver = line_str.split(":", 1)[1].strip()
+                    elif "Up Time" in line_str and ":" in line_str:
+                        uptime = line_str.split(":", 1)[1].strip()
+                
+                switches.append({
+                    "name": hostname,
+                    "ip": sw_ip,
+                    "mac": mac or sw_ip,
+                    "status": 1,
+                    "model": model,
+                    "sn": serial,
+                    "firmwareVersion": os_ver,
+                    "uptime": uptime or "Unknown",
+                    "lastSeen": None
+                })
+                
+                # Exit switch to return to firewall prompt
+                chan.send("exit\n")
+                recv_until(chan, fw_prompt, timeout=8)
+                
+            except Exception as e:
+                switches.append({
+                    "name": f"Switch-{sw_ip}",
+                    "ip": sw_ip,
+                    "mac": sw_ip,
+                    "status": 0,
+                    "model": "Aruba Switch",
+                    "sn": "",
+                    "firmwareVersion": "",
+                    "uptime": "--",
+                    "lastSeen": int(time.time() * 1000)
+                })
+                # Abort any hung connection/prompt using Ctrl+C
+                try:
+                    chan.send("\x03")
+                    time.sleep(0.5)
+                    chan.send("exit\n")
+                    time.sleep(0.5)
+                    chan.send("\n")
+                    recv_until(chan, fw_prompt, timeout=5)
+                except Exception:
+                    pass
+        ssh.close()
+    except Exception as e:
+        for sw_ip in ip_list:
             switches.append({
                 "name": f"Switch-{sw_ip}",
                 "ip": sw_ip,
@@ -125,12 +162,9 @@ def fetch_switches_info(fw_ip, fw_user, fw_pass, sw_pass, sw_ips):
                 "uptime": "--",
                 "lastSeen": int(time.time() * 1000)
             })
-            try:
-                ssh.close()
-            except Exception:
-                pass
-                
+            
     return switches
+
 
 def main():
     script_start_time = time.time()
