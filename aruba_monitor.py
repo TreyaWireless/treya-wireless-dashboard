@@ -209,8 +209,15 @@ def main():
         }))
         sys.exit(0)
 
+    lock_dir = "/tmp/treya_locks"
+    try:
+        os.makedirs(lock_dir, exist_ok=True)
+        os.chmod(lock_dir, 0o777)
+    except Exception:
+        pass
+
     cache_file = f"/tmp/aruba_cache_{ip}.json"
-    lock_file = f"/tmp/aruba_lock_{ip}.lock"
+    lock_file = os.path.join(lock_dir, f"aruba_lock_{ip}.lock")
 
     if not is_update_task:
         if os.path.exists(cache_file):
@@ -498,7 +505,18 @@ def main():
                 os.chmod(temp_cache, 0o666)
             except Exception:
                 pass
-            os.replace(temp_cache, cache_file)
+            
+            try:
+                os.replace(temp_cache, cache_file)
+            except PermissionError:
+                # Fallback to direct write if directory permissions (sticky bit) block rename
+                with open(cache_file, "w") as f:
+                    f.write(json_str)
+                try:
+                    os.remove(temp_cache)
+                except Exception:
+                    pass
+            
             try:
                 os.chmod(cache_file, 0o666)
             except Exception:
