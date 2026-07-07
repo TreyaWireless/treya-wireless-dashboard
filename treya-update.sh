@@ -62,6 +62,13 @@ if [ -f "$TMP_DIR/repo/aruba_monitor.py" ]; then
     chmod +x /usr/lib/treya-wireless/externalscripts/aruba_monitor.py 2>/dev/null || true
     echo "aruba_monitor.py updated."
 fi
+if [ -f "$TMP_DIR/repo/treya_route_sync.py" ]; then
+    cp $TMP_DIR/repo/treya_route_sync.py /usr/local/bin/treya_route_sync.py 2>/dev/null || true
+    chmod +x /usr/local/bin/treya_route_sync.py 2>/dev/null || true
+    (crontab -l 2>/dev/null | grep -v 'treya_route_sync.py'; echo '* * * * * /usr/bin/python3 /usr/local/bin/treya_route_sync.py >/dev/null 2>&1') | crontab -
+    echo "treya_route_sync.py updated and cron job registered."
+fi
+
 
 # Ensure config directories have correct ownerships
 chown -R treya_wireless:treya_wireless /etc/treya /etc/treya-wireless 2>/dev/null || true

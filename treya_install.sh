@@ -271,6 +271,14 @@ echo "[STEP 12] Setting up Python dependencies..."
 dnf install -y python3-pip python3-requests 2>/dev/null || true
 pip3 install requests 2>/dev/null || true
 
+# Install route sync script if available
+if [ -f ./treya_route_sync.py ]; then
+    cp ./treya_route_sync.py /usr/local/bin/treya_route_sync.py 2>/dev/null || true
+    chmod +x /usr/local/bin/treya_route_sync.py 2>/dev/null || true
+    (crontab -l 2>/dev/null | grep -v 'treya_route_sync.py'; echo '* * * * * /usr/bin/python3 /usr/local/bin/treya_route_sync.py >/dev/null 2>&1') | crontab -
+    echo "treya_route_sync.py installed and cron job registered."
+fi
+
 # Clean temp directory
 rm -rf /tmp/treya_rpms_install
 
