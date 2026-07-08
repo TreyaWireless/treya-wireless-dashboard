@@ -120,14 +120,14 @@ def main():
         }))
         sys.exit(0)
 
-    lock_dir = "/tmp/treya_locks"
+    lock_dir = "/var/cache/treya-wireless/locks"
     try:
         os.makedirs(lock_dir, exist_ok=True)
         os.chmod(lock_dir, 0o777)
     except Exception:
         pass
 
-    cache_file = f"/tmp/omada_cache_{ip}.json"
+    cache_file = f"/var/cache/treya-wireless/omada_cache_{ip}.json"
     lock_file = os.path.join(lock_dir, f"omada_lock_{ip}.lock")
 
     if not is_update_task:

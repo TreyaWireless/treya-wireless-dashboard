@@ -31,6 +31,15 @@ class CControllerOmadaClients extends CController {
 			$all_omada_hostids[] = $row['hostid'];
 		}
 
+		if ($all_omada_hostids) {
+			$permitted_hosts = API::Host()->get([
+				'output' => ['hostid'],
+				'hostids' => $all_omada_hostids,
+				'preservekeys' => true
+			]);
+			$all_omada_hostids = array_keys($permitted_hosts);
+		}
+
 		$resolved_hostids = [];
 
 		if (!$groupids && !$hostids) {

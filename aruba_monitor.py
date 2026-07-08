@@ -162,8 +162,64 @@ def fetch_switches_info(fw_ip, fw_user, fw_pass, sw_pass, sw_ips):
                 "uptime": "--",
                 "lastSeen": int(time.time() * 1000)
             })
-            
     return switches
+def format_aruba_uptime(raw_time):
+    if not raw_time:
+        return "Unknown"
+    parts = raw_time.split(':')
+    friendly_parts = [p for p in parts if not p.endswith('s')]
+    if friendly_parts:
+        return " ".join(friendly_parts)
+    return raw_time
+
+def parse_cli_table(table_text):
+    lines = table_text.strip().splitlines()
+    if not lines:
+        return []
+    
+    sep_idx = -1
+    for idx, line in enumerate(lines):
+        if (line.startswith('----') and ' ' in line) or (line.strip() and all(c in '- ' for c in line) and ' ' in line):
+            sep_idx = idx
+            break
+            
+    if sep_idx == -1:
+        return []
+        
+    sep_line = lines[sep_idx]
+    col_starts = []
+    in_dash = False
+    for i, c in enumerate(sep_line):
+        if c == '-':
+            if not in_dash:
+                col_starts.append(i)
+                in_dash = True
+        else:
+            in_dash = False
+            
+    columns = []
+    for idx, start in enumerate(col_starts):
+        end = col_starts[idx + 1] if idx + 1 < len(col_starts) else len(sep_line)
+        columns.append((start, end))
+        
+    header_line = lines[sep_idx - 1] if sep_idx > 0 else ""
+    headers = []
+    for start, end in columns:
+        headers.append(header_line[start:end].strip())
+        
+    rows = []
+    for line in lines[sep_idx + 1:]:
+        if not line.strip():
+            continue
+        if line.startswith('---') or 'Access Points' in line:
+            continue
+        row = {}
+        for (start, end), header in zip(columns, headers):
+            val = line[start:end].strip() if start < len(line) else ""
+            row[header] = val
+        if row.get('Name'):
+            rows.append(row)
+    return rows
 
 
 def main():
@@ -209,14 +265,14 @@ def main():
         }))
         sys.exit(0)
 
-    lock_dir = "/tmp/treya_locks"
+    lock_dir = "/var/cache/treya-wireless/locks"
     try:
         os.makedirs(lock_dir, exist_ok=True)
         os.chmod(lock_dir, 0o777)
     except Exception:
         pass
 
-    cache_file = f"/tmp/aruba_cache_{ip}.json"
+    cache_file = f"/var/cache/treya-wireless/aruba_cache_{ip}.json"
     lock_file = os.path.join(lock_dir, f"aruba_lock_{ip}.lock")
 
     if not is_update_task:
@@ -351,6 +407,20 @@ def main():
         # 2. Fetch Access Points
         r_aps = session.post(url, data={'opcode': 'show', 'cmd': 'show aps', 'sid': sid}, timeout=10)
         r_aps.raise_for_status()
+
+        # Fetch individual AP age (uptime) from support command
+        ap_uptimes = {}
+        try:
+            r_support = session.post(url, data={'opcode': 'support', 'cmd': 'show aps', 'sid': sid}, timeout=10)
+            if r_support.status_code == 200:
+                parsed_aps = parse_cli_table(r_support.text)
+                for ap in parsed_aps:
+                    ap_name = ap.get("Name")
+                    ap_age = ap.get("Age")
+                    if ap_name and ap_age:
+                        ap_uptimes[ap_name] = format_aruba_uptime(ap_age)
+        except Exception:
+            pass
         
         # 3. Fetch Clients
         r_clients = session.post(url, data={'opcode': 'show', 'cmd': 'show clients', 'sid': sid}, timeout=10)
@@ -396,13 +466,14 @@ def main():
                         noise_2g = int(noise_2g_match.group(0)) if noise_2g_match else 0
 
                         # Map to JSON object
+                        mapped_uptime = ap_uptimes.get(ap_name, elected_time)
                         eaps.append({
                             "name": ap_name,
                             "ip": ap_ip,
                             "mac": ap_name, # Map MAC as AP Name for client count matching logic
                             "status": 1,
                             "model": ap_model,
-                            "uptime": elected_time,
+                            "uptime": mapped_uptime,
                             "clientCount": ap_clients,
                             "channel_2g": chan_2g,
                             "channel_5g": chan_5g,

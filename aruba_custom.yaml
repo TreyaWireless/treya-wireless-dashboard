@@ -130,7 +130,7 @@ zabbix_export:
                     - 3600s
               trigger_prototypes:
                 - uuid: ec2f0bdb190e4508a7c8166730b69f2b
-                  expression: 'last(/Aruba Controller Custom API/aruba.ap.chan_util_2g[{#AP_NAME}])>70 and last(/Aruba Controller Custom API/aruba.ap.chan_util_2g[{#AP_NAME}])>=0'
+                  expression: 'min(/Aruba Controller Custom API/aruba.ap.chan_util_2g[{#AP_NAME}],3m)>70 and min(/Aruba Controller Custom API/aruba.ap.chan_util_2g[{#AP_NAME}],3m)>=0'
                   name: 'High 2.4GHz Channel Interference on AP {#AP_NAME} on {HOST.NAME} (>{$ARUBA_CHAN_UTIL_WARN}%)'
                   priority: WARNING
                   description: 'AP {#AP_NAME} 2.4 GHz channel utilization is high.'
@@ -154,7 +154,7 @@ zabbix_export:
                     - 3600s
               trigger_prototypes:
                 - uuid: df0828b767404c148ca9c89c95e9e7b0
-                  expression: 'last(/Aruba Controller Custom API/aruba.ap.chan_util_5g[{#AP_NAME}])>70 and last(/Aruba Controller Custom API/aruba.ap.chan_util_5g[{#AP_NAME}])>=0'
+                  expression: 'min(/Aruba Controller Custom API/aruba.ap.chan_util_5g[{#AP_NAME}],3m)>70 and min(/Aruba Controller Custom API/aruba.ap.chan_util_5g[{#AP_NAME}],3m)>=0'
                   name: 'High 5GHz Channel Interference on AP {#AP_NAME} on {HOST.NAME} (>{$ARUBA_CHAN_UTIL_WARN}%)'
                   priority: WARNING
                   description: 'AP {#AP_NAME} 5 GHz channel utilization is high.'

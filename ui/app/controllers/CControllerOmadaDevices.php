@@ -58,10 +58,10 @@ class CControllerOmadaDevices extends CController {
 				$ip = $db_interfaces ? reset($db_interfaces)['ip'] : '';
 				
 				// 1. Try local cache file
-				$cache_file = "/tmp/aruba_cache_{$ip}.json";
-				if ($ip && file_exists($cache_file)) {
-					$cache_content = file_get_contents($cache_file);
-					$json_data = json_decode($cache_content, true);
+				$cache_file = "/var/cache/treya-wireless/aruba_cache_{$ip}.json";
+				if ($ip && file_exists($cache_file) && is_readable($cache_file)) {
+					$cache_content = @file_get_contents($cache_file);
+					$json_data = ($cache_content !== false && $cache_content !== '') ? json_decode($cache_content, true) : null;
 					if (is_array($json_data) && ($json_data['status'] ?? '') === 'success') {
 						if (!isset($json_data['devices'])) {
 							$devices = [];
@@ -607,11 +607,12 @@ class CControllerOmadaDevices extends CController {
 			}
 			
 			// Get cached LLDP count or trigger update
-			$lldp_cache_file = '/tmp/omada_lldp_count.json';
+			$lldp_cache_file = '/var/cache/treya-wireless/omada_lldp_count.json';
 			$lldp_count = 18; // default fallback
 			$needs_update = true;
-			if (file_exists($lldp_cache_file)) {
-				$cache = json_decode(file_get_contents($lldp_cache_file), true);
+			if (file_exists($lldp_cache_file) && is_readable($lldp_cache_file)) {
+				$cache_content = @file_get_contents($lldp_cache_file);
+				$cache = ($cache_content !== false && $cache_content !== '') ? json_decode($cache_content, true) : null;
 				if (is_array($cache)) {
 					$lldp_count = $cache['lldp_count'] ?? 18;
 					if (time() - ($cache['timestamp'] ?? 0) < 300) {
