@@ -58,16 +58,16 @@ def fetch_switches_info(fw_ip, fw_user, fw_pass, sw_pass, sw_ips):
         for sw_ip in ip_list:
             try:
                 chan.send(f"execute ssh admin@{sw_ip}\n")
-                out = recv_until(chan, ["Are you sure you want to continue connecting", "password:", "Password:"], timeout=10)
+                out = recv_until(chan, ["Are you sure you want to continue connecting", "password:", "Password:"], timeout=2)
                 
                 if "Are you sure you want to continue connecting" in out:
                     chan.send("yes\n")
-                    out = recv_until(chan, ["password:", "Password:"], timeout=8)
+                    out = recv_until(chan, ["password:", "Password:"], timeout=2)
                     
                 chan.send(f"{sw_pass}\n")
                 
                 # Wait for switch prompt (make sure it doesn't contain fw_prompt)
-                prompt = recv_until(chan, [">", "#"], timeout=12)
+                prompt = recv_until(chan, [">", "#"], timeout=3)
                 if fw_prompt in prompt:
                     raise Exception("Returned to firewall prompt prematurely or login failed")
                 
@@ -84,7 +84,7 @@ def fetch_switches_info(fw_ip, fw_user, fw_pass, sw_pass, sw_ips):
                 chan.send("show system\n")
                 time.sleep(1.0)
                 
-                output = recv_until(chan, sw_prompt, timeout=5)
+                output = recv_until(chan, sw_prompt, timeout=2)
                 
                 hostname = sw_ip
                 model = "Aruba Switch"
