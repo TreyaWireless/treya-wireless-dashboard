@@ -148,7 +148,7 @@ $filter_html = <<<HTML
 	</thead>
 	<tbody id="switch-table-rows">
 		<tr>
-			<td colspan="9" style="text-align: center; padding: 20px; color: var(--font-alt-color);">Loading Switches list from Omada Controller...</td>
+			<td colspan="9" style="text-align: center; padding: 20px; color: var(--font-alt-color);">Loading Switches list...</td>
 		</tr>
 	</tbody>
 </table>

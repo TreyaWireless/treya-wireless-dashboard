@@ -160,7 +160,7 @@ $filter_html = <<<HTML
 	</thead>
 	<tbody id="ap-table-rows">
 		<tr>
-			<td colspan="16" style="text-align: center; padding: 20px; color: var(--font-alt-color);">Loading Access Points list from Omada Controller...</td>
+			<td colspan="16" style="text-align: center; padding: 20px; color: var(--font-alt-color);">Loading Access Points list...</td>
 		</tr>
 	</tbody>
 </table>

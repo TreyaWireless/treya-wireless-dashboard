@@ -192,7 +192,7 @@ $filter_html = <<<HTML
 	</thead>
 	<tbody id="clients-table-rows">
 		<tr>
-			<td colspan="10" style="text-align: center; padding: 20px; color: var(--font-alt-color);">Loading client list from Omada Controller...</td>
+			<td colspan="10" style="text-align: center; padding: 20px; color: var(--font-alt-color);">Loading client list...</td>
 		</tr>
 	</tbody>
 </table>
