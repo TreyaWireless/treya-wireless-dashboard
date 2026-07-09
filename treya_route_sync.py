@@ -32,8 +32,16 @@ def add_route_runtime(ip):
     except Exception as e:
         print(f"Error adding route for {ip}: {e}", file=sys.stderr)
 
+def remove_route_runtime(ip):
+    try:
+        cmd = ["ip", "route", "del", ip, "via", "10.8.0.1", "dev", "tun0"]
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print(f"Successfully removed runtime route for {ip}")
+    except Exception as e:
+        pass
+
 def add_route_config(ip):
-    config_path = "/etc/openvpn/client/Rohan_K.conf"
+    config_path = "/etc/openvpn/client/Treya_Wireless.conf"
     if not os.path.exists(config_path):
         return
     try:
@@ -44,9 +52,26 @@ def add_route_config(ip):
         if route_line not in content:
             with open(config_path, "a") as f:
                 f.write(f"\n{route_line}\n")
-            print(f"Successfully added route {ip} to Rohan_K.conf")
+            print(f"Successfully added route {ip} to Treya_Wireless.conf")
     except Exception as e:
         print(f"Error updating config for {ip}: {e}", file=sys.stderr)
+
+def remove_route_config(ip):
+    config_path = "/etc/openvpn/client/Treya_Wireless.conf"
+    if not os.path.exists(config_path):
+        return
+    try:
+        with open(config_path, "r") as f:
+            content = f.read()
+        
+        route_line = f"route {ip} 255.255.255.255"
+        if route_line in content:
+            new_content = content.replace(route_line, "")
+            with open(config_path, "w") as f:
+                f.write(new_content)
+            print(f"Successfully removed route {ip} from Treya_Wireless.conf")
+    except Exception as e:
+        pass
 
 def main():
     ips = get_zabbix_aruba_ips()
@@ -60,6 +85,13 @@ def main():
         if not re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', ip):
             continue
             
+        # We access Bhiwandi (43.241.129.220) directly over WAN, not VPN:
+        if ip == '43.241.129.220':
+            remove_route_config(ip)
+            if ip in routes:
+                remove_route_runtime(ip)
+            continue
+
         # Check if route already exists
         if ip in routes:
             # Still make sure it is in the config file
