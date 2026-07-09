@@ -125,11 +125,43 @@ $filter_html = <<<HTML
 	max-width: 100% !important;
 	box-sizing: border-box;
 }
+.btn-page {
+	padding: 4px 10px;
+	font-size: 11px;
+	border: 1px solid var(--border-color);
+	background: var(--ui-bg-color);
+	color: var(--font-color);
+	cursor: pointer;
+	border-radius: 3px;
+	transition: background 0.1s, border-color 0.1s;
+}
+.btn-page:hover {
+	background: var(--border-color);
+}
+.btn-page.active {
+	background: #0275d8;
+	color: #fff;
+	border-color: #0275d8;
+}
+.btn-page:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
 </style>
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
 	<h3 style="margin: 0; font-size: 16px; font-weight: bold; color: var(--font-color);">Access Points list</h3>
-	<div id="connection-status-msg" style="font-size: 11px; color: var(--font-alt-color);">Loading live data...</div>
+	<div style="display: flex; align-items: center; gap: 15px;">
+		<div style="font-size: 12px; display: inline-flex; align-items: center; gap: 6px; color: var(--font-alt-color);">
+			<span>Show:</span>
+			<select id="pager-limit" style="height: 22px; padding: 0 4px; border: 1px solid var(--border-color); background: var(--form-bg-color); color: var(--font-color); border-radius: 3px; cursor: pointer;">
+				<option value="50">50 entries</option>
+				<option value="100" selected>100 entries</option>
+				<option value="all">All entries</option>
+			</select>
+		</div>
+		<div id="connection-status-msg" style="font-size: 11px; color: var(--font-alt-color);">Loading live data...</div>
+	</div>
 </div>
 
 <table class="list-table">
@@ -165,6 +197,11 @@ $filter_html = <<<HTML
 	</tbody>
 </table>
 
+<div id="pagination-controls-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; background: var(--ui-bg-color); padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+	<div id="pagination-info" style="font-size: 12px; color: var(--font-alt-color);">Showing 0-0 of 0 entries</div>
+	<div id="pagination-buttons" style="display: flex; gap: 5px;"></div>
+</div>
+
 <script type="text/javascript">
 function toggleFilterCollapse() {
 	const content = document.getElementById("filter-content");
@@ -183,6 +220,7 @@ const resolvedHostIds = $resolved_hostids_json;
 document.addEventListener("DOMContentLoaded", () => {
 	let allApData = [];
 	let pollingInterval = null;
+	let currentPage = 1;
 	
 	function loadApData(showLoading) {
 		const hostIds = resolvedHostIds;
@@ -329,15 +367,31 @@ document.addEventListener("DOMContentLoaded", () => {
 		document.getElementById("kpi-offline-aps").innerText = kpiOffline;
 		document.getElementById("kpi-connected-clients").innerText = kpiClients;
 		
+		// PAGINATION CALCULATIONS
+		const totalEntries = filtered.length;
+		const limitVal = document.getElementById("pager-limit").value;
+		const pageSize = limitVal === "all" ? totalEntries : parseInt(limitVal);
+		const totalPages = Math.ceil(totalEntries / pageSize) || 1;
+		
+		if (currentPage > totalPages) {
+			currentPage = totalPages;
+		}
+		
+		const startIndex = (currentPage - 1) * pageSize;
+		const endIndex = Math.min(startIndex + pageSize, totalEntries);
+		const pageItems = filtered.slice(startIndex, endIndex);
+		
 		// Render table rows
 		const tbody = document.getElementById("ap-table-rows");
 		if (filtered.length === 0) {
 			tbody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px; color: var(--font-alt-color);">No matching Access Points found.</td></tr>';
+			document.getElementById("pagination-info").innerText = "Showing 0-0 of 0 entries";
+			document.getElementById("pagination-buttons").innerHTML = "";
 			return;
 		}
 		
 		let rowsHtml = '';
-		filtered.forEach(ap => {
+		pageItems.forEach(ap => {
 			const mac = ap.mac.toUpperCase().trim();
 			const isOnline = ap.status === 1;
 			
@@ -441,7 +495,32 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 		
 		tbody.innerHTML = rowsHtml;
+		
+		// Update Pagination Info
+		document.getElementById("pagination-info").innerText = `Showing \${totalEntries > 0 ? startIndex + 1 : 0} to \${endIndex} of \${totalEntries} entries`;
+		
+		// Generate Pagination Buttons
+		let buttonsHtml = '';
+		
+		// Prev Button
+		buttonsHtml += `<button type="button" class="btn-page" \${currentPage === 1 ? "disabled" : ""} onclick="changeApsPage(\${currentPage - 1})">◀ Prev</button>`;
+		
+		// Page Numbers
+		for (let i = 1; i <= totalPages; i++) {
+			buttonsHtml += `<button type="button" class="btn-page \${i === currentPage ? "active" : ""}" onclick="changeApsPage(\${i})">\${i}</button>`;
+		}
+		
+		// Next Button
+		buttonsHtml += `<button type="button" class="btn-page" \${currentPage === totalPages ? "disabled" : ""} onclick="changeApsPage(\${currentPage + 1})">Next ▶</button>`;
+		
+		document.getElementById("pagination-buttons").innerHTML = buttonsHtml;
 	}
+	
+	// Expose changeApsPage to global window context for onclick handlers
+	window.changeApsPage = function(pageNumber) {
+		currentPage = pageNumber;
+		renderApList();
+	};
 	
 	// Event Listeners
 	document.getElementById("btn-reset-filter").addEventListener("click", () => {
@@ -449,8 +528,20 @@ document.addEventListener("DOMContentLoaded", () => {
 	});
 	
 	// Real-time filtering
-	document.getElementById("filter-search").addEventListener("input", renderApList);
-	document.getElementById("filter-status").addEventListener("change", renderApList);
+	document.getElementById("filter-search").addEventListener("input", () => {
+		currentPage = 1;
+		renderApList();
+	});
+	document.getElementById("filter-status").addEventListener("change", () => {
+		currentPage = 1;
+		renderApList();
+	});
+	
+	// Pager limit changes
+	document.getElementById("pager-limit").addEventListener("change", () => {
+		currentPage = 1;
+		renderApList();
+	});
 	
 	// Initial Load
 	loadApData(true);
