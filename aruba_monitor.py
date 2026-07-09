@@ -236,6 +236,8 @@ def main():
         is_update_task = True
         sys.argv.remove("--update-cache")
 
+    req_timeout = 40 if is_update_task else 10
+
     if len(sys.argv) < 5:
         print(json.dumps({
             "status": "error",
@@ -314,6 +316,57 @@ def main():
                 sys.exit(0)
             except Exception:
                 pass
+        else:
+            # Cache file does not exist. Initialize it with empty/loading template
+            # and spawn background process to run the heavy fetch. This prevents
+            # Zabbix execution timeout (30s limit) on new or slow controller connections.
+            default_data = json.dumps({
+                "status": "success",
+                "online_aps": 0,
+                "offline_aps": 0,
+                "total_aps": 0,
+                "online_switches": 0,
+                "offline_switches": 0,
+                "total_switches": 0,
+                "online_gateways": 0,
+                "offline_gateways": 0,
+                "total_gateways": 0,
+                "total_devices": 0,
+                "total_clients": 0,
+                "active_loops": 0,
+                "loop_status_text": "Loading data...",
+                "eaps": [],
+                "switches": [],
+                "clients": [],
+                "error_message": "Initializing cache in background..."
+            }, separators=(',', ':'))
+            
+            try:
+                with open(cache_file, "w") as f:
+                    f.write(default_data)
+                os.chmod(cache_file, 0o666)
+            except Exception:
+                pass
+                
+            print(default_data)
+
+            if not os.path.exists(lock_file):
+                import subprocess
+                script_file = os.path.abspath(__file__)
+                args = [sys.executable, script_file, ip, port, username, password]
+                if len(sys.argv) > 5:
+                    args.extend(sys.argv[5:])
+                args.append("--update-cache")
+                try:
+                    subprocess.Popen(
+                        args,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        start_new_session=True
+                    )
+                except Exception:
+                    pass
+            sys.exit(0)
 
     # Try to acquire lock
     acquired_lock = False
@@ -379,7 +432,7 @@ def main():
             'passwd': password,
             'refresh': 'false'
         }
-        r_login = session.post(url, data=login_payload, timeout=10)
+        r_login = session.post(url, data=login_payload, timeout=req_timeout)
         r_login.raise_for_status()
         
         sid_match = re.search(r'name="sid"[^>]*>([^<]+)</data>', r_login.text)
@@ -390,7 +443,7 @@ def main():
         # Fetch Summary (for cluster uptime/Elected Time)
         elected_time = "5d 10h 20m"
         try:
-            r_summary = session.post(url, data={'opcode': 'show', 'cmd': 'show summary', 'sid': sid}, timeout=10)
+            r_summary = session.post(url, data={'opcode': 'show', 'cmd': 'show summary', 'sid': sid}, timeout=req_timeout)
             r_summary.raise_for_status()
             match_elected = re.search(r'name="Elected Time\s*"[^>]*>([^<]+)</data>', r_summary.text)
             if match_elected:
@@ -405,13 +458,13 @@ def main():
             pass
 
         # 2. Fetch Access Points
-        r_aps = session.post(url, data={'opcode': 'show', 'cmd': 'show aps', 'sid': sid}, timeout=10)
+        r_aps = session.post(url, data={'opcode': 'show', 'cmd': 'show aps', 'sid': sid}, timeout=req_timeout)
         r_aps.raise_for_status()
 
         # Fetch individual AP age (uptime) from support command
         ap_uptimes = {}
         try:
-            r_support = session.post(url, data={'opcode': 'support', 'cmd': 'show aps', 'sid': sid}, timeout=10)
+            r_support = session.post(url, data={'opcode': 'support', 'cmd': 'show aps', 'sid': sid}, timeout=req_timeout)
             if r_support.status_code == 200:
                 parsed_aps = parse_cli_table(r_support.text)
                 for ap in parsed_aps:
@@ -423,7 +476,7 @@ def main():
             pass
         
         # 3. Fetch Clients
-        r_clients = session.post(url, data={'opcode': 'show', 'cmd': 'show clients', 'sid': sid}, timeout=10)
+        r_clients = session.post(url, data={'opcode': 'show', 'cmd': 'show clients', 'sid': sid}, timeout=req_timeout)
         r_clients.raise_for_status()
 
         # Parse APs XML
