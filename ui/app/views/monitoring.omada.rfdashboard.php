@@ -63,7 +63,7 @@ $resolved_hosts_json = json_encode($data['resolved_hosts_list']);
 $url_mac = $data['mac'];
 $url_hostid = $data['hostid'];
 
-// Embed multiselect CSS classes and layout scripts
+// Collapsible Filter HTML matching Zabbix look-and-feel
 $body_html = <<<HTML
 <style>
 .multiselect-control, .multiselect, .multiselect-wrapper, .multiselect-list {
@@ -809,7 +809,7 @@ const resolvedHosts = {$resolved_hosts_json};
 const urlSelectedMac = "{$url_mac}";
 const urlSelectedHostId = "{$url_hostid}";
 
-document.addEventListener("DOMContentLoaded", () => {
+function initDashboard() {
 	let allHostAps = [];
 	let allClientsList = [];
 	let activeAp = null;
@@ -1123,8 +1123,11 @@ document.addEventListener("DOMContentLoaded", () => {
 		const ctx = canvas.getContext("2d");
 		
 		const rect = canvas.getBoundingClientRect();
-		canvas.width = rect.width;
-		canvas.height = rect.height;
+		// Avoid resetting canvas size on every single mousemove redraw unless actual size changes
+		if (canvas.width !== Math.floor(rect.width) || canvas.height !== Math.floor(rect.height)) {
+			canvas.width = rect.width;
+			canvas.height = rect.height;
+		}
 		
 		const w = canvas.width;
 		const h = canvas.height;
@@ -1133,6 +1136,9 @@ document.addEventListener("DOMContentLoaded", () => {
 		
 		const chartH = h - 22;
 		
+		// Draw grid lines
+		ctx.strokeStyle = "rgba(0, 0, 0, 0.05)";
+		ctx.lineWidth = 0.5;
 		for (let i = 1; i < 4; i++) {
 			let gridY = (chartH / 4) * i;
 			ctx.beginPath();
@@ -1479,7 +1485,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 		
 		tooltip.innerHTML = `
-			<div class="tooltip-title" style="font-size:12px;">\${chan}</div>
+			<div class="tooltip-title" style="font-size:12px;">Channel \${chan}</div>
 			<div class="tooltip-row"><span>Available :</span> <strong>\${avail} %</strong></div>
 			<div class="tooltip-row"><span>WiFi :</span> <strong>\${wifi} %</strong></div>
 			<div class="tooltip-row"><span>Interference :</span> <strong>\${interf} %</strong></div>
@@ -1656,14 +1662,34 @@ document.addEventListener("DOMContentLoaded", () => {
 		window.location.href = 'treya.php?action=omada.rf_dashboard';
 	});
 	
+	function resizeCanvases() {
+		canvasIds.forEach(id => {
+			const canvas = document.getElementById(id);
+			if (canvas) {
+				const rect = canvas.getBoundingClientRect();
+				canvas.width = rect.width;
+				canvas.height = rect.height;
+			}
+		});
+		renderAllOverviewCharts();
+	}
+	
+	window.addEventListener("resize", resizeCanvases);
+	
 	queryApDetails();
 	pollingInterval = setInterval(queryApDetails, 10000);
 	graphInterval = setInterval(updateGraphSlidingWindow, 3000);
-});
+}
+
+document.addEventListener("DOMContentLoaded", initDashboard);
+
+// Fallback in case DOMContentLoaded has already fired in the Zabbix template lifecycle
+if (document.readyState === "complete" || document.readyState === "interactive") {
+	initDashboard();
+}
 </script>
 HTML;
 
-// Add content inside CHtmlEntity to render using Zabbix layout engine
 $html_page->addItem(new CHtmlEntity($body_html));
 $html_page->show();
 ?>
