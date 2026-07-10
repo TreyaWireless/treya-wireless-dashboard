@@ -1,0 +1,62 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: 362ee067445b497cb00003ddfbefec84
+      name: Templates/Network devices
+  templates:
+    - uuid: 6ef7bac2613c4622b21607145d8b4d94
+      template: 'Template Switch Loop Detection SNMP'
+      name: 'Template Switch Loop Detection SNMP'
+      groups:
+        - name: Templates/Network devices
+      description: |
+        Standard SNMP template to detect network loops on Managed Switches by monitoring STP (Spanning Tree Protocol) port states (RFC 1493 Bridge MIB).
+        Raises alerts if a port is in Blocking (2) state.
+      discovery_rules:
+        - uuid: de9f09d3dd5a41279c1e3ceea24b4fba
+          name: 'STP Bridge Ports Discovery'
+          type: SNMP_AGENT
+          snmp_oid: 'discovery[{#STP_PORT},1.3.6.1.2.1.17.2.15.1.1]'
+          key: stp.port.discovery
+          delay: 5m
+          description: 'Discovers active spanning tree bridge ports.'
+          item_prototypes:
+            - uuid: a883b3a0fcce49adbe8927318be3ac73
+              name: 'STP Port {#STP_PORT}: State'
+              type: SNMP_AGENT
+              snmp_oid: '1.3.6.1.2.1.17.2.15.1.3.{#SNMPINDEX}'
+              key: 'stp.port.state[{#STP_PORT}]'
+              delay: 1m
+              value_type: INTEGER
+              description: |
+                The port's current state in Spanning Tree:
+                1: disabled
+                2: blocking (Loop Detected)
+                3: listening
+                4: learning
+                5: forwarding
+                6: broken
+              valuemap:
+                name: 'Spanning Tree State'
+              trigger_prototypes:
+                - uuid: 4d7c5807041f44a28ba6fa622135c2bd
+                  expression: 'last(/Template Switch Loop Detection SNMP/stp.port.state[{#STP_PORT}])=2'
+                  name: 'Loop detected: STP blocked port {#STP_PORT} on {HOST.NAME}'
+                  priority: AVERAGE
+                  description: 'Spanning Tree Protocol (STP) has placed port {#STP_PORT} into Blocking state to prevent a network loop.'
+      valuemaps:
+        - uuid: ebf3f37b735a4b5f96b7051e426122d6
+          name: 'Spanning Tree State'
+          mappings:
+            - value: '1'
+              newvalue: disabled
+            - value: '2'
+              newvalue: blocking
+            - value: '3'
+              newvalue: listening
+            - value: '4'
+              newvalue: learning
+            - value: '5'
+              newvalue: forwarding
+            - value: '6'
+              newvalue: broken
