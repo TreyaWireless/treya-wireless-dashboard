@@ -732,12 +732,9 @@ document.addEventListener("DOMContentLoaded", () => {
 	
 	// Polling functions
 	function queryApDetails() {
-		// Try to read from selected host in Zabbix multiselect
+		// Use resolved hosts passed from the controller
 		let activeHostId = "";
-		const multiselect = jQuery('#hostids_').multiSelect('getData');
-		if (multiselect && multiselect.length > 0) {
-			activeHostId = multiselect[0].id;
-		} else if (urlSelectedHostId) {
+		if (urlSelectedHostId) {
 			activeHostId = urlSelectedHostId;
 		} else if (resolvedHosts.length > 0) {
 			activeHostId = resolvedHosts[0].hostid;
@@ -1359,12 +1356,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	
 	// Form Reset
 	document.getElementById("btn-reset-filter").addEventListener("click", () => {
-		jQuery('#groupids_').multiSelect('clean');
-		jQuery('#hostids_').multiSelect('clean');
-		apSelector.innerHTML = '<option value="">-- Select AP --</option>';
-		urlSelectedMac = "";
-		urlSelectedHostId = "";
-		queryApDetails();
+		window.location.href = 'treya.php?action=omada.rf_dashboard';
 	});
 	
 	// Polling and Init
