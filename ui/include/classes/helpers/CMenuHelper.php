@@ -60,7 +60,9 @@ class CMenuHelper {
 						(new CMenuItem(_('Switches')))
 							->setAction('omada.switches'),
 						(new CMenuItem(_('Clients')))
-							->setAction('omada.clients')
+							->setAction('omada.clients'),
+						(new CMenuItem(_('RF Dashboard')))
+							->setAction('omada.rf_dashboard')
 					])))
 				: null,
 			CWebUser::checkAccess(CRoleHelper::UI_MONITORING_MAPS)

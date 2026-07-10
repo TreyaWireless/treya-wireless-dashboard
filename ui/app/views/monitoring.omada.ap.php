@@ -252,18 +252,20 @@ document.addEventListener("DOMContentLoaded", () => {
 				let mergedAps = [];
 				let errorMsgs = [];
 				
-				results.forEach(res => {
+				results.forEach((res, resIdx) => {
 					if (res.status === 'success') {
 						const devices = res.devices || [];
 						const clients = res.clients || [];
+						const currentHostId = hostIds[resIdx];
 						
 						// Filter for Access Points
 						let fetchedAps = devices.filter(d => d.type === "ap" || String(d.type).toLowerCase() === "ap");
 						
-						// Inject client count mapping
+						// Inject client count mapping and hostid
 						fetchedAps.forEach(ap => {
 							const mac = ap.mac.toUpperCase().trim();
 							ap.clientCount = clients.filter(c => c.apMac && c.apMac.toUpperCase().trim() === mac).length;
+							ap.hostId = currentHostId;
 						});
 						
 						// Fallback mock APs if empty for complete styling showcase
@@ -277,6 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
 									model: "EAP225",
 									uptime: "14d 6h 32m",
 									clientCount: 15,
+									hostId: currentHostId,
 									lastSeen: null
 								},
 								{
@@ -287,6 +290,7 @@ document.addEventListener("DOMContentLoaded", () => {
 									model: "EAP610",
 									uptime: "8d 19h 12m",
 									clientCount: 22,
+									hostId: currentHostId,
 									lastSeen: null
 								},
 								{
@@ -297,6 +301,7 @@ document.addEventListener("DOMContentLoaded", () => {
 									model: "EAP660 HD",
 									uptime: "32d 12h 45m",
 									clientCount: 47,
+									hostId: currentHostId,
 									lastSeen: null
 								},
 								{
@@ -307,6 +312,7 @@ document.addEventListener("DOMContentLoaded", () => {
 									model: "EAP225-Outdoor",
 									uptime: "--",
 									clientCount: 0,
+									hostId: currentHostId,
 									lastSeen: Date.now() - 345000 // 5m 45s ago
 								}
 							];
@@ -476,7 +482,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			
 			rowsHtml += '<tr>' +
 				'<td>' + statusHtml + '</td>' +
-				'<td style="font-weight: bold; color: #ffb300;">' + ap.name + '</td>' +
+				'<td style="font-weight: bold;"><a href="treya.php?action=omada.rf_dashboard&mac=' + encodeURIComponent(ap.mac) + '&hostid=' + ap.hostId + '" style="color: #ffb300; text-decoration: none;" title="Open RF Dashboard">' + ap.name + '</a></td>' +
 				'<td>' + (ap.ip || "--") + '</td>' +
 				'<td>access</td>' +
 				'<td style="font-weight: bold; color: ' + (ap.clientCount > 0 ? "#ffb300" : "inherit") + ';">' + ap.clientCount + '</td>' +
