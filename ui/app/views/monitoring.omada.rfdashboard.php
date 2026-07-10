@@ -1486,10 +1486,10 @@ function initDashboard() {
 		
 		tooltip.innerHTML = `
 			<div class="tooltip-title" style="font-size:12px;">Channel \${chan}</div>
-			<div class="tooltip-row"><span>Available :</span> <strong>\${avail} %</strong></div>
-			<div class="tooltip-row"><span>WiFi :</span> <strong>\${wifi} %</strong></div>
-			<div class="tooltip-row"><span>Interference :</span> <strong>\${interf} %</strong></div>
-			<div class="tooltip-row"><span>Quality :</span> <strong>\${qual} %</strong></div>
+			<div class="tooltip-row"><span><span class="tooltip-color" style="background:rgba(2, 117, 216, 0.35);"></span>Available :</span> <strong>\${avail} %</strong></div>
+			<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>WiFi :</span> <strong>\${wifi} %</strong></div>
+			<div class="tooltip-row"><span><span class="tooltip-color" style="background:#f24f1d;"></span>Interference :</span> <strong>\${interf} %</strong></div>
+			<div class="tooltip-row"><span><span class="tooltip-color" style="background:#26c281;"></span>Quality :</span> <strong>\${qual} %</strong></div>
 			<div style="font-size: 9px; color: #888; border-top: 1px solid var(--border-color, #eee); padding-top: 4px; margin-top: 5px; text-align: center;">Click this to see more</div>
 		`;
 		
