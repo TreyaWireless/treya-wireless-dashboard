@@ -402,8 +402,7 @@ $body_html = <<<HTML
 	border-radius: 50%;
 	margin-right: 5px;
 }
-</style>
-
+<div id="rf-dashboard-wrapper" style="position: relative;">
 <form method="get" action="treya.php" name="rf_filter_form" id="rf_filter_form" style="margin-bottom: 20px;">
 	<input type="hidden" name="action" value="omada.rf_dashboard">
 	
@@ -800,6 +799,7 @@ $body_html = <<<HTML
 			<span style="width: 6px; height: 6px; border-radius: 50%; background: #26c281; display: inline-block;"></span> STANDBY (OK)
 		</div>
 	</div>
+</div>
 </div>
 
 <!-- ================= JS SCRIPT LOGIC ================= -->
@@ -1275,7 +1275,7 @@ function initDashboard() {
 		if (!tooltip) {
 			tooltip = document.createElement("div");
 			tooltip.id = "graph-hover-tooltip";
-			document.body.appendChild(tooltip);
+			document.getElementById("rf-dashboard-wrapper").appendChild(tooltip);
 		}
 		
 		const timeVal = graphData.times[idx] || "23:12:59";
@@ -1324,8 +1324,9 @@ function initDashboard() {
 		const stepX = rect.width / 14;
 		const hoverX = idx * stepX;
 		
-		tooltip.style.left = (rect.left + window.scrollX + hoverX + 15) + "px";
-		tooltip.style.top = (rect.top + window.scrollY + mouseY - 25) + "px";
+		const wrapperRect = document.getElementById("rf-dashboard-wrapper").getBoundingClientRect();
+		tooltip.style.left = (rect.left - wrapperRect.left + hoverX + 15) + "px";
+		tooltip.style.top = (rect.top - wrapperRect.top + mouseY - 25) + "px";
 		tooltip.style.display = "block";
 	}
 	
@@ -1481,7 +1482,7 @@ function initDashboard() {
 		if (!tooltip) {
 			tooltip = document.createElement("div");
 			tooltip.id = "graph-hover-tooltip";
-			document.body.appendChild(tooltip);
+			document.getElementById("rf-dashboard-wrapper").appendChild(tooltip);
 		}
 		
 		tooltip.innerHTML = `
@@ -1493,8 +1494,10 @@ function initDashboard() {
 			<div style="font-size: 9px; color: #888; border-top: 1px solid var(--border-color, #eee); padding-top: 4px; margin-top: 5px; text-align: center;">Click this to see more</div>
 		`;
 		
-		tooltip.style.left = (e.clientX + window.scrollX - 50) + "px";
-		tooltip.style.top = (e.clientY + window.scrollY - 110) + "px";
+		const wrapperRect = document.getElementById("rf-dashboard-wrapper").getBoundingClientRect();
+		const rect = e.currentTarget.getBoundingClientRect();
+		tooltip.style.left = (rect.left - wrapperRect.left + (rect.width / 2) - 60) + "px";
+		tooltip.style.top = (rect.top - wrapperRect.top - 120) + "px";
 		tooltip.style.display = "block";
 	}
 	
