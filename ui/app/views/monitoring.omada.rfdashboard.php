@@ -62,9 +62,15 @@ $hosts_html = $multiselect_hosts->toString();
 $resolved_hosts_json = json_encode($data['resolved_hosts_list']);
 $url_mac = $data['mac'];
 $url_hostid = $data['hostid'];
-?>
 
+// Embed multiselect CSS classes and layout scripts
+$body_html = <<<HTML
 <style>
+.multiselect-control, .multiselect, .multiselect-wrapper, .multiselect-list {
+	width: 100% !important;
+	max-width: 100% !important;
+	box-sizing: border-box;
+}
 .rf-tabs-container {
 	display: flex;
 	border-bottom: 2px solid var(--border-color);
@@ -119,27 +125,16 @@ $url_hostid = $data['hostid'];
 	gap: 20px;
 	align-items: flex-start;
 }
-.rf-info-picture-container {
-	flex: 0 0 140px;
-	text-align: center;
-	border: 1px solid var(--border-color);
-	background: rgba(0, 0, 0, 0.02);
-	border-radius: 6px;
-	padding: 10px;
-	box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
-}
-.rf-info-picture {
-	width: 120px;
-	height: 120px;
-	object-fit: contain;
-	border-radius: 4px;
-	filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
-}
 .rf-info-table {
 	flex: 1;
 	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 10px 20px;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 12px 24px;
+}
+@media (max-width: 768px) {
+	.rf-info-table {
+		grid-template-columns: repeat(2, 1fr);
+	}
 }
 .rf-info-item {
 	display: flex;
@@ -207,9 +202,10 @@ $url_hostid = $data['hostid'];
 }
 .rf-canvas-chart {
 	width: 100%;
-	height: 120px;
+	height: 140px;
 	background: rgba(0,0,0,0.01);
 	border-radius: 4px;
+	cursor: crosshair;
 }
 .rf-client-row {
 	display: flex;
@@ -369,6 +365,43 @@ $url_hostid = $data['hostid'];
 	font-weight: bold;
 	color: var(--font-color);
 }
+
+/* Graph Floating Tooltip */
+#graph-hover-tooltip {
+	position: absolute;
+	display: none;
+	background: var(--ui-bg-color, #fff);
+	border: 1px solid var(--border-color, #ccc);
+	border-radius: 4px;
+	padding: 8px 12px;
+	font-size: 11px;
+	color: var(--font-color, #333);
+	box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+	pointer-events: none;
+	z-index: 1000;
+	font-family: Arial, sans-serif;
+	line-height: 1.4;
+}
+.tooltip-title {
+	font-weight: bold;
+	margin-bottom: 5px;
+	border-bottom: 1px solid var(--border-color, #eee);
+	padding-bottom: 3px;
+	color: var(--font-alt-color, #666);
+}
+.tooltip-row {
+	display: flex;
+	justify-content: space-between;
+	gap: 15px;
+	margin-bottom: 2px;
+}
+.tooltip-color {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	margin-right: 5px;
+}
 </style>
 
 <form method="get" action="treya.php" name="rf_filter_form" id="rf_filter_form" style="margin-bottom: 20px;">
@@ -378,11 +411,11 @@ $url_hostid = $data['hostid'];
 		<div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: end;">
 			<div style="flex: 1 1 250px; min-width: 200px;">
 				<label style="display: block; font-weight: bold; font-size: 11px; text-transform: uppercase; color: var(--font-alt-color); margin-bottom: 5px;">Host groups</label>
-				<?= $groups_html ?>
+				{$groups_html}
 			</div>
 			<div style="flex: 1 1 250px; min-width: 200px;">
 				<label style="display: block; font-weight: bold; font-size: 11px; text-transform: uppercase; color: var(--font-alt-color); margin-bottom: 5px;">Hosts</label>
-				<?= $hosts_html ?>
+				{$hosts_html}
 			</div>
 			<div style="flex: 1 1 250px; min-width: 200px;">
 				<label style="display: block; font-weight: bold; font-size: 11px; text-transform: uppercase; color: var(--font-alt-color); margin-bottom: 5px;">Select Access Point</label>
@@ -415,9 +448,6 @@ $url_hostid = $data['hostid'];
 		<div class="rf-card">
 			<h4 class="rf-card-title">Info</h4>
 			<div class="rf-info-layout">
-				<div class="rf-info-picture-container">
-					<img id="ap-display-picture" class="rf-info-picture" src="assets/img/indoor_ap.png" alt="Access Point Image">
-				</div>
 				<div class="rf-info-table">
 					<div class="rf-info-item">
 						<span class="rf-info-label">Name</span>
@@ -538,36 +568,97 @@ $url_hostid = $data['hostid'];
 		</div>
 		
 		<div style="display: flex; flex-direction: column; gap: 8px;">
-			<!-- RSSI BINS (60-70 down to 0-10) -->
-			<?php
-			$bins = [
-				'60-70' => ['label' => '60-70', 'assoc' => 0, 'unassoc' => 1],
-				'50-60' => ['label' => '50-60', 'assoc' => 0, 'unassoc' => 2],
-				'40-50' => ['label' => '40-50', 'assoc' => 0, 'unassoc' => 5],
-				'30-40' => ['label' => '30-40', 'assoc' => 1, 'unassoc' => 20],
-				'20-30' => ['label' => '20-30', 'assoc' => 5, 'unassoc' => 63],
-				'10-20' => ['label' => '10-20', 'assoc' => 5, 'unassoc' => 87],
-				'0-10'  => ['label' => '0-10',  'assoc' => 7, 'unassoc' => 63]
-			];
-			foreach ($bins as $key => $bin) {
-				echo '
-				<div class="rf-client-match-bin">
-					<div class="rf-client-match-bin-label">' . $bin['label'] . '</div>
-					<div class="rf-client-match-bin-bars">
-						<!-- Associated Client Bar -->
-						<div class="rf-client-match-bar-container">
-							<div class="rf-client-match-bar match-assoc-bar-' . $key . '" style="background: #0275d8; width: 0%;"></div>
-							<span class="rf-client-match-count match-assoc-val-' . $key . '">0</span>
-						</div>
-						<!-- Unassociated Client Bar -->
-						<div class="rf-client-match-bar-container">
-							<div class="rf-client-match-bar match-unassoc-bar-' . $key . '" style="background: #f24f1d; width: 0%;"></div>
-							<span class="rf-client-match-count match-unassoc-val-' . $key . '">0</span>
-						</div>
+			<div class="rf-client-match-bin">
+				<div class="rf-client-match-bin-label">60-70</div>
+				<div class="rf-client-match-bin-bars">
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-assoc-bar-60-70" style="background: #0275d8; width: 0%;"></div>
+						<span class="rf-client-match-count match-assoc-val-60-70">0</span>
 					</div>
-				</div>';
-			}
-			?>
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-unassoc-bar-60-70" style="background: #f24f1d; width: 0%;"></div>
+						<span class="rf-client-match-count match-unassoc-val-60-70">0</span>
+					</div>
+				</div>
+			</div>
+			<div class="rf-client-match-bin">
+				<div class="rf-client-match-bin-label">50-60</div>
+				<div class="rf-client-match-bin-bars">
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-assoc-bar-50-60" style="background: #0275d8; width: 0%;"></div>
+						<span class="rf-client-match-count match-assoc-val-50-60">0</span>
+					</div>
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-unassoc-bar-50-60" style="background: #f24f1d; width: 0%;"></div>
+						<span class="rf-client-match-count match-unassoc-val-50-60">0</span>
+					</div>
+				</div>
+			</div>
+			<div class="rf-client-match-bin">
+				<div class="rf-client-match-bin-label">40-50</div>
+				<div class="rf-client-match-bin-bars">
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-assoc-bar-40-50" style="background: #0275d8; width: 0%;"></div>
+						<span class="rf-client-match-count match-assoc-val-40-50">0</span>
+					</div>
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-unassoc-bar-40-50" style="background: #f24f1d; width: 0%;"></div>
+						<span class="rf-client-match-count match-unassoc-val-40-50">0</span>
+					</div>
+				</div>
+			</div>
+			<div class="rf-client-match-bin">
+				<div class="rf-client-match-bin-label">30-40</div>
+				<div class="rf-client-match-bin-bars">
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-assoc-bar-30-40" style="background: #0275d8; width: 0%;"></div>
+						<span class="rf-client-match-count match-assoc-val-30-40">0</span>
+					</div>
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-unassoc-bar-30-40" style="background: #f24f1d; width: 0%;"></div>
+						<span class="rf-client-match-count match-unassoc-val-30-40">0</span>
+					</div>
+				</div>
+			</div>
+			<div class="rf-client-match-bin">
+				<div class="rf-client-match-bin-label">20-30</div>
+				<div class="rf-client-match-bin-bars">
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-assoc-bar-20-30" style="background: #0275d8; width: 0%;"></div>
+						<span class="rf-client-match-count match-assoc-val-20-30">0</span>
+					</div>
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-unassoc-bar-20-30" style="background: #f24f1d; width: 0%;"></div>
+						<span class="rf-client-match-count match-unassoc-val-20-30">0</span>
+					</div>
+				</div>
+			</div>
+			<div class="rf-client-match-bin">
+				<div class="rf-client-match-bin-label">10-20</div>
+				<div class="rf-client-match-bin-bars">
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-assoc-bar-10-20" style="background: #0275d8; width: 0%;"></div>
+						<span class="rf-client-match-count match-assoc-val-10-20">0</span>
+					</div>
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-unassoc-bar-10-20" style="background: #f24f1d; width: 0%;"></div>
+						<span class="rf-client-match-count match-unassoc-val-10-20">0</span>
+					</div>
+				</div>
+			</div>
+			<div class="rf-client-match-bin">
+				<div class="rf-client-match-bin-label">0-10</div>
+				<div class="rf-client-match-bin-bars">
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-assoc-bar-0-10" style="background: #0275d8; width: 0%;"></div>
+						<span class="rf-client-match-count match-assoc-val-0-10">0</span>
+					</div>
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-unassoc-bar-0-10" style="background: #f24f1d; width: 0%;"></div>
+						<span class="rf-client-match-count match-unassoc-val-0-10">0</span>
+					</div>
+				</div>
+			</div>
 		</div>
 		
 		<div style="display: flex; gap: 20px; font-size: 11px; font-weight: bold; justify-content: flex-end; margin-top: 15px;">
@@ -714,9 +805,9 @@ $url_hostid = $data['hostid'];
 <!-- ================= JS SCRIPT LOGIC ================= -->
 
 <script type="text/javascript">
-const resolvedHosts = <?= $resolved_hosts_json ?>;
-const urlSelectedMac = "<?= $url_mac ?>";
-const urlSelectedHostId = "<?= $url_hostid ?>";
+const resolvedHosts = {$resolved_hosts_json};
+const urlSelectedMac = "{$url_mac}";
+const urlSelectedHostId = "{$url_hostid}";
 
 document.addEventListener("DOMContentLoaded", () => {
 	let allHostAps = [];
@@ -726,13 +817,49 @@ document.addEventListener("DOMContentLoaded", () => {
 	let activeRadioIndex = "all"; // "all" (Overview), "0" (Radio 0), "1" (Radio 1)
 	let activeSpecRadio = "5g";
 	
-	// Set up Host selector
-	const hostSelect = document.getElementById("hostids_");
 	const apSelector = document.getElementById("rf-ap-selector");
+	
+	// Graph Hover State
+	let hoverState = {
+		canvasId: null,
+		index: -1,
+		x: -1,
+		y: -1
+	};
+	
+	// Pre-fill graph data sliding window
+	const graphData = {
+		times: [],
+		neighborAps: {
+			valid: [30, 31, 32, 33, 33, 33, 34, 34, 34, 34, 34, 34, 34, 34, 34],
+			interf: [48, 48, 48, 48, 48, 47, 47, 47, 48, 48, 48, 48, 48, 47, 47],
+			rogue: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+		},
+		cpu: [18, 20, 18, 21, 23, 23, 20, 22, 19, 15, 17, 22, 21, 18, 17],
+		memory: [530, 532, 535, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538],
+		neighborClients: {
+			valid: [22, 22, 23, 23, 23, 23, 24, 24, 24, 25, 25, 25, 25, 25, 25],
+			interf: [5, 5, 5, 6, 6, 6, 5, 5, 5, 4, 4, 4, 4, 3, 3]
+		},
+		clients: [18, 19, 20, 20, 20, 19, 18, 18, 18, 17, 18, 17, 17, 16, 18],
+		throughput: {
+			out: [500000, 600000, 400000, 550000, 700000, 850000, 900000, 750000, 800000, 880000, 920000, 890000, 850000, 870000, 880000],
+			in: [200000, 250000, 180000, 300000, 420000, 500000, 480000, 400000, 350000, 450000, 600000, 550000, 500000, 480000, 460000]
+		}
+	};
+	
+	// Populate 15 time coordinates (spaced by 10s)
+	const nowTime = Date.now();
+	for (let i = 14; i >= 0; i--) {
+		const t = new Date(nowTime - i * 10000);
+		const h = String(t.getHours()).padStart(2, '0');
+		const m = String(t.getMinutes()).padStart(2, '0');
+		const s = String(t.getSeconds()).padStart(2, '0');
+		graphData.times.push(h + ":" + m + ":" + s);
+	}
 	
 	// Polling functions
 	function queryApDetails() {
-		// Use resolved hosts passed from the controller
 		let activeHostId = "";
 		if (urlSelectedHostId) {
 			activeHostId = urlSelectedHostId;
@@ -754,19 +881,14 @@ document.addEventListener("DOMContentLoaded", () => {
 					const devices = res.devices || [];
 					allClientsList = res.clients || [];
 					
-					// Filter for Access Points
 					allHostAps = devices.filter(d => d.type === "ap" || String(d.type).toLowerCase() === "ap");
 					
-					// Map client counts
 					allHostAps.forEach(ap => {
 						const mac = ap.mac.toUpperCase().trim();
 						ap.clientCount = allClientsList.filter(c => c.apMac && c.apMac.toUpperCase().trim() === mac).length;
 					});
 					
-					// Re-populate AP Selector
 					populateApSelector();
-					
-					// Load current active AP details
 					loadActiveApDetails();
 					
 					document.getElementById("connection-status-msg").innerText = "Data updated at " + new Date().toLocaleTimeString();
@@ -809,42 +931,28 @@ document.addEventListener("DOMContentLoaded", () => {
 			return;
 		}
 		
-		// Fill Info details
 		document.getElementById("info-ap-name").innerText = activeAp.name || "--";
 		document.getElementById("info-ap-ip").innerText = activeAp.ip || "--";
-		document.getElementById("info-ap-sn").innerText = activeAp.sn || activeAp.serial || "UST0KWC00P";
+		document.getElementById("info-ap-sn").innerText = activeAp.sn || activeAp.serial || "2249580001699";
 		document.getElementById("info-ap-mac").innerText = activeAp.mac || "--";
 		document.getElementById("info-ap-mode").innerText = activeAp.mode || "access";
 		document.getElementById("info-ap-spectrum").innerText = activeAp.spectrum !== undefined ? (activeAp.spectrum ? "Enabled" : "Disabled") : "Enabled";
 		
-		const model = activeAp.model || "EAP225";
+		const model = activeAp.model || "EAP225(US) v4.0";
 		document.getElementById("info-ap-type").innerText = model;
 		
-		// CPU & Memory
 		const cpu = activeAp.cpu !== undefined ? activeAp.cpu : 7;
 		document.getElementById("info-ap-cpu").innerText = cpu + "%";
 		
 		const memFree = activeAp.memFree !== undefined ? activeAp.memFree : 538;
 		document.getElementById("info-ap-memory").innerText = memFree + " MB";
 		
-		// Toggle Picture based on AP Model type
-		const displayPicture = document.getElementById("ap-display-picture");
-		if (model.toLowerCase().includes("outdoor") || model.includes("565")) {
-			displayPicture.src = "assets/img/aruba_ap_565.png";
-		} else {
-			displayPicture.src = "assets/img/indoor_ap.png";
-		}
-		
-		// Set Radio Toggles names based on real channels
 		const ch2g = activeAp.channel_2g || 6;
-		const ch5g = activeAp.channel_5g || 149;
+		const ch5g = activeAp.channel_5g || 64;
 		document.getElementById("radio-0-btn").innerText = "Radio 0 - Chan. " + ch5g;
 		document.getElementById("radio-1-btn").innerText = "Radio 1 - Chan. " + ch2g;
 
-		// Render Clients list for this AP
 		renderClientsListForAp();
-		
-		// Render Tab specific visualizations
 		renderActiveTabContent();
 	}
 	
@@ -880,13 +988,13 @@ document.addEventListener("DOMContentLoaded", () => {
 			listHtml += `
 			<div class="rf-client-row">
 				<div class="rf-client-name" style="width: 50%; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-					${c.name || c.ip || "Guest Client"}
+					\${c.name || c.ip || "Guest Client"}
 				</div>
 				<div class="rf-client-icons" style="width: 25%; justify-content: center;">
-					${barsHtml}
+					\${barsHtml}
 				</div>
 				<div class="rf-client-icons" style="width: 25%; justify-content: flex-end;">
-					${speedHtml}
+					\${speedHtml}
 				</div>
 			</div>`;
 		});
@@ -908,11 +1016,11 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 		
 		return `
-		<div class="signal-bar-icon" title="${rssi} dBm">
-			<span class="signal-bar ${barsActive >= 1 ? colorClass : ''}" style="height: 3px;"></span>
-			<span class="signal-bar ${barsActive >= 2 ? colorClass : ''}" style="height: 6px;"></span>
-			<span class="signal-bar ${barsActive >= 3 ? colorClass : ''}" style="height: 9px;"></span>
-			<span class="signal-bar ${barsActive >= 4 ? colorClass : ''}" style="height: 12px;"></span>
+		<div class="signal-bar-icon" title="\${rssi} dBm">
+			<span class="signal-bar \${barsActive >= 1 ? colorClass : ''}" style="height: 3px;"></span>
+			<span class="signal-bar \${barsActive >= 2 ? colorClass : ''}" style="height: 6px;"></span>
+			<span class="signal-bar \${barsActive >= 3 ? colorClass : ''}" style="height: 9px;"></span>
+			<span class="signal-bar \${barsActive >= 4 ? colorClass : ''}" style="height: 12px;"></span>
 		</div>`;
 	}
 	
@@ -925,40 +1033,26 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 		
 		return `
-		<div class="speedometer-icon" title="${rateMbps} Mbps">
-			<span class="speedometer-needle ${speedClass}"></span>
+		<div class="speedometer-icon" title="\${rateMbps} Mbps">
+			<span class="speedometer-needle \${speedClass}"></span>
 		</div>`;
 	}
 
 	// ================= REAL-TIME GRAPH ENGINE (CANVAS) =================
 
-	const graphData = {
-		time: Array.from({length: 15}, (_, i) => i),
-		neighborAps: {
-			valid: [30, 31, 32, 33, 33, 33, 34, 34, 34, 34, 34, 34, 34, 34, 34],
-			interf: [48, 48, 48, 48, 48, 47, 47, 47, 48, 48, 48, 48, 48, 47, 47],
-			rogue: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-		},
-		cpu: [5, 6, 7, 7, 8, 7, 6, 5, 7, 8, 9, 8, 7, 8, 7],
-		memory: [530, 532, 535, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538],
-		neighborClients: {
-			valid: [22, 22, 23, 23, 23, 23, 24, 24, 24, 25, 25, 25, 25, 25, 25],
-			interf: [45, 45, 45, 46, 46, 46, 45, 45, 45, 44, 44, 44, 44, 43, 43]
-		},
-		clients: [4, 4, 5, 5, 6, 7, 7, 8, 9, 9, 9, 8, 8, 7, 6],
-		throughput: {
-			out: [500000, 600000, 400000, 550000, 700000, 850000, 900000, 750000, 800000, 880000, 920000, 890000, 850000, 870000, 880000],
-			in: [200000, 250000, 180000, 300000, 420000, 500000, 480000, 400000, 350000, 450000, 600000, 550000, 500000, 480000, 460000]
-		}
-	};
-	
 	function updateGraphSlidingWindow() {
 		if (!activeAp) return;
 		
-		// Push new CPU and memory values
-		const currentCpu = activeAp.cpu !== undefined ? activeAp.cpu : Math.floor(Math.random() * 5) + 5;
+		const t = new Date();
+		const h = String(t.getHours()).padStart(2, '0');
+		const m = String(t.getMinutes()).padStart(2, '0');
+		const s = String(t.getSeconds()).padStart(2, '0');
+		graphData.times.shift();
+		graphData.times.push(h + ":" + m + ":" + s);
+		
+		const currentCpu = activeAp.cpu !== undefined ? activeAp.cpu : Math.floor(Math.random() * 8) + 16;
 		const currentMem = activeAp.memFree !== undefined ? activeAp.memFree : 538;
-		const clientCount = activeAp.clientCount !== undefined ? activeAp.clientCount : 5;
+		const clientCount = activeAp.clientCount !== undefined ? activeAp.clientCount : 18;
 		
 		graphData.cpu.shift();
 		graphData.cpu.push(currentCpu);
@@ -969,24 +1063,23 @@ document.addEventListener("DOMContentLoaded", () => {
 		graphData.clients.shift();
 		graphData.clients.push(clientCount);
 		
-		// Push other dummy sliding metrics
 		graphData.neighborAps.valid.shift();
-		graphData.neighborAps.valid.push(32 + Math.floor(Math.random() * 3));
+		graphData.neighborAps.valid.push(33 + Math.floor(Math.random() * 2));
 		
 		graphData.neighborAps.interf.shift();
-		graphData.neighborAps.interf.push(46 + Math.floor(Math.random() * 3));
+		graphData.neighborAps.interf.push(47 + Math.floor(Math.random() * 2));
 		
 		graphData.neighborClients.valid.shift();
-		graphData.neighborClients.valid.push(23 + Math.floor(Math.random() * 3));
+		graphData.neighborClients.valid.push(24 + Math.floor(Math.random() * 2));
 		
 		graphData.neighborClients.interf.shift();
-		graphData.neighborClients.interf.push(42 + Math.floor(Math.random() * 3));
+		graphData.neighborClients.interf.push(4 + Math.floor(Math.random() * 2));
 		
 		graphData.throughput.out.shift();
-		graphData.throughput.out.push(700000 + Math.floor(Math.random() * 200000));
+		graphData.throughput.out.push(850000 + Math.floor(Math.random() * 100000));
 		
 		graphData.throughput.in.shift();
-		graphData.throughput.in.push(400000 + Math.floor(Math.random() * 150000));
+		graphData.throughput.in.push(450000 + Math.floor(Math.random() * 80000));
 		
 		renderAllOverviewCharts();
 	}
@@ -998,11 +1091,11 @@ document.addEventListener("DOMContentLoaded", () => {
 			{ data: graphData.neighborAps.valid, color: "#0275d8" },
 			{ data: graphData.neighborAps.interf, color: "#f24f1d" },
 			{ data: graphData.neighborAps.rogue, color: "#e33734" }
-		], 0, 75);
+		], 0, 50);
 		
 		drawSparkline("chart-cpu", [
 			{ data: graphData.cpu, color: "#0275d8", fill: true }
-		], 0, 15);
+		], 0, 40);
 		
 		drawSparkline("chart-memory", [
 			{ data: graphData.memory, color: "#0275d8" }
@@ -1011,11 +1104,11 @@ document.addEventListener("DOMContentLoaded", () => {
 		drawSparkline("chart-neighbor-clients", [
 			{ data: graphData.neighborClients.valid, color: "#0275d8" },
 			{ data: graphData.neighborClients.interf, color: "#f24f1d" }
-		], 0, 75);
+		], 0, 40);
 		
 		drawSparkline("chart-clients", [
 			{ data: graphData.clients, color: "#0275d8", fill: true }
-		], 0, 15);
+		], 0, 30);
 		
 		drawSparkline("chart-throughput", [
 			{ data: graphData.throughput.out, color: "#0275d8", fill: true },
@@ -1029,7 +1122,6 @@ document.addEventListener("DOMContentLoaded", () => {
 		
 		const ctx = canvas.getContext("2d");
 		
-		// Set dynamic resolution
 		const rect = canvas.getBoundingClientRect();
 		canvas.width = rect.width;
 		canvas.height = rect.height;
@@ -1039,18 +1131,16 @@ document.addEventListener("DOMContentLoaded", () => {
 		
 		ctx.clearRect(0, 0, w, h);
 		
-		// Draw grid lines
-		ctx.strokeStyle = "rgba(0, 0, 0, 0.05)";
-		ctx.lineWidth = 0.5;
+		const chartH = h - 22;
+		
 		for (let i = 1; i < 4; i++) {
-			let gridY = (h / 4) * i;
+			let gridY = (chartH / 4) * i;
 			ctx.beginPath();
 			ctx.moveTo(0, gridY);
 			ctx.lineTo(w, gridY);
 			ctx.stroke();
 		}
 		
-		// Draw datasets
 		datasets.forEach(ds => {
 			const data = ds.data;
 			if (data.length < 2) return;
@@ -1061,7 +1151,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			ctx.beginPath();
 			for (let i = 0; i < data.length; i++) {
 				const val = data[i];
-				const normY = h - ((val - minVal) / range) * h;
+				const normY = chartH - ((val - minVal) / range) * chartH;
 				const x = i * stepX;
 				
 				if (i === 0) {
@@ -1072,25 +1162,214 @@ document.addEventListener("DOMContentLoaded", () => {
 			}
 			
 			ctx.strokeStyle = ds.color;
-			ctx.lineWidth = 2.5;
+			ctx.lineWidth = 1.8;
 			ctx.stroke();
 			
-			// Fill underneath if requested
 			if (ds.fill) {
-				ctx.lineTo(w, h);
-				ctx.lineTo(0, h);
+				ctx.lineTo(w, chartH);
+				ctx.lineTo(0, chartH);
 				ctx.closePath();
 				
-				// Create gradient
-				let grad = ctx.createLinearGradient(0, 0, 0, h);
-				grad.addColorStop(0, ds.color + "30"); // 30 represents hex transparency
-				grad.addColorStop(1, ds.color + "03");
+				let grad = ctx.createLinearGradient(0, 0, 0, chartH);
+				grad.addColorStop(0, ds.color + "22");
+				grad.addColorStop(1, ds.color + "01");
 				
 				ctx.fillStyle = grad;
 				ctx.fill();
 			}
 		});
+		
+		ctx.strokeStyle = "rgba(0, 0, 0, 0.08)";
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+		ctx.moveTo(0, chartH);
+		ctx.lineTo(w, chartH);
+		ctx.stroke();
+		
+		if (graphData.times && graphData.times.length === 15) {
+			const startTime = graphData.times[0].substring(0, 5);
+			const middleTime = graphData.times[7].substring(0, 5);
+			const endTime = graphData.times[14].substring(0, 5);
+			
+			ctx.fillStyle = "var(--font-alt-color, #777)";
+			ctx.font = "9px Arial, sans-serif";
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			ctx.fillText(startTime, 30, chartH + 11);
+			ctx.fillText(middleTime, w / 2, chartH + 11);
+			ctx.fillText(endTime, w - 30, chartH + 11);
+		}
+		
+		if (hoverState.canvasId === canvasId && hoverState.index >= 0 && hoverState.index < 15) {
+			const stepX = w / 14;
+			const hoverX = hoverState.index * stepX;
+			const range = maxVal - minVal;
+			
+			ctx.strokeStyle = "rgba(0, 0, 0, 0.25)";
+			ctx.lineWidth = 1;
+			ctx.setLineDash([3, 3]);
+			ctx.beginPath();
+			ctx.moveTo(hoverX, 0);
+			ctx.lineTo(hoverX, chartH);
+			ctx.stroke();
+			ctx.setLineDash([]);
+			
+			datasets.forEach(ds => {
+				const val = ds.data[hoverState.index];
+				const normY = chartH - ((val - minVal) / range) * chartH;
+				
+				ctx.fillStyle = ds.color;
+				ctx.beginPath();
+				ctx.arc(hoverX, normY, 4.5, 0, Math.PI * 2);
+				ctx.fill();
+				
+				ctx.strokeStyle = "#ffffff";
+				ctx.lineWidth = 1.5;
+				ctx.beginPath();
+				ctx.arc(hoverX, normY, 4.5, 0, Math.PI * 2);
+				ctx.stroke();
+			});
+		}
 	}
+
+	function triggerRedrawForCanvas(id) {
+		if (id === "chart-neighbor-aps") {
+			drawSparkline("chart-neighbor-aps", [
+				{ data: graphData.neighborAps.valid, color: "#0275d8" },
+				{ data: graphData.neighborAps.interf, color: "#f24f1d" },
+				{ data: graphData.neighborAps.rogue, color: "#e33734" }
+			], 0, 50);
+		} else if (id === "chart-cpu") {
+			drawSparkline("chart-cpu", [
+				{ data: graphData.cpu, color: "#0275d8", fill: true }
+			], 0, 40);
+		} else if (id === "chart-memory") {
+			drawSparkline("chart-memory", [
+				{ data: graphData.memory, color: "#0275d8" }
+			], 0, 750);
+		} else if (id === "chart-neighbor-clients") {
+			drawSparkline("chart-neighbor-clients", [
+				{ data: graphData.neighborClients.valid, color: "#0275d8" },
+				{ data: graphData.neighborClients.interf, color: "#f24f1d" }
+			], 0, 40);
+		} else if (id === "chart-clients") {
+			drawSparkline("chart-clients", [
+				{ data: graphData.clients, color: "#0275d8", fill: true }
+			], 0, 30);
+		} else if (id === "chart-throughput") {
+			drawSparkline("chart-throughput", [
+				{ data: graphData.throughput.out, color: "#0275d8", fill: true },
+				{ data: graphData.throughput.in, color: "#f24f1d", fill: true }
+			], 0, 1200000);
+		}
+	}
+	
+	function showTooltipForCanvas(id, idx, rect, mouseX, mouseY) {
+		let tooltip = document.getElementById("graph-hover-tooltip");
+		if (!tooltip) {
+			tooltip = document.createElement("div");
+			tooltip.id = "graph-hover-tooltip";
+			document.body.appendChild(tooltip);
+		}
+		
+		const timeVal = graphData.times[idx] || "23:12:59";
+		const today = new Date();
+		const dateStr = today.getFullYear() + "-" + 
+						String(today.getMonth() + 1).padStart(2, '0') + "-" + 
+						String(today.getDate()).padStart(2, '0');
+		const fullTimeStr = dateStr + " " + timeVal;
+		
+		let contentHtml = `<div class="tooltip-title">\${fullTimeStr}</div>`;
+		
+		if (id === "chart-neighbor-aps") {
+			contentHtml += `
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>Valid:</span> <strong>\${graphData.neighborAps.valid[idx]}</strong></div>
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#f24f1d;"></span>Interfering:</span> <strong>\${graphData.neighborAps.interf[idx]}</strong></div>
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#e33734;"></span>Rogue:</span> <strong>\${graphData.neighborAps.rogue[idx]}</strong></div>
+			`;
+		} else if (id === "chart-cpu") {
+			contentHtml += `
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>CPU:</span> <strong>\${graphData.cpu[idx]}%</strong></div>
+			`;
+		} else if (id === "chart-memory") {
+			contentHtml += `
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>Memory Free:</span> <strong>\${graphData.memory[idx]} MB</strong></div>
+			`;
+		} else if (id === "chart-neighbor-clients") {
+			contentHtml += `
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>Valid:</span> <strong>\${graphData.neighborClients.valid[idx]}</strong></div>
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#f24f1d;"></span>Interfering:</span> <strong>\${graphData.neighborClients.interf[idx]}</strong></div>
+			`;
+		} else if (id === "chart-clients") {
+			contentHtml += `
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>Clients:</span> <strong>\${graphData.clients[idx]}</strong></div>
+			`;
+		} else if (id === "chart-throughput") {
+			const tx = formatThroughput(graphData.throughput.out[idx]);
+			const rx = formatThroughput(graphData.throughput.in[idx]);
+			contentHtml += `
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>Out:</span> <strong>\${tx}</strong></div>
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#f24f1d;"></span>In:</span> <strong>\${rx}</strong></div>
+			`;
+		}
+		
+		tooltip.innerHTML = contentHtml;
+		
+		const stepX = rect.width / 14;
+		const hoverX = idx * stepX;
+		
+		tooltip.style.left = (rect.left + window.scrollX + hoverX + 15) + "px";
+		tooltip.style.top = (rect.top + window.scrollY + mouseY - 25) + "px";
+		tooltip.style.display = "block";
+	}
+	
+	function formatThroughput(bps) {
+		if (bps >= 1000000) {
+			return (bps / 1000000).toFixed(1) + " Mbps";
+		} else if (bps >= 1000) {
+			return (bps / 1000).toFixed(0) + " Kbps";
+		}
+		return bps + " bps";
+	}
+
+	const canvasIds = [
+		"chart-neighbor-aps",
+		"chart-cpu",
+		"chart-memory",
+		"chart-neighbor-clients",
+		"chart-clients",
+		"chart-throughput"
+	];
+	
+	canvasIds.forEach(id => {
+		const canvas = document.getElementById(id);
+		if (canvas) {
+			canvas.addEventListener("mousemove", (e) => {
+				const rect = canvas.getBoundingClientRect();
+				const x = e.clientX - rect.left;
+				const y = e.clientY - rect.top;
+				
+				const idx = Math.min(14, Math.max(0, Math.round((x / rect.width) * 14)));
+				
+				hoverState.canvasId = id;
+				hoverState.index = idx;
+				
+				triggerRedrawForCanvas(id);
+				showTooltipForCanvas(id, idx, rect, x, y);
+			});
+			
+			canvas.addEventListener("mouseleave", () => {
+				hoverState.canvasId = null;
+				hoverState.index = -1;
+				triggerRedrawForCanvas(id);
+				
+				const tooltip = document.getElementById("graph-hover-tooltip");
+				if (tooltip) {
+					tooltip.style.display = "none";
+				}
+			});
+		}
+	});
 
 	// ================= CLIENT MATCH TAB RENDER =================
 
@@ -1120,13 +1399,12 @@ document.addEventListener("DOMContentLoaded", () => {
 		title.innerText = (radioType === "5g" ? "5 GHz" : "2.4 GHz") + " Station Layout";
 		
 		const data = matchLayoutData[radioType];
-		const maxCount = 100; // Normalised maximum for bar width calculation
+		const maxCount = 100;
 		
 		for (const key in data) {
 			const assocVal = data[key].assoc;
 			const unassocVal = data[key].unassoc;
 			
-			// Associated Bar
 			const assocBar = document.querySelector(".match-assoc-bar-" + key);
 			const assocText = document.querySelector(".match-assoc-val-" + key);
 			if (assocBar && assocText) {
@@ -1135,7 +1413,6 @@ document.addEventListener("DOMContentLoaded", () => {
 				assocText.innerText = assocVal;
 			}
 			
-			// Unassociated Bar
 			const unassocBar = document.querySelector(".match-unassoc-bar-" + key);
 			const unassocText = document.querySelector(".match-unassoc-val-" + key);
 			if (unassocBar && unassocText) {
@@ -1162,21 +1439,21 @@ document.addEventListener("DOMContentLoaded", () => {
 			snir: 33,
 			knownAps: 9,
 			unknownAps: 14,
-			interferers: [] // empty
+			interferers: []
 		},
 		"2g": {
 			activeChan: 6,
 			channels: [1, 6, 11],
-			quality: [85, 92, 88],
-			wifi: [32, 22, 28],
-			interf: [15, 8, 12],
-			noise: -86,
-			maxSignal: -63,
-			maxSsid: "Galaxy A17 5G 60C2",
-			maxBssid: "8a:a8:bd:b6:7b:a4",
-			snir: 23,
+			quality: [58, 92, 88],
+			wifi: [13, 22, 28],
+			interf: [4, 8, 12],
+			noise: -82,
+			maxSignal: -70,
+			maxSsid: "HP-Print-BF-LaserJet Pro MFP",
+			maxBssid: "fc:01:7c:3a:d1:bf",
+			snir: 12,
 			knownAps: 10,
-			unknownAps: 11,
+			unknownAps: 12,
 			interferers: [
 				{
 					type: "Microwave Oven",
@@ -1193,14 +1470,41 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	};
 	
+	function showSpectrumTooltip(e, chan, avail, wifi, interf, qual) {
+		let tooltip = document.getElementById("graph-hover-tooltip");
+		if (!tooltip) {
+			tooltip = document.createElement("div");
+			tooltip.id = "graph-hover-tooltip";
+			document.body.appendChild(tooltip);
+		}
+		
+		tooltip.innerHTML = `
+			<div class="tooltip-title" style="font-size:12px;">\${chan}</div>
+			<div class="tooltip-row"><span>Available :</span> <strong>\${avail} %</strong></div>
+			<div class="tooltip-row"><span>WiFi :</span> <strong>\${wifi} %</strong></div>
+			<div class="tooltip-row"><span>Interference :</span> <strong>\${interf} %</strong></div>
+			<div class="tooltip-row"><span>Quality :</span> <strong>\${qual} %</strong></div>
+			<div style="font-size: 9px; color: #888; border-top: 1px solid var(--border-color, #eee); padding-top: 4px; margin-top: 5px; text-align: center;">Click this to see more</div>
+		`;
+		
+		tooltip.style.left = (e.clientX + window.scrollX - 50) + "px";
+		tooltip.style.top = (e.clientY + window.scrollY - 110) + "px";
+		tooltip.style.display = "block";
+	}
+	
+	function hideSpectrumTooltip() {
+		const tooltip = document.getElementById("graph-hover-tooltip");
+		if (tooltip) {
+			tooltip.style.display = "none";
+		}
+	}
+	
 	function renderSpectrumTab() {
 		const data = spectrumDetails[activeSpecRadio];
 		
-		// Set headers/titles
 		document.getElementById("interferers-title").innerText = "Non-WiFi Device List: " + (activeSpecRadio === "5g" ? "5 GHz" : "2.4 GHz");
 		document.getElementById("quality-title").innerText = (activeSpecRadio === "5g" ? "5 GHz" : "2.4 GHz") + " Channel Utilization and Quality";
 		
-		// Fill Interferers Table
 		const tbody = document.getElementById("interferer-rows");
 		if (data.interferers.length === 0) {
 			tbody.innerHTML = `
@@ -1215,21 +1519,20 @@ document.addEventListener("DOMContentLoaded", () => {
 			data.interferers.forEach(inf => {
 				rows += `
 				<tr>
-					<td><span style="font-weight: bold; color: #f24f1d;">${inf.type}</span></td>
-					<td>${inf.id}</td>
-					<td>${inf.frequency}</td>
-					<td>${inf.bandwidth}</td>
-					<td>${inf.affected}</td>
-					<td>${inf.signal} dBm</td>
-					<td>${inf.dutyCycle}</td>
-					<td>${inf.addTime}</td>
-					<td>${inf.updateTime}</td>
+					<td><span style="font-weight: bold; color: #f24f1d;">\${inf.type}</span></td>
+					<td>\${inf.id}</td>
+					<td>\${inf.frequency}</td>
+					<td>\${inf.bandwidth}</td>
+					<td>\${inf.affected}</td>
+					<td>\${inf.signal} dBm</td>
+					<td>\${inf.dutyCycle}</td>
+					<td>\${inf.addTime}</td>
+					<td>\${inf.updateTime}</td>
 				</tr>`;
 			});
 			tbody.innerHTML = rows;
 		}
 		
-		// Draw Channel Utilization Bars
 		const wrapper = document.getElementById("channel-bars-wrapper");
 		wrapper.innerHTML = '';
 		
@@ -1239,29 +1542,32 @@ document.addEventListener("DOMContentLoaded", () => {
 			const interf = data.interf[idx];
 			const avail = 100 - wifi - interf;
 			
-			// Build bar HTML
 			const barDiv = document.createElement("div");
 			barDiv.className = "rf-chan-bar-outer";
 			barDiv.style.cursor = "pointer";
 			barDiv.onclick = () => selectActiveChannelStats(chan, idx);
 			
+			barDiv.addEventListener("mousemove", (e) => {
+				showSpectrumTooltip(e, chan, avail, wifi, interf, qual);
+			});
+			barDiv.addEventListener("mouseleave", () => {
+				hideSpectrumTooltip();
+			});
+			
 			barDiv.innerHTML = `
 			<div style="display: flex; gap: 8px; height: 180px; align-items: flex-end;">
-				<!-- Utilization stacked segment bar -->
 				<div class="rf-chan-bar-fill" style="height: 100%; width: 22px; background: rgba(0,0,0,0.03); border: 1px solid var(--border-color);">
-					<div class="rf-chan-segment" style="height: ${wifi}%; background: #0275d8;" title="WiFi: ${wifi}%"></div>
-					<div class="rf-chan-segment" style="height: ${interf}%; background: #f24f1d;" title="Interference: ${interf}%"></div>
-					<div class="rf-chan-segment" style="height: ${avail}%; background: rgba(2, 117, 216, 0.15);" title="Available: ${avail}%"></div>
+					<div class="rf-chan-segment" style="height: \${wifi}%; background: #0275d8;" title="WiFi: \${wifi}%"></div>
+					<div class="rf-chan-segment" style="height: \${interf}%; background: #f24f1d;" title="Interference: \${interf}%"></div>
+					<div class="rf-chan-segment" style="height: \${avail}%; background: rgba(2, 117, 216, 0.15);" title="Available: \${avail}%"></div>
 				</div>
-				<!-- Quality bar indicator -->
-				<div style="width: 8px; height: ${qual}%; background: #26c281; border-radius: 2px;" title="Quality: ${qual}%"></div>
+				<div style="width: 8px; height: \${qual}%; background: #26c281; border-radius: 2px;" title="Quality: \${qual}%"></div>
 			</div>
-			<div class="rf-chan-label">${chan}</div>`;
+			<div class="rf-chan-label">\${chan}</div>`;
 			
 			wrapper.appendChild(barDiv);
 		});
 		
-		// Select first channel as default
 		selectActiveChannelStats(data.activeChan, data.channels.indexOf(data.activeChan));
 	}
 	
@@ -1286,14 +1592,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	// ================= CONTROLS & EVENT HANDLERS =================
 	
-	// Tab toggles
 	const tabs = document.querySelectorAll(".rf-tab");
 	tabs.forEach(tab => {
 		tab.addEventListener("click", () => {
 			tabs.forEach(t => t.classList.remove("active"));
 			tab.classList.add("active");
 			
-			// Switch pane
 			const targetPane = tab.getAttribute("data-tab");
 			document.querySelectorAll(".tab-pane").forEach(pane => pane.style.display = "none");
 			document.getElementById("tab-content-" + targetPane).style.display = "block";
@@ -1314,20 +1618,16 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	}
 	
-	// Radio toggles in Overview
 	const radioBtns = document.querySelectorAll(".rf-radio-btn[data-radio]");
 	radioBtns.forEach(btn => {
 		btn.addEventListener("click", () => {
 			radioBtns.forEach(b => b.classList.remove("active"));
 			btn.classList.add("active");
 			activeRadioIndex = btn.getAttribute("data-radio");
-			
-			// Force redraw sparklines with slightly different dummy radio factors
 			renderAllOverviewCharts();
 		});
 	});
 	
-	// Radio toggles in Client Match
 	const matchBtns = [document.getElementById("btn-match-radio-0"), document.getElementById("btn-match-radio-1")];
 	matchBtns.forEach(btn => {
 		if (btn) {
@@ -1340,7 +1640,6 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	});
 	
-	// Radio toggles in Spectrum
 	const specBtns = document.querySelectorAll(".rf-radio-btn[data-spec-radio]");
 	specBtns.forEach(btn => {
 		btn.addEventListener("click", () => {
@@ -1351,25 +1650,20 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	});
 
-	// Dropdown and selector triggers
 	apSelector.addEventListener("change", loadActiveApDetails);
 	
-	// Form Reset
 	document.getElementById("btn-reset-filter").addEventListener("click", () => {
 		window.location.href = 'treya.php?action=omada.rf_dashboard';
 	});
 	
-	// Polling and Init
 	queryApDetails();
-	pollingInterval = setInterval(queryApDetails, 10000); // Poll device details every 10 seconds
-	graphInterval = setInterval(updateGraphSlidingWindow, 3000); // Animate slide graphs every 3 seconds
+	pollingInterval = setInterval(queryApDetails, 10000);
+	graphInterval = setInterval(updateGraphSlidingWindow, 3000);
 });
 </script>
+HTML;
 
-<?php
-$html_page
-	->addItem($filter_html)
-	->addItem($html_page->getWebLayoutMode() === ZBX_LAYOUT_NORMAL ? $filter_html : null) // Keeps standard layout controls mapping
-	->addItem(new CTag('div', true, $html_page->toString())) // placeholder wrapper
-	->show();
+// Add content inside CHtmlEntity to render using Zabbix layout engine
+$html_page->addItem(new CHtmlEntity($body_html));
+$html_page->show();
 ?>
