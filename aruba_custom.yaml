@@ -178,7 +178,7 @@ zabbix_export:
                     - 3600s
               trigger_prototypes:
                 - uuid: cc69931de8164508ba764b9b2d474b8f
-                  expression: 'last(/Aruba Controller Custom API/aruba.ap.noise_2g[{#AP_NAME}])>-65 and last(/Aruba Controller Custom API/aruba.ap.noise_2g[{#AP_NAME}])<0'
+                  expression: 'last(/Aruba Controller Custom API/aruba.ap.noise_2g[{#AP_NAME}])>{$ARUBA_NOISE_THRESHOLD} and last(/Aruba Controller Custom API/aruba.ap.noise_2g[{#AP_NAME}])<0'
                   name: 'High RF Noise on AP {#AP_NAME} 2.4GHz on {HOST.NAME} (Noise > {$ARUBA_NOISE_THRESHOLD} dBm)'
                   priority: WARNING
                   description: 'AP {#AP_NAME} 2.4 GHz RF Noise is high.'
@@ -202,7 +202,7 @@ zabbix_export:
                     - 3600s
               trigger_prototypes:
                 - uuid: 2256760ae1a44e5193ccd07970a01741
-                  expression: 'last(/Aruba Controller Custom API/aruba.ap.noise_5g[{#AP_NAME}])>-65 and last(/Aruba Controller Custom API/aruba.ap.noise_5g[{#AP_NAME}])<0'
+                  expression: 'last(/Aruba Controller Custom API/aruba.ap.noise_5g[{#AP_NAME}])>{$ARUBA_NOISE_THRESHOLD} and last(/Aruba Controller Custom API/aruba.ap.noise_5g[{#AP_NAME}])<0'
                   name: 'High RF Noise on AP {#AP_NAME} 5GHz on {HOST.NAME} (Noise > {$ARUBA_NOISE_THRESHOLD} dBm)'
                   priority: WARNING
                   description: 'AP {#AP_NAME} 5 GHz RF Noise is high.'
@@ -257,7 +257,7 @@ zabbix_export:
           value: '70'
           description: 'Channel Utilization WARNING threshold (%)'
         - macro: '{$ARUBA_NOISE_THRESHOLD}'
-          value: '-65'
+          value: '-80'
           description: 'RF Noise Floor WARNING threshold (dBm)'
         - macro: '{$ARUBA_SSH_PASS}'
           type: SECRET_TEXT
