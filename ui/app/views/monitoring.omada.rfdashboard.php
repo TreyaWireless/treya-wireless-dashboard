@@ -402,6 +402,7 @@ $body_html = <<<HTML
 	border-radius: 50%;
 	margin-right: 5px;
 }
+</style>
 <div id="rf-dashboard-wrapper" style="position: relative;">
 <form method="get" action="treya.php" name="rf_filter_form" id="rf_filter_form" style="margin-bottom: 20px;">
 	<input type="hidden" name="action" value="omada.rf_dashboard">
@@ -1693,6 +1694,6 @@ if (document.readyState === "complete" || document.readyState === "interactive")
 </script>
 HTML;
 
-$html_page->addItem(new CHtmlEntity($body_html));
+$html_page->addItem(new CObject($body_html));
 $html_page->show();
 ?>
