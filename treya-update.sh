@@ -62,6 +62,9 @@ if [ -f "$TMP_DIR/repo/aruba_monitor.py" ]; then
     chmod +x /usr/lib/treya-wireless/externalscripts/aruba_monitor.py 2>/dev/null || true
     echo "aruba_monitor.py updated."
 fi
+
+# Apply SELinux contexts to external scripts
+restorecon -R -v /usr/lib/zabbix/externalscripts /usr/lib/treya-wireless/externalscripts 2>/dev/null || true
 if [ -f "$TMP_DIR/repo/treya_route_sync.py" ]; then
     cp $TMP_DIR/repo/treya_route_sync.py /usr/local/bin/treya_route_sync.py 2>/dev/null || true
     chmod +x /usr/local/bin/treya_route_sync.py 2>/dev/null || true

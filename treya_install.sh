@@ -266,6 +266,9 @@ if command -v semanage &>/dev/null; then
     # Web UI files RHEL security context
     restorecon -R -v /usr/share/treya-wireless 2>/dev/null || true
     
+    # External scripts RHEL security context
+    restorecon -R -v /usr/lib/zabbix/externalscripts /usr/lib/treya-wireless/externalscripts 2>/dev/null || true
+    
     # Network connections boolean
     setsebool -P httpd_can_network_connect 1 2>/dev/null || true
     setsebool -P httpd_can_connect_zabbix 1 2>/dev/null || true
