@@ -20,6 +20,40 @@ class CControllerOmadaDevices extends CController {
 	protected function doAction(): void {
 		$hostid = $this->getInput('hostid');
 		
+		$is_windows = (stripos(PHP_OS, 'WIN') === 0);
+		if ($is_windows) {
+			$cache_dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'treya-wireless';
+			$python_bin = 'python';
+			// Check if python is in system path, if not check User AppData Programs
+			$check = @shell_exec('python --version');
+			if ($check === null || strpos($check, 'Python') === false) {
+				$user_profile = getenv('USERPROFILE');
+				if ($user_profile) {
+					$search_dir = $user_profile . DIRECTORY_SEPARATOR . 'AppData' . DIRECTORY_SEPARATOR . 'Local' . DIRECTORY_SEPARATOR . 'Programs' . DIRECTORY_SEPARATOR . 'Python';
+					if (is_dir($search_dir)) {
+						$subdirs = glob($search_dir . DIRECTORY_SEPARATOR . 'Python*', GLOB_ONLYDIR);
+						if ($subdirs) {
+							rsort($subdirs);
+							foreach ($subdirs as $subdir) {
+								$candidate = $subdir . DIRECTORY_SEPARATOR . 'python.exe';
+								if (file_exists($candidate)) {
+									$python_bin = $candidate;
+									break;
+								}
+							}
+						}
+					}
+				}
+			}
+		} else {
+			$cache_dir = '/var/cache/treya-wireless';
+			$python_bin = 'python3';
+		}
+		$lock_dir = $cache_dir . DIRECTORY_SEPARATOR . 'locks';
+		if (!file_exists($lock_dir)) {
+			@mkdir($lock_dir, 0777, true);
+		}
+		
 		// Fetch macros from database
 		$db_macros = DBselect(
 			'SELECT macro, value FROM hostmacro WHERE hostid='.zbx_dbstr($hostid)
@@ -57,9 +91,41 @@ class CControllerOmadaDevices extends CController {
 				]);
 				$ip = $db_interfaces ? reset($db_interfaces)['ip'] : '';
 				
-				// 1. Try local cache file
-				$cache_file = "/var/cache/treya-wireless/aruba_cache_{$ip}.json";
-				if ($ip && file_exists($cache_file) && is_readable($cache_file)) {
+				if ($ip) {
+					$cache_file = $cache_dir . DIRECTORY_SEPARATOR . "aruba_cache_{$ip}.json";
+					$lock_file = $lock_dir . DIRECTORY_SEPARATOR . "aruba_lock_{$ip}.lock";
+					
+					$cache_exists = file_exists($cache_file);
+					$cache_age = $cache_exists ? (time() - filemtime($cache_file)) : 99999;
+					if ($cache_age >= 30) {
+						$is_locked = file_exists($lock_file) && (time() - filemtime($lock_file) < 45);
+						if (!$is_locked) {
+							$user = escapeshellarg($macros['{$ARUBA_USER}'] ?? '');
+							$pass = escapeshellarg($macros['{$ARUBA_PASS}'] ?? '');
+							$port = escapeshellarg($macros['{$ARUBA_PORT}'] ?? '22');
+							$sw_ssh_pass = escapeshellarg($macros['{$ARUBA_SSH_PASS}'] ?? '');
+							$fw_pass = escapeshellarg($macros['{$ARUBA_FW_PASS}'] ?? '');
+							$sw_ips = escapeshellarg($macros['{$ARUBA_SWITCH_IPS}'] ?? '');
+							
+							$script_path = $is_windows ? '' : '/usr/lib/treya-wireless/externalscripts/aruba_monitor.py';
+							if (!$script_path || !file_exists($script_path)) {
+								$script_path = dirname(dirname(dirname(__DIR__))) . DIRECTORY_SEPARATOR . 'aruba_monitor.py';
+							}
+							
+							if ($is_windows) {
+								$cmd = "start /B " . $python_bin . " " . escapeshellarg($script_path) . " " .
+								       escapeshellarg($ip) . " {$port} {$user} {$pass} {$sw_ssh_pass} {$fw_pass} {$sw_ips} --update-cache > NUL 2>&1";
+								pclose(popen($cmd, "r"));
+							} else {
+								$cmd = "{$python_bin} " . escapeshellarg($script_path) . " " .
+								       escapeshellarg($ip) . " {$port} {$user} {$pass} {$sw_ssh_pass} {$fw_pass} {$sw_ips} --update-cache > /dev/null 2>&1 &";
+								exec($cmd);
+							}
+						}
+					}
+					
+					// 1. Try local cache file
+					if ($cache_exists && is_readable($cache_file)) {
 					$cache_content = @file_get_contents($cache_file);
 					$json_data = ($cache_content !== false && $cache_content !== '') ? json_decode($cache_content, true) : null;
 					if (is_array($json_data) && ($json_data['status'] ?? '') === 'success') {
@@ -202,6 +268,7 @@ class CControllerOmadaDevices extends CController {
 					// ignore and fallback
 				}
 			}
+		}
 
 			$output = [
 				'status' => 'error',
@@ -209,6 +276,71 @@ class CControllerOmadaDevices extends CController {
 			];
 			$this->setResponse(new CControllerResponseData(['main_block' => json_encode($output)]));
 			return;
+		}
+
+		// Fetch host interface IP for cache check
+		$db_interfaces = API::HostInterface()->get([
+			'output' => ['ip'],
+			'hostids' => $hostid,
+			'main' => 1
+		]);
+		$ip = $db_interfaces ? reset($db_interfaces)['ip'] : '';
+		
+		if ($vendor === 'omada' && $ip) {
+			$cache_file = $cache_dir . DIRECTORY_SEPARATOR . "omada_cache_{$ip}.json";
+			$lock_file = $lock_dir . DIRECTORY_SEPARATOR . "omada_lock_{$ip}.lock";
+			
+			$cache_exists = file_exists($cache_file);
+			$cache_age = $cache_exists ? (time() - filemtime($cache_file)) : 99999;
+			if ($cache_age >= 30) {
+				$is_locked = file_exists($lock_file) && (time() - filemtime($lock_file) < 45);
+				if (!$is_locked) {
+					$client_id = escapeshellarg($macros['{$OMADA_CLIENT_ID}'] ?? '');
+					$client_secret = escapeshellarg($macros['{$OMADA_CLIENT_SECRET}'] ?? '');
+					$port = escapeshellarg($macros['{$OMADA_PORT}'] ?? '443');
+					$omadac_id = escapeshellarg($macros['{$OMADA_ID}'] ?? '');
+					
+					$script_path = $is_windows ? '' : '/usr/lib/treya-wireless/externalscripts/omada_monitor.py';
+					if (!$script_path || !file_exists($script_path)) {
+						$script_path = dirname(dirname(dirname(__DIR__))) . DIRECTORY_SEPARATOR . 'omada_monitor.py';
+					}
+					
+					if ($is_windows) {
+						$cmd = "start /B " . $python_bin . " " . escapeshellarg($script_path) . " " .
+						       escapeshellarg($ip) . " {$port} {$client_id} {$client_secret} {$omadac_id} --update-cache > NUL 2>&1";
+						pclose(popen($cmd, "r"));
+					} else {
+						$cmd = "{$python_bin} " . escapeshellarg($script_path) . " " .
+						       escapeshellarg($ip) . " {$port} {$client_id} {$client_secret} {$omadac_id} --update-cache > /dev/null 2>&1 &";
+						exec($cmd);
+					}
+				}
+			}
+			
+			if ($cache_exists && is_readable($cache_file)) {
+				$cache_content = @file_get_contents($cache_file);
+				$json_data = ($cache_content !== false && $cache_content !== '') ? json_decode($cache_content, true) : null;
+				if (is_array($json_data) && ($json_data['status'] ?? '') === 'success') {
+					if (!isset($json_data['devices'])) {
+						$devices = [];
+						if (isset($json_data['eaps'])) {
+							foreach ($json_data['eaps'] as $ap) {
+								$ap['type'] = 'ap';
+								$devices[] = $ap;
+							}
+						}
+						if (isset($json_data['switches'])) {
+							foreach ($json_data['switches'] as $sw) {
+								$sw['type'] = 'switch';
+								$devices[] = $sw;
+							}
+						}
+						$json_data['devices'] = $devices;
+					}
+					$this->setResponse(new CControllerResponseData(['main_block' => json_encode($json_data)]));
+					return;
+				}
+			}
 		}
 
 		if (!isset($macros['{$OMADA_URL}']) || !isset($macros['{$OMADA_ID}']) || !isset($macros['{$OMADA_CLIENT_ID}']) || !isset($macros['{$OMADA_CLIENT_SECRET}'])) {

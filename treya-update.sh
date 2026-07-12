@@ -80,6 +80,14 @@ chown -R apache:apache /etc/treya/web /etc/treya-wireless/web 2>/dev/null || tru
 chmod 755 /etc/treya/web /etc/treya-wireless/web 2>/dev/null || true
 chmod 644 /etc/treya/web/treya.conf.php /etc/treya-wireless/web/treya.conf.php 2>/dev/null || true
 
+# Add zabbix user to treya_wireless group so it can share cache files
+usermod -a -G treya_wireless zabbix 2>/dev/null || true
+
+# Setup shared cache directories with 777 permissions
+mkdir -p /var/cache/treya-wireless/locks
+chown -R treya_wireless:treya_wireless /var/cache/treya-wireless 2>/dev/null || true
+chmod -R 777 /var/cache/treya-wireless 2>/dev/null || true
+
 # 6. PHP Cache clear
 php -r "opcache_reset();" 2>/dev/null || true
 

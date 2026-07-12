@@ -12,6 +12,22 @@ import paramiko
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+def get_cache_dir():
+    if os.name == 'nt':
+        import tempfile
+        return os.path.join(tempfile.gettempdir(), 'treya-wireless')
+    else:
+        return '/var/cache/treya-wireless'
+
+def get_settings_file():
+    if os.name == 'nt':
+        local_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ai_settings.json')
+        if os.path.exists(local_path):
+            return local_path
+        return r"C:\etc\treya-wireless\ai_settings.json"
+    else:
+        return "/etc/treya-wireless/ai_settings.json"
+
 def recv_until(chan, pattern, timeout=10):
     buf = ""
     start = time.time()
@@ -217,9 +233,225 @@ def parse_cli_table(table_text):
         for (start, end), header in zip(columns, headers):
             val = line[start:end].strip() if start < len(line) else ""
             row[header] = val
-        if row.get('Name'):
+        if row.get('Name') or row.get('MAC Address') or row.get('mac'):
             rows.append(row)
     return rows
+
+
+def get_local_analysis(eaps, clients, ip):
+    issues = []
+    actions = []
+    health_score = 100
+    
+    # Check for high 2.4GHz TX power
+    for ap in eaps:
+        pwr_2g = ap.get("tx_power_2g") or ap.get("pwr_2g")
+        if pwr_2g is not None:
+            try:
+                pwr_val = int(pwr_2g)
+                if pwr_val >= 20:
+                    health_score -= 10
+                    issues.append({
+                        "ap_name": ap.get("name") or "Access Point",
+                        "problem": f"High 2.4GHz TX power ({pwr_val} dBm) detected. This causes 'sticky' clients to remain connected to weak 2.4GHz signals instead of steering to 5GHz."
+                    })
+                    actions.append({
+                        "ap_mac": ap.get("mac") or "",
+                        "ap_name": ap.get("name") or "Access Point",
+                        "parameter": "tx_power_2g",
+                        "current_value": str(pwr_val),
+                        "new_value": "12",
+                        "reason": f"Reduce 2.4GHz TX power on {ap.get('name')} to 12 dBm to encourage client steering to the faster 5GHz band."
+                    })
+            except Exception:
+                pass
+
+    # Check for 5GHz Co-channel interference
+    ch_5g_map = {}
+    for ap in eaps:
+        ch_5g = ap.get("channel_5g") or ap.get("ch_5g")
+        if ch_5g and str(ch_5g).isdigit():
+            ch_val = int(ch_5g)
+            if ch_val > 14: # 5GHz channel
+                ch_5g_map.setdefault(ch_val, []).append(ap)
+
+    # For each channel used by multiple APs
+    for chan, aps in ch_5g_map.items():
+        if len(aps) > 1:
+            health_score -= 15 * (len(aps) - 1)
+            ap_names = ", ".join([ap.get("name") or "AP" for ap in aps])
+            for ap in aps:
+                issues.append({
+                    "ap_name": ap.get("name") or "Access Point",
+                    "problem": f"Co-channel interference on 5GHz Channel {chan} with neighboring APs ({ap_names})."
+                })
+            
+            # Suggest shifting one of the APs to another channel
+            common_5g_channels = [36, 44, 52, 60, 100, 108, 116, 132, 149, 157]
+            unused_channels = [c for c in common_5g_channels if c not in ch_5g_map]
+            suggested_chan = unused_channels[0] if unused_channels else 36
+            
+            for ap in aps[1:]:
+                actions.append({
+                    "ap_mac": ap.get("mac") or "",
+                    "ap_name": ap.get("name") or "Access Point",
+                    "parameter": "channel_5g",
+                    "current_value": str(chan),
+                    "new_value": str(suggested_chan),
+                    "reason": f"Shift 5GHz channel from {chan} to {suggested_chan} to resolve co-channel overlap with {aps[0].get('name')}."
+                })
+                
+    # Check for poor clients
+    poor_clients_count = 0
+    for c in clients:
+        rssi = c.get("rssi")
+        if rssi is not None:
+            try:
+                rssi_val = int(rssi)
+                if rssi_val <= -80:
+                    poor_clients_count += 1
+            except Exception:
+                pass
+                
+    if poor_clients_count > 0:
+        health_score -= min(poor_clients_count * 3, 20)
+        issues.append({
+            "ap_name": "Network clients",
+            "problem": f"{poor_clients_count} client(s) experiencing low RSSI (<= -80 dBm), causing retransmissions and performance degradation."
+        })
+        
+    health_score = max(0, min(100, health_score))
+    
+    return {
+        "health_score": health_score,
+        "issues": issues,
+        "actions": actions
+    }
+
+
+def get_ai_analysis_cached(eaps, clients, ip, cache_file):
+    settings_file = get_settings_file()
+    
+    # Check if cache already contains fresh AI analysis (less than 30 mins old)
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file) as f:
+                old_cache = json.load(f)
+            if "ai_analysis" in old_cache and "ai_analysis_timestamp" in old_cache:
+                age = time.time() - old_cache["ai_analysis_timestamp"]
+                if age < 1800:
+                    return old_cache["ai_analysis"], old_cache["ai_analysis_timestamp"]
+        except Exception:
+            pass
+
+    groq_key = None
+    gemini_key = None
+    if os.path.exists(settings_file):
+        try:
+            with open(settings_file) as f:
+                settings = json.load(f)
+            groq_key = settings.get("groq_api_key")
+            gemini_key = settings.get("gemini_api_key")
+        except Exception:
+            pass
+
+    # Build telemetry payload
+    telemetry = {
+        "site_ip": ip,
+        "eaps": [],
+        "poor_clients": []
+    }
+    
+    for ap in eaps:
+        telemetry["eaps"].append({
+            "name": ap.get("name"),
+            "mac": ap.get("mac"),
+            "ch_2g": ap.get("channel_2g"),
+            "pwr_2g": ap.get("tx_power_2g"),
+            "util_2g": ap.get("channel_util_2g"),
+            "ch_5g": ap.get("channel_5g"),
+            "pwr_5g": ap.get("tx_power_5g"),
+            "util_5g": ap.get("channel_util_5g"),
+            "clientCount": ap.get("clientCount")
+        })
+        
+    for c in clients:
+        if c.get("rssi") is not None and c.get("rssi") <= -80:
+            telemetry["poor_clients"].append({
+                "name": c.get("name"),
+                "mac": c.get("mac"),
+                "apMac": c.get("apMac"),
+                "apName": c.get("apName"),
+                "rssi": c.get("rssi"),
+                "ch": c.get("channel"),
+                "radioId": c.get("radioId")
+            })
+
+    prompt = f"""
+You are an automated RF Optimization Agent. Review this wireless network telemetry data:
+{json.dumps(telemetry)}
+
+Tasks:
+1. Identify APs experiencing Co-Channel Interference on 5GHz.
+2. Identify APs with extremely high 2.4GHz TX power causing sticky clients.
+3. Suggest remediation actions (reducing 2.4GHz power or shifting 5GHz channels to non-overlapping ones).
+
+You must respond ONLY with a valid JSON object matching the schema below. Do not include any markdown styling, conversational text, or explanation outside the JSON.
+
+Required JSON Schema:
+{{
+    "health_score": 85,
+    "issues": [
+        {{"ap_name": "AP Name", "problem": "Detailed description of the issue"}}
+    ],
+    "actions": [
+        {{"ap_mac": "00:00:00:00:00:00", "ap_name": "AP Name", "parameter": "channel_5g|tx_power_2g", "current_value": "161", "new_value": "36", "reason": "Why this action is recommended"}}
+    ]
+}}
+"""
+
+    # 4. Try Groq
+    if groq_key:
+        try:
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
+            payload = {
+                "model": "llama-3.3-70b-versatile",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.0,
+                "response_format": {"type": "json_object"}
+            }
+            r = requests.post(url, headers=headers, json=payload, timeout=20)
+            if r.status_code == 200:
+                res_txt = r.json()["choices"][0]["message"]["content"].strip()
+                res_dict = json.loads(res_txt)
+                res_dict["engine"] = "Groq Llama 3.3"
+                return res_dict, time.time()
+        except Exception:
+            pass
+
+    # 5. Fallback to Gemini
+    if gemini_key:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [{"parts": [{"text": prompt + " Respond in strict JSON."}]}],
+                "generationConfig": {"responseMimeType": "application/json"}
+            }
+            r = requests.post(url, headers=headers, json=payload, timeout=20)
+            if r.status_code == 200:
+                res_txt = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                res_dict = json.loads(res_txt)
+                res_dict["engine"] = "Gemini 1.5 Flash"
+                return res_dict, time.time()
+        except Exception:
+            pass
+
+    # 6. Fallback to Local Heuristics
+    local_res = get_local_analysis(eaps, clients, ip)
+    local_res["engine"] = "Local Heuristics"
+    return local_res, time.time()
 
 
 def main():
@@ -267,14 +499,18 @@ def main():
         }))
         sys.exit(0)
 
-    lock_dir = "/var/cache/treya-wireless/locks"
+    cache_dir = get_cache_dir()
+    lock_dir = os.path.join(cache_dir, 'locks')
     try:
         os.makedirs(lock_dir, exist_ok=True)
-        os.chmod(lock_dir, 0o777)
+        if os.name != 'nt':
+            os.chmod(lock_dir, 0o777)
     except Exception:
         pass
 
-    cache_file = f"/var/cache/treya-wireless/aruba_cache_{ip}.json"
+    cache_file = os.path.join(cache_dir, f"aruba_cache_{ip}.json")
+    ap_names_file = os.path.join(cache_dir, f"aruba_ap_names_{ip}.json")
+    ap_serials_file = os.path.join(cache_dir, f"aruba_ap_serials_{ip}.json")
     lock_file = os.path.join(lock_dir, f"aruba_lock_{ip}.lock")
 
     if not is_update_task:
@@ -307,12 +543,16 @@ def main():
                             args.extend(sys.argv[5:])
                         args.append("--update-cache")
                         
-                        subprocess.Popen(
-                            args,
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL,
-                            start_new_session=True
-                        )
+                        popen_kwargs = {
+                            'stdout': subprocess.DEVNULL,
+                            'stderr': subprocess.DEVNULL
+                        }
+                        if os.name == 'nt':
+                            popen_kwargs['creationflags'] = 0x00000008  # DETACHED_PROCESS
+                        else:
+                            popen_kwargs['start_new_session'] = True
+                        
+                        subprocess.Popen(args, **popen_kwargs)
                 sys.exit(0)
             except Exception:
                 pass
@@ -358,12 +598,16 @@ def main():
                     args.extend(sys.argv[5:])
                 args.append("--update-cache")
                 try:
-                    subprocess.Popen(
-                        args,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        start_new_session=True
-                    )
+                    popen_kwargs = {
+                        'stdout': subprocess.DEVNULL,
+                        'stderr': subprocess.DEVNULL
+                    }
+                    if os.name == 'nt':
+                        popen_kwargs['creationflags'] = 0x00000008  # DETACHED_PROCESS
+                    else:
+                        popen_kwargs['start_new_session'] = True
+                    
+                    subprocess.Popen(args, **popen_kwargs)
                 except Exception:
                     pass
             sys.exit(0)
@@ -461,8 +705,9 @@ def main():
         r_aps = session.post(url, data={'opcode': 'show', 'cmd': 'show aps', 'sid': sid}, timeout=req_timeout)
         r_aps.raise_for_status()
 
-        # Fetch individual AP age (uptime) from support command
+        # Fetch individual AP age (uptime) and serial from support command
         ap_uptimes = {}
+        ap_serials_by_name = {}
         try:
             r_support = session.post(url, data={'opcode': 'support', 'cmd': 'show aps', 'sid': sid}, timeout=req_timeout)
             if r_support.status_code == 200:
@@ -470,8 +715,11 @@ def main():
                 for ap in parsed_aps:
                     ap_name = ap.get("Name")
                     ap_age = ap.get("Age")
+                    ap_sn = ap.get("Serial #", "") or ""
                     if ap_name and ap_age:
-                        ap_uptimes[ap_name] = format_aruba_uptime(ap_age)
+                        ap_uptimes[ap_name.strip()] = format_aruba_uptime(ap_age)
+                    if ap_name and ap_sn:
+                        ap_serials_by_name[ap_name.strip()] = ap_sn.strip()
         except Exception:
             pass
         
@@ -479,8 +727,60 @@ def main():
         r_clients = session.post(url, data={'opcode': 'show', 'cmd': 'show clients', 'sid': sid}, timeout=req_timeout)
         r_clients.raise_for_status()
 
+        # Parse AP Name to MAC mapping from show summary
+        ap_name_to_mac = {}  # name -> mac
+        mac_to_ap_name = {}  # mac -> name  (for offline AP naming)
+        try:
+            tree_sum = ET.fromstring(r_summary.text)
+            for t in tree_sum.findall('.//t'):
+                if 'Access Points' in t.attrib.get('tn', ''):
+                    for r_row in t.findall('r'):
+                        cols_sum = [c_cell.text for c_cell in r_row.findall('c')]
+                        if len(cols_sum) >= 3:
+                            sum_mac = cols_sum[0].lower().strip()
+                            sum_name = cols_sum[2].strip()
+                            ap_name_to_mac[sum_name] = sum_mac
+                            mac_to_ap_name[sum_mac] = sum_name
+        except Exception:
+            pass
+
+        # Load persistent AP name cache from disk and merge
+        persistent_mac_names = {}
+        try:
+            if os.path.exists(ap_names_file):
+                with open(ap_names_file, 'r') as _f:
+                    persistent_mac_names = json.load(_f)
+        except Exception:
+            pass
+        # Merge: live data takes priority over cached data
+        merged_mac_names = {**persistent_mac_names, **mac_to_ap_name}
+
+        # Load persistent serial number cache
+        persistent_mac_serials = {}
+        try:
+            if os.path.exists(ap_serials_file):
+                with open(ap_serials_file, 'r') as _f:
+                    persistent_mac_serials = json.load(_f)
+        except Exception:
+            pass
+
+        # Save updated live AP names back to disk
+        if mac_to_ap_name:
+            try:
+                merged_save = {**persistent_mac_names, **mac_to_ap_name}
+                with open(ap_names_file, 'w') as _f:
+                    json.dump(merged_save, _f)
+                try:
+                    os.chmod(ap_names_file, 0o666)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+
         # Parse APs XML
         eaps = []
+        active_macs = set()
         try:
             tree_aps = ET.fromstring(r_aps.text)
             table_aps = tree_aps.find('t')
@@ -489,7 +789,7 @@ def main():
                 for r in rows:
                     cols = [c.text for c in r.findall('c')]
                     if len(cols) >= 18:
-                        ap_name = cols[0]
+                        ap_name = cols[0].strip() if cols[0] else ""
                         ap_ip = cols[1]
                         ap_clients = int(cols[4]) if cols[4] and cols[4].isdigit() else 0
                         ap_model = cols[5]
@@ -520,10 +820,19 @@ def main():
 
                         # Map to JSON object
                         mapped_uptime = ap_uptimes.get(ap_name, elected_time)
+                        real_mac = ap_name_to_mac.get(ap_name, ap_name.lower())
+                        active_macs.add(real_mac.lower().strip())
+                        ap_serial = ap_serials_by_name.get(ap_name, cols[9] if len(cols) > 9 and cols[9] else "")
+
+                        # Save serial in persistent cache keyed by MAC
+                        if real_mac and ap_serial:
+                            persistent_mac_serials[real_mac.lower().strip()] = ap_serial
+
                         eaps.append({
                             "name": ap_name,
                             "ip": ap_ip,
-                            "mac": ap_name, # Map MAC as AP Name for client count matching logic
+                            "mac": real_mac,
+                            "serial": ap_serial,
                             "status": 1,
                             "model": ap_model,
                             "uptime": mapped_uptime,
@@ -538,6 +847,60 @@ def main():
                             "tx_power_5g": pwr_5g
                         })
         except Exception as ex_ap:
+            pass
+
+        # Identify offline APs using ONLY the persistent name cache.
+        # The persistent cache only contains APs that were previously seen ONLINE by this monitor.
+        # This ensures we only show truly offline APs (previously connected but now down),
+        # NOT every MAC in the allowlist (which includes uninstalled/decommissioned/other-site APs).
+        # Save updated serial cache to disk
+        if persistent_mac_serials:
+            try:
+                with open(ap_serials_file, 'w') as _f:
+                    json.dump(persistent_mac_serials, _f)
+                try:
+                    os.chmod(ap_serials_file, 0o666)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+        previously_known_macs = set(merged_mac_names.keys())
+        offline_macs = previously_known_macs - active_macs
+        for off_mac in offline_macs:
+            friendly_name = merged_mac_names.get(off_mac.lower().strip(), off_mac.upper())
+            off_serial = persistent_mac_serials.get(off_mac.lower().strip(), "--")
+            eaps.append({
+                "name": friendly_name,
+                "ip": "--",
+                "mac": off_mac,
+                "serial": off_serial,
+                "status": 0,
+                "model": "Aruba AP",
+                "uptime": "--",
+                "clientCount": 0,
+                "channel_2g": "--",
+                "channel_5g": "--",
+                "channel_util_2g": 0,
+                "channel_util_5g": 0,
+                "noise_floor_2g": 0,
+                "noise_floor_5g": 0,
+                "tx_power_2g": 0,
+                "tx_power_5g": 0
+            })
+
+        # Fetch client uptimes (Age) from support command
+        client_uptimes = {}
+        try:
+            r_support_clients = session.post(url, data={'opcode': 'support', 'cmd': 'show clients debug', 'sid': sid}, timeout=req_timeout)
+            if r_support_clients.status_code == 200:
+                parsed_cls = parse_cli_table(r_support_clients.text)
+                for c in parsed_cls:
+                    c_mac = c.get("MAC Address")
+                    c_age = c.get("Age")
+                    if c_mac and c_age and c_age.isdigit():
+                        client_uptimes[c_mac.lower().strip()] = int(c_age)
+        except Exception:
             pass
 
         # Parse Clients XML
@@ -556,6 +919,8 @@ def main():
                         c_os = cols[3] or ""
                         c_ssid = cols[4] or ""
                         c_ap = cols[5] or ""
+                        c_chan = cols[6] or ""
+                        
                         c_sig_raw = cols[10] or "0"
                         c_sig_match = re.search(r'^\d+', c_sig_raw)
                         c_sig = int(c_sig_match.group(0)) if c_sig_match else 0
@@ -564,6 +929,12 @@ def main():
                         c_spd_match = re.search(r'^\d+', c_spd_raw)
                         c_spd = int(c_spd_match.group(0)) if c_spd_match else 0
 
+                        # radioId: 1 for 5GHz (chan > 14), 0 for 2.4GHz
+                        r_id = 1 if (c_chan.isdigit() and int(c_chan) > 14) else 0
+
+                        # Resolve real AP MAC
+                        c_ap_mac = ap_name_to_mac.get(c_ap, c_ap)
+
                         clients.append({
                             "name": c_name,
                             "mac": c_mac,
@@ -571,13 +942,16 @@ def main():
                             "wireless": True,
                             "ssid": c_ssid,
                             "apName": c_ap,
-                            "apMac": c_ap, # Map AP MAC as AP Name for matching
+                            "apMac": c_ap_mac,
                             "rssi": - (100 - c_sig) if c_sig <= 100 else -70,
                             "signal": c_sig,
                             "speed": c_spd,
                             "currentSpeedMbps": c_spd,
                             "trafficDown": None,
-                            "trafficUp": None
+                            "trafficUp": None,
+                            "radioId": r_id,
+                            "uptime": client_uptimes.get(c_mac.lower().strip(), None),
+                            "channel": c_chan
                         })
         except Exception as ex_cl:
             pass
@@ -589,13 +963,15 @@ def main():
 
         # Generate summary numbers
         total_aps = len(eaps)
-        online_aps = len(eaps)
-        offline_aps = 0
+        online_aps = len([ap for ap in eaps if ap["status"] == 1])
+        offline_aps = len([ap for ap in eaps if ap["status"] == 0])
         total_clients = len(clients)
         
         online_switches = len([s for s in switches if s["status"] == 1])
         offline_switches = len([s for s in switches if s["status"] == 0])
         total_switches = len(switches)
+
+        ai_analysis, ai_time = get_ai_analysis_cached(eaps, clients, ip, cache_file)
 
         result_data = {
             "status": "success",
@@ -615,7 +991,9 @@ def main():
             "eaps": eaps,
             "switches": switches,
             "clients": clients,
-            "error_message": ""
+            "error_message": "",
+            "ai_analysis": ai_analysis,
+            "ai_analysis_timestamp": ai_time
         }
 
         json_str = json.dumps(result_data, separators=(',', ':'))

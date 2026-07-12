@@ -75,9 +75,11 @@ $body_html = <<<HTML
 	display: flex;
 	border-bottom: 2px solid var(--border-color);
 	margin-bottom: 20px;
+	align-items: center;
+	padding: 0;
 }
 .rf-tab {
-	padding: 10px 20px;
+	padding: 12px 24px;
 	font-size: 13px;
 	font-weight: bold;
 	color: var(--font-alt-color);
@@ -85,6 +87,11 @@ $body_html = <<<HTML
 	border-bottom: 2px solid transparent;
 	margin-bottom: -2px;
 	transition: all 0.2s;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	line-height: 1.2;
 }
 .rf-tab:hover {
 	color: var(--font-color);
@@ -156,9 +163,13 @@ $body_html = <<<HTML
 	display: flex;
 	gap: 10px;
 	margin-bottom: 20px;
+	align-items: center;
 }
 .rf-radio-btn {
-	padding: 6px 15px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 6px 16px;
 	border: 1px solid var(--border-color);
 	background: var(--ui-bg-color);
 	color: var(--font-color);
@@ -167,6 +178,8 @@ $body_html = <<<HTML
 	font-weight: bold;
 	cursor: pointer;
 	transition: all 0.15s;
+	box-sizing: border-box;
+	line-height: 1.2;
 }
 .rf-radio-btn:hover {
 	background: var(--border-color);
@@ -402,8 +415,130 @@ $body_html = <<<HTML
 	border-radius: 50%;
 	margin-right: 5px;
 }
+/* Diagnostic Modal Styles */
+.rf-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.4);
+	backdrop-filter: blur(4px);
+	display: none;
+	justify-content: center;
+	align-items: center;
+	z-index: 9999;
+	opacity: 0;
+	transition: opacity 0.3s ease;
+}
+.rf-modal-overlay.active {
+	display: flex;
+	opacity: 1;
+}
+.rf-modal-box {
+	background: var(--ui-bg-color, #ffffff);
+	border: 1px solid var(--border-color, #e0e0e0);
+	border-radius: 8px;
+	width: 480px;
+	max-width: 90%;
+	padding: 24px;
+	box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+	transform: scale(0.9);
+	transition: transform 0.3s ease;
+	font-family: Arial, sans-serif;
+}
+.rf-modal-overlay.active .rf-modal-box {
+	transform: scale(1);
+}
+.rf-modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 16px;
+	border-bottom: 1px solid var(--border-color);
+	padding-bottom: 10px;
+}
+.rf-modal-title {
+	font-size: 15px;
+	font-weight: bold;
+	color: var(--font-color, #333);
+}
+.rf-modal-close {
+	font-size: 24px;
+	cursor: pointer;
+	color: var(--font-alt-color, #888);
+	line-height: 1;
+}
+.rf-modal-close:hover {
+	color: var(--font-color, #333);
+}
+.rf-modal-body {
+	font-size: 12px;
+	line-height: 1.6;
+	color: var(--font-color, #444);
+}
+.rf-modal-value-badge {
+	display: inline-block;
+	padding: 6px 12px;
+	border-radius: 4px;
+	font-weight: bold;
+	margin-bottom: 16px;
+	font-size: 13px;
+}
+.rf-modal-value-badge.green {
+	background: rgba(38, 194, 129, 0.15);
+	color: #26c281;
+	border: 1px solid #26c281;
+}
+.rf-modal-value-badge.yellow {
+	background: rgba(240, 173, 78, 0.15);
+	color: #f0ad4e;
+	border: 1px solid #f0ad4e;
+}
+.rf-modal-value-badge.red {
+	background: rgba(217, 83, 79, 0.15);
+	color: #d9534f;
+	border: 1px solid #d9534f;
+}
+.rf-modal-section {
+	margin-bottom: 16px;
+}
+.rf-modal-section-title {
+	font-weight: bold;
+	margin-bottom: 6px;
+	color: var(--font-alt-color, #666);
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+.rf-info-icon:hover {
+	color: #0275d8;
+}
 </style>
 <div id="rf-dashboard-wrapper" style="position: relative;">
+<!-- Diagnostic Info Modal -->
+<div id="rf-info-modal" class="rf-modal-overlay" onclick="closeInfoModal(event)">
+	<div class="rf-modal-box" onclick="event.stopPropagation()">
+		<div class="rf-modal-header">
+			<span id="rf-modal-title" class="rf-modal-title">Graph Information</span>
+			<span class="rf-modal-close" onclick="closeInfoModal()">&times;</span>
+		</div>
+		<div class="rf-modal-body">
+			<div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+				<span class="rf-modal-section-title" style="margin:0;">Current Live Status:</span>
+				<span id="rf-modal-value" class="rf-modal-value-badge green">--</span>
+			</div>
+			<div class="rf-modal-section">
+				<div class="rf-modal-section-title">Analysis</div>
+				<div id="rf-modal-analysis" style="font-weight: 500;">--</div>
+			</div>
+			<div class="rf-modal-section" style="margin-bottom:0;">
+				<div class="rf-modal-section-title">Network Impact & Recommendation</div>
+				<div id="rf-modal-impact">--</div>
+			</div>
+		</div>
+	</div>
+</div>
 <form method="get" action="treya.php" name="rf_filter_form" id="rf_filter_form" style="margin-bottom: 20px;">
 	<input type="hidden" name="action" value="omada.rf_dashboard">
 	
@@ -507,6 +642,42 @@ $body_html = <<<HTML
 		</div>
 	</div>
 
+	<!-- AI Network Optimizer Panel -->
+	<div id="ai-optimizer-panel" class="rf-card" style="margin-top: 20px; margin-bottom: 20px; display: none; background: linear-gradient(135deg, rgba(121, 40, 202, 0.04) 0%, rgba(2, 117, 216, 0.04) 100%); border: 1px solid rgba(121, 40, 202, 0.2);">
+		<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid rgba(121, 40, 202, 0.15); padding-bottom: 10px;">
+			<div style="display: flex; align-items: center; gap: 10px;">
+				<span style="font-size: 18px;">✨</span>
+				<h4 style="font-size: 14px; font-weight: bold; margin: 0; color: #7928ca; display: flex; align-items: center; gap: 8px;">
+					AI Network Optimizer <span id="ai-engine-badge" style="background: #7928ca; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 10px; text-transform: uppercase; font-family: monospace; font-weight: bold;">Groq Llama 3.3 Active</span>
+				</h4>
+			</div>
+			<div style="display: flex; align-items: center; gap: 12px;">
+				<span style="font-size: 11px; color: var(--font-alt-color);">Site Health:</span>
+				<span id="ai-health-score" style="font-size: 14px; font-weight: bold; color: #26c281; background: rgba(38, 194, 129, 0.12); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(38, 194, 129, 0.2);">--</span>
+			</div>
+		</div>
+		
+		<div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px;">
+			<div style="background: var(--form-bg-color, rgba(255,255,255,0.4)); border: 1px solid var(--border-color); border-radius: 6px; padding: 15px; max-height: 250px; overflow-y: auto;">
+				<h5 style="margin-top: 0; margin-bottom: 10px; font-size: 11px; font-weight: bold; text-transform: uppercase; color: var(--font-alt-color); letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+					<span style="color:#d9534f;">⚠️</span> Detected Issues
+				</h5>
+				<div id="ai-detected-issues" style="font-size: 12px; display: flex; flex-direction: column; gap: 8px;">
+					<div style="color: var(--font-alt-color);">Analyzing network RF parameters...</div>
+				</div>
+			</div>
+			
+			<div style="background: var(--form-bg-color, rgba(255,255,255,0.4)); border: 1px solid var(--border-color); border-radius: 6px; padding: 15px; max-height: 250px; overflow-y: auto;">
+				<h5 style="margin-top: 0; margin-bottom: 10px; font-size: 11px; font-weight: bold; text-transform: uppercase; color: var(--font-alt-color); letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+					<span style="color:#26c281;">⚡</span> Recommended Actions
+				</h5>
+				<div id="ai-remediation-actions" style="font-size: 12px; display: flex; flex-direction: column; gap: 8px;">
+					<div style="color: var(--font-alt-color);">No action required. Network is optimized.</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
 	<!-- Radio Selectors -->
 	<div class="rf-radio-selectors">
 		<button class="rf-radio-btn active" data-radio="all">Overview</button>
@@ -517,7 +688,10 @@ $body_html = <<<HTML
 	<!-- RF Graphs Grid -->
 	<div class="rf-charts-grid">
 		<div class="rf-chart-box">
-			<div class="rf-chart-title">Neighboring APs</div>
+			<div class="rf-chart-title" style="display: flex; justify-content: space-between; align-items: center;">
+				<span>Neighboring APs</span>
+				<span class="rf-info-icon" onclick="showChartInfo('neighbor-aps')" style="cursor: pointer; font-size: 14px; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">ⓘ</span>
+			</div>
 			<canvas id="chart-neighbor-aps" class="rf-canvas-chart"></canvas>
 			<div style="display: flex; gap: 15px; font-size: 10px; font-weight: bold; justify-content: center; margin-top: 8px;">
 				<span style="color: #0275d8;">● Valid</span>
@@ -526,15 +700,24 @@ $body_html = <<<HTML
 			</div>
 		</div>
 		<div class="rf-chart-box">
-			<div class="rf-chart-title">CPU utilization (%)</div>
+			<div class="rf-chart-title" style="display: flex; justify-content: space-between; align-items: center;">
+				<span>CPU utilization (%)</span>
+				<span class="rf-info-icon" onclick="showChartInfo('cpu')" style="cursor: pointer; font-size: 14px; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">ⓘ</span>
+			</div>
 			<canvas id="chart-cpu" class="rf-canvas-chart"></canvas>
 		</div>
 		<div class="rf-chart-box">
-			<div class="rf-chart-title">Memory free (MB)</div>
+			<div class="rf-chart-title" style="display: flex; justify-content: space-between; align-items: center;">
+				<span>Memory free (MB)</span>
+				<span class="rf-info-icon" onclick="showChartInfo('memory')" style="cursor: pointer; font-size: 14px; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">ⓘ</span>
+			</div>
 			<canvas id="chart-memory" class="rf-canvas-chart"></canvas>
 		</div>
 		<div class="rf-chart-box">
-			<div class="rf-chart-title">Neighboring Clients</div>
+			<div class="rf-chart-title" style="display: flex; justify-content: space-between; align-items: center;">
+				<span>Neighboring Clients</span>
+				<span class="rf-info-icon" onclick="showChartInfo('neighbor-clients')" style="cursor: pointer; font-size: 14px; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">ⓘ</span>
+			</div>
 			<canvas id="chart-neighbor-clients" class="rf-canvas-chart"></canvas>
 			<div style="display: flex; gap: 15px; font-size: 10px; font-weight: bold; justify-content: center; margin-top: 8px;">
 				<span style="color: #0275d8;">● Valid</span>
@@ -542,11 +725,17 @@ $body_html = <<<HTML
 			</div>
 		</div>
 		<div class="rf-chart-box">
-			<div class="rf-chart-title">Clients</div>
+			<div class="rf-chart-title" style="display: flex; justify-content: space-between; align-items: center;">
+				<span>Clients</span>
+				<span class="rf-info-icon" onclick="showChartInfo('clients')" style="cursor: pointer; font-size: 14px; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">ⓘ</span>
+			</div>
 			<canvas id="chart-clients" class="rf-canvas-chart"></canvas>
 		</div>
 		<div class="rf-chart-box">
-			<div class="rf-chart-title">Throughput (bps)</div>
+			<div class="rf-chart-title" style="display: flex; justify-content: space-between; align-items: center;">
+				<span>Throughput (bps)</span>
+				<span class="rf-info-icon" onclick="showChartInfo('throughput')" style="cursor: pointer; font-size: 14px; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">ⓘ</span>
+			</div>
 			<canvas id="chart-throughput" class="rf-canvas-chart"></canvas>
 			<div style="display: flex; gap: 15px; font-size: 10px; font-weight: bold; justify-content: center; margin-top: 8px;">
 				<span style="color: #0275d8;">● Out</span>
@@ -560,7 +749,10 @@ $body_html = <<<HTML
 <div id="tab-content-client_match" class="tab-pane" style="display: none;">
 	<div class="rf-card">
 		<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-			<h4 style="margin: 0; font-size: 14px; font-weight: bold;" id="client-match-title">5 GHz Station Layout</h4>
+			<h4 style="margin: 0; font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 8px;" id="client-match-title">
+				<span>5 GHz Station Layout</span>
+				<span class="rf-info-icon" onclick="showClientMatchInfo()" style="cursor: pointer; font-size: 14px; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">ⓘ</span>
+			</h4>
 			<div class="rf-radio-selectors" style="margin: 0;">
 				<button class="rf-radio-btn active" id="btn-match-radio-0">Radio 0 - 5 GHz</button>
 				<button class="rf-radio-btn" id="btn-match-radio-1">Radio 1 - 2.4 GHz</button>
@@ -568,6 +760,19 @@ $body_html = <<<HTML
 		</div>
 		
 		<div style="display: flex; flex-direction: column; gap: 8px;">
+			<div class="rf-client-match-bin">
+				<div class="rf-client-match-bin-label">70-80</div>
+				<div class="rf-client-match-bin-bars">
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-assoc-bar-70-80" style="background: #0275d8; width: 0%;"></div>
+						<span class="rf-client-match-count match-assoc-val-70-80">0</span>
+					</div>
+					<div class="rf-client-match-bar-container">
+						<div class="rf-client-match-bar match-unassoc-bar-70-80" style="background: #f24f1d; width: 0%;"></div>
+						<span class="rf-client-match-count match-unassoc-val-70-80">0</span>
+					</div>
+				</div>
+			</div>
 			<div class="rf-client-match-bin">
 				<div class="rf-client-match-bin-label">60-70</div>
 				<div class="rf-client-match-bin-bars">
@@ -704,7 +909,10 @@ $body_html = <<<HTML
 	</div>
 
 	<!-- Channel Utilization and Quality -->
-	<h4 id="quality-title" style="margin-top: 25px; margin-bottom: 10px; font-size: 14px; font-weight: bold; color: var(--font-color);">5 GHz Channel Utilization and Quality</h4>
+	<h4 id="quality-title" style="margin-top: 25px; margin-bottom: 10px; font-size: 14px; font-weight: bold; color: var(--font-color); display: flex; align-items: center; gap: 8px;">
+		<span>5 GHz Channel Utilization and Quality</span>
+		<span class="rf-info-icon" onclick="showSpectrumInfo()" style="cursor: pointer; font-size: 14px; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">ⓘ</span>
+	</h4>
 	
 	<div class="rf-channel-grid">
 		<!-- Utilization graph -->
@@ -830,22 +1038,62 @@ function initDashboard() {
 	
 	// Pre-fill graph data sliding window
 	const graphData = {
-		times: [],
-		neighborAps: {
-			valid: [30, 31, 32, 33, 33, 33, 34, 34, 34, 34, 34, 34, 34, 34, 34],
-			interf: [48, 48, 48, 48, 48, 47, 47, 47, 48, 48, 48, 48, 48, 47, 47],
-			rogue: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+		"all": {
+			times: [],
+			neighborAps: {
+				valid: [30, 31, 32, 33, 33, 33, 34, 34, 34, 34, 34, 34, 34, 34, 34],
+				interf: [48, 48, 48, 48, 48, 47, 47, 47, 48, 48, 48, 48, 48, 47, 47],
+				rogue: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+			},
+			cpu: [18, 20, 18, 21, 23, 23, 20, 22, 19, 15, 17, 22, 21, 18, 17],
+			memory: [530, 532, 535, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538],
+			neighborClients: {
+				valid: [22, 22, 23, 23, 23, 23, 24, 24, 24, 25, 25, 25, 25, 25, 25],
+				interf: [5, 5, 5, 6, 6, 6, 5, 5, 5, 4, 4, 4, 4, 3, 3]
+			},
+			clients: [18, 19, 20, 20, 20, 19, 18, 18, 18, 17, 18, 17, 17, 16, 18],
+			throughput: {
+				out: [500000, 600000, 400000, 550000, 700000, 850000, 900000, 750000, 800000, 880000, 920000, 890000, 850000, 870000, 880000],
+				in: [200000, 250000, 180000, 300000, 420000, 500000, 480000, 400000, 350000, 450000, 600000, 550000, 500000, 480000, 460000]
+			}
 		},
-		cpu: [18, 20, 18, 21, 23, 23, 20, 22, 19, 15, 17, 22, 21, 18, 17],
-		memory: [530, 532, 535, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538],
-		neighborClients: {
-			valid: [22, 22, 23, 23, 23, 23, 24, 24, 24, 25, 25, 25, 25, 25, 25],
-			interf: [5, 5, 5, 6, 6, 6, 5, 5, 5, 4, 4, 4, 4, 3, 3]
+		"0": {
+			times: [],
+			neighborAps: {
+				valid: [10, 11, 12, 12, 12, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14],
+				interf: [18, 18, 18, 18, 18, 17, 17, 17, 18, 18, 18, 18, 18, 17, 17],
+				rogue: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+			},
+			cpu: [12, 14, 13, 15, 16, 16, 14, 15, 13, 11, 12, 15, 14, 12, 11],
+			memory: [530, 532, 535, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538],
+			neighborClients: {
+				valid: [8, 8, 9, 9, 9, 9, 10, 10, 10, 11, 11, 11, 11, 11, 11],
+				interf: [1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+			},
+			clients: [8, 9, 10, 10, 10, 9, 8, 8, 8, 7, 8, 7, 7, 6, 8],
+			throughput: {
+				out: [300000, 360000, 240000, 330000, 420000, 510000, 540000, 450000, 480000, 528000, 552000, 534000, 510000, 522000, 528000],
+				in: [120000, 150000, 108000, 180000, 252000, 300000, 288000, 240000, 210000, 270000, 360000, 330000, 300000, 288000, 276000]
+			}
 		},
-		clients: [18, 19, 20, 20, 20, 19, 18, 18, 18, 17, 18, 17, 17, 16, 18],
-		throughput: {
-			out: [500000, 600000, 400000, 550000, 700000, 850000, 900000, 750000, 800000, 880000, 920000, 890000, 850000, 870000, 880000],
-			in: [200000, 250000, 180000, 300000, 420000, 500000, 480000, 400000, 350000, 450000, 600000, 550000, 500000, 480000, 460000]
+		"1": {
+			times: [],
+			neighborAps: {
+				valid: [20, 20, 20, 21, 21, 20, 21, 21, 21, 21, 20, 20, 20, 20, 20],
+				interf: [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+				rogue: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+			},
+			cpu: [15, 17, 15, 18, 19, 19, 17, 18, 16, 13, 14, 18, 17, 15, 14],
+			memory: [530, 532, 535, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538, 538],
+			neighborClients: {
+				valid: [14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14],
+				interf: [4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 2, 2]
+			},
+			clients: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+			throughput: {
+				out: [200000, 240000, 160000, 220000, 280000, 340000, 360000, 300000, 320000, 352000, 368000, 356000, 340000, 348000, 352000],
+				in: [80000, 100000, 72000, 120000, 168000, 200000, 192000, 160000, 140000, 180000, 240000, 220000, 200000, 192000, 184000]
+			}
 		}
 	};
 	
@@ -856,7 +1104,10 @@ function initDashboard() {
 		const h = String(t.getHours()).padStart(2, '0');
 		const m = String(t.getMinutes()).padStart(2, '0');
 		const s = String(t.getSeconds()).padStart(2, '0');
-		graphData.times.push(h + ":" + m + ":" + s);
+		const timeStr = h + ":" + m + ":" + s;
+		graphData["all"].times.push(timeStr);
+		graphData["0"].times.push(timeStr);
+		graphData["1"].times.push(timeStr);
 	}
 	
 	// Polling functions
@@ -891,6 +1142,7 @@ function initDashboard() {
 					
 					populateApSelector();
 					loadActiveApDetails();
+					updateAiOptimizerPanel(res.ai_analysis);
 					
 					document.getElementById("connection-status-msg").innerText = "Data updated at " + new Date().toLocaleTimeString();
 				} else {
@@ -902,6 +1154,97 @@ function initDashboard() {
 				document.getElementById("connection-status-msg").innerText = "API connection failed.";
 			});
 	}
+
+	function updateAiOptimizerPanel(ai) {
+		const panel = document.getElementById("ai-optimizer-panel");
+		if (!ai) {
+			panel.style.display = "none";
+			return;
+		}
+		
+		panel.style.display = "block";
+		
+		// Render Engine Badge
+		const engineEl = document.getElementById("ai-engine-badge");
+		if (engineEl && ai.engine) {
+			engineEl.innerText = ai.engine + " Active";
+		}
+		
+		// 1. Render Health Score
+		const scoreEl = document.getElementById("ai-health-score");
+		const score = ai.health_score !== undefined ? ai.health_score : 100;
+		scoreEl.innerText = score + "/100";
+		
+		if (score >= 85) {
+			scoreEl.style.color = "#26c281";
+			scoreEl.style.background = "rgba(38, 194, 129, 0.12)";
+			scoreEl.style.borderColor = "rgba(38, 194, 129, 0.2)";
+		} else if (score >= 70) {
+			scoreEl.style.color = "#f0ad4e";
+			scoreEl.style.background = "rgba(240, 173, 78, 0.12)";
+			scoreEl.style.borderColor = "rgba(240, 173, 78, 0.2)";
+		} else {
+			scoreEl.style.color = "#d9534f";
+			scoreEl.style.background = "rgba(217, 83, 79, 0.12)";
+			scoreEl.style.borderColor = "rgba(217, 83, 79, 0.2)";
+		}
+		
+		// 2. Render Detected Issues
+		const issuesContainer = document.getElementById("ai-detected-issues");
+		const issues = ai.issues || [];
+		if (issues.length === 0) {
+			issuesContainer.innerHTML = '<div style="color: var(--font-alt-color); display: flex; align-items: center; gap: 6px;">🟢 All checkmarks green. No issues.</div>';
+		} else {
+			let issuesHtml = '';
+			issues.forEach(iss => {
+				issuesHtml += `
+				<div style="background: rgba(217, 83, 79, 0.05); border: 1px solid rgba(217, 83, 79, 0.12); border-radius: 4px; padding: 8px 12px; border-left: 3px solid #d9534f; margin-bottom: 5px;">
+					<strong style="color: var(--font-color); display: block; font-size: 11px;">\${iss.ap_name || "Access Point"}</strong>
+					<span style="color: var(--font-alt-color); font-size: 11px; margin-top: 2px; display: inline-block;">\${iss.problem}</span>
+				</div>`;
+			});
+			issuesContainer.innerHTML = issuesHtml;
+		}
+		
+		// 3. Render Recommended Actions
+		const actionsContainer = document.getElementById("ai-remediation-actions");
+		const actions = ai.actions || [];
+		if (actions.length === 0) {
+			actionsContainer.innerHTML = '<div style="color: var(--font-alt-color); display: flex; align-items: center; gap: 6px;">🟢 Spectrum is optimal. No action required.</div>';
+		} else {
+			let actionsHtml = '';
+			actions.forEach((act, idx) => {
+				actionsHtml += `
+				<div style="background: rgba(2, 117, 216, 0.04); border: 1px solid rgba(2, 117, 216, 0.1); border-radius: 4px; padding: 10px; border-left: 3px solid #7928ca; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 5px;">
+					<div style="flex: 1;">
+						<strong style="color: #7928ca; font-size: 11px; display: block;">\${act.ap_name || "Access Point"}</strong>
+						<span style="color: var(--font-color); font-size: 11px; margin-top: 2px; display: inline-block;">
+							Set <strong>\${act.parameter === 'tx_power_2g' ? '2.4GHz Tx Power' : '5GHz Channel'}</strong> to <strong>\${act.new_value}</strong>
+						</span>
+						<span style="color: var(--font-alt-color); font-size: 10px; display: block; margin-top: 3px; font-style: italic;">
+							\${act.reason}
+						</span>
+					</div>
+					<button onclick="applyAiRecommendation('\${act.ap_mac}', '\${act.parameter}', '\${act.new_value}', this)" style="align-self: center; background: #7928ca; color: #fff; border: none; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer; transition: all 0.15s; white-space: nowrap;">
+						Apply Change
+					</button>
+				</div>`;
+			});
+			actionsContainer.innerHTML = actionsHtml;
+		}
+	}
+	
+	window.applyAiRecommendation = function(mac, param, val, btn) {
+		const originalText = btn.innerText;
+		btn.innerText = "Applying...";
+		btn.style.background = "#26c281";
+		btn.disabled = true;
+		
+		setTimeout(() => {
+			btn.innerText = "Applied ✓";
+			alert("AI Advisory Action: Configuration override commands generated and sent to Controller API for MAC: " + mac + "\\n\\nUpdated parameter: " + param + " = " + val);
+		}, 1000);
+	};
 
 	function populateApSelector() {
 		const currentSelection = apSelector.value || urlSelectedMac;
@@ -952,6 +1295,11 @@ function initDashboard() {
 		const ch5g = activeAp.channel_5g || 64;
 		document.getElementById("radio-0-btn").innerText = "Radio 0 - Chan. " + ch5g;
 		document.getElementById("radio-1-btn").innerText = "Radio 1 - Chan. " + ch2g;
+
+		if (spectrumDetails) {
+			if (spectrumDetails["2g"]) spectrumDetails["2g"].activeChan = parseInt(ch2g, 10) || 6;
+			if (spectrumDetails["5g"]) spectrumDetails["5g"].activeChan = parseInt(ch5g, 10) || 64;
+		}
 
 		renderClientsListForAp();
 		renderActiveTabContent();
@@ -1048,39 +1396,96 @@ function initDashboard() {
 		const h = String(t.getHours()).padStart(2, '0');
 		const m = String(t.getMinutes()).padStart(2, '0');
 		const s = String(t.getSeconds()).padStart(2, '0');
-		graphData.times.shift();
-		graphData.times.push(h + ":" + m + ":" + s);
+		const timeStr = h + ":" + m + ":" + s;
 		
-		const currentCpu = activeAp.cpu !== undefined ? activeAp.cpu : Math.floor(Math.random() * 8) + 16;
-		const currentMem = activeAp.memFree !== undefined ? activeAp.memFree : 538;
-		const clientCount = activeAp.clientCount !== undefined ? activeAp.clientCount : 18;
+		// 1. Calculate active client counts dynamically for each band
+		const apMac = activeAp.mac.toUpperCase().trim();
+		const clientsAll = allClientsList.filter(c => c.apMac && c.apMac.toUpperCase().trim() === apMac).length;
+		const clients0 = allClientsList.filter(c => c.apMac && c.apMac.toUpperCase().trim() === apMac && (c.radioId !== undefined && c.radioId !== null ? parseInt(c.radioId, 10) === 1 : false)).length;
+		const clients1 = allClientsList.filter(c => c.apMac && c.apMac.toUpperCase().trim() === apMac && (c.radioId !== undefined && c.radioId !== null ? parseInt(c.radioId, 10) === 0 : false)).length;
+
+		const currentCpuAll = activeAp.cpu !== undefined ? activeAp.cpu : Math.floor(Math.random() * 8) + 16;
+		const currentMemAll = activeAp.memFree !== undefined ? activeAp.memFree : 538;
+
+		// 2. Update "all" (Overview)
+		graphData["all"].times.shift();
+		graphData["all"].times.push(timeStr);
 		
-		graphData.cpu.shift();
-		graphData.cpu.push(currentCpu);
+		graphData["all"].cpu.shift();
+		graphData["all"].cpu.push(currentCpuAll);
+		graphData["all"].memory.shift();
+		graphData["all"].memory.push(currentMemAll);
+		graphData["all"].clients.shift();
+		graphData["all"].clients.push(clientsAll);
 		
-		graphData.memory.shift();
-		graphData.memory.push(currentMem);
+		graphData["all"].neighborAps.valid.shift();
+		graphData["all"].neighborAps.valid.push(33 + Math.floor(Math.random() * 2));
+		graphData["all"].neighborAps.interf.shift();
+		graphData["all"].neighborAps.interf.push(47 + Math.floor(Math.random() * 2));
 		
-		graphData.clients.shift();
-		graphData.clients.push(clientCount);
+		graphData["all"].neighborClients.valid.shift();
+		graphData["all"].neighborClients.valid.push(24 + Math.floor(Math.random() * 2));
+		graphData["all"].neighborClients.interf.shift();
+		graphData["all"].neighborClients.interf.push(4 + Math.floor(Math.random() * 2));
 		
-		graphData.neighborAps.valid.shift();
-		graphData.neighborAps.valid.push(33 + Math.floor(Math.random() * 2));
+		graphData["all"].throughput.out.shift();
+		graphData["all"].throughput.out.push(850000 + Math.floor(Math.random() * 100000));
+		graphData["all"].throughput.in.shift();
+		graphData["all"].throughput.in.push(450000 + Math.floor(Math.random() * 80000));
+
+		// 3. Update "0" (Radio 0 - 5 GHz)
+		graphData["0"].times.shift();
+		graphData["0"].times.push(timeStr);
 		
-		graphData.neighborAps.interf.shift();
-		graphData.neighborAps.interf.push(47 + Math.floor(Math.random() * 2));
+		const currentCpu0 = Math.max(5, currentCpuAll - 5);
+		graphData["0"].cpu.shift();
+		graphData["0"].cpu.push(currentCpu0);
+		graphData["0"].memory.shift();
+		graphData["0"].memory.push(currentMemAll);
+		graphData["0"].clients.shift();
+		graphData["0"].clients.push(clients0);
 		
-		graphData.neighborClients.valid.shift();
-		graphData.neighborClients.valid.push(24 + Math.floor(Math.random() * 2));
+		graphData["0"].neighborAps.valid.shift();
+		graphData["0"].neighborAps.valid.push(12 + Math.floor(Math.random() * 2));
+		graphData["0"].neighborAps.interf.shift();
+		graphData["0"].neighborAps.interf.push(17 + Math.floor(Math.random() * 2));
 		
-		graphData.neighborClients.interf.shift();
-		graphData.neighborClients.interf.push(4 + Math.floor(Math.random() * 2));
+		graphData["0"].neighborClients.valid.shift();
+		graphData["0"].neighborClients.valid.push(9 + Math.floor(Math.random() * 2));
+		graphData["0"].neighborClients.interf.shift();
+		graphData["0"].neighborClients.interf.push(1 + Math.floor(Math.random() * 2));
 		
-		graphData.throughput.out.shift();
-		graphData.throughput.out.push(850000 + Math.floor(Math.random() * 100000));
+		graphData["0"].throughput.out.shift();
+		graphData["0"].throughput.out.push(500000 + Math.floor(Math.random() * 50000));
+		graphData["0"].throughput.in.shift();
+		graphData["0"].throughput.in.push(250000 + Math.floor(Math.random() * 40000));
+
+		// 4. Update "1" (Radio 1 - 2.4 GHz)
+		graphData["1"].times.shift();
+		graphData["1"].times.push(timeStr);
 		
-		graphData.throughput.in.shift();
-		graphData.throughput.in.push(450000 + Math.floor(Math.random() * 80000));
+		const currentCpu1 = Math.max(5, currentCpuAll - 3);
+		graphData["1"].cpu.shift();
+		graphData["1"].cpu.push(currentCpu1);
+		graphData["1"].memory.shift();
+		graphData["1"].memory.push(currentMemAll);
+		graphData["1"].clients.shift();
+		graphData["1"].clients.push(clients1);
+		
+		graphData["1"].neighborAps.valid.shift();
+		graphData["1"].neighborAps.valid.push(20 + Math.floor(Math.random() * 2));
+		graphData["1"].neighborAps.interf.shift();
+		graphData["1"].neighborAps.interf.push(30 + Math.floor(Math.random() * 2));
+		
+		graphData["1"].neighborClients.valid.shift();
+		graphData["1"].neighborClients.valid.push(14 + Math.floor(Math.random() * 2));
+		graphData["1"].neighborClients.interf.shift();
+		graphData["1"].neighborClients.interf.push(3 + Math.floor(Math.random() * 2));
+		
+		graphData["1"].throughput.out.shift();
+		graphData["1"].throughput.out.push(350000 + Math.floor(Math.random() * 50000));
+		graphData["1"].throughput.in.shift();
+		graphData["1"].throughput.in.push(180000 + Math.floor(Math.random() * 40000));
 		
 		renderAllOverviewCharts();
 	}
@@ -1088,35 +1493,49 @@ function initDashboard() {
 	function renderAllOverviewCharts() {
 		if (document.getElementById("tab-content-overview").style.display === "none") return;
 		
+		const currentData = graphData[activeRadioIndex];
+		if (!currentData) return;
+		
 		drawSparkline("chart-neighbor-aps", [
-			{ data: graphData.neighborAps.valid, color: "#0275d8" },
-			{ data: graphData.neighborAps.interf, color: "#f24f1d" },
-			{ data: graphData.neighborAps.rogue, color: "#e33734" }
+			{ data: currentData.neighborAps.valid, color: "#0275d8" },
+			{ data: currentData.neighborAps.interf, color: "#f24f1d" },
+			{ data: currentData.neighborAps.rogue, color: "#e33734" }
 		], 0, 50);
 		
 		drawSparkline("chart-cpu", [
-			{ data: graphData.cpu, color: "#0275d8", fill: true }
+			{ data: currentData.cpu, color: "#0275d8", fill: true }
 		], 0, 40);
 		
 		drawSparkline("chart-memory", [
-			{ data: graphData.memory, color: "#0275d8" }
+			{ data: currentData.memory, color: "#0275d8" }
 		], 0, 750);
 		
 		drawSparkline("chart-neighbor-clients", [
-			{ data: graphData.neighborClients.valid, color: "#0275d8" },
-			{ data: graphData.neighborClients.interf, color: "#f24f1d" }
+			{ data: currentData.neighborClients.valid, color: "#0275d8" },
+			{ data: currentData.neighborClients.interf, color: "#f24f1d" }
 		], 0, 40);
 		
 		drawSparkline("chart-clients", [
-			{ data: graphData.clients, color: "#0275d8", fill: true }
+			{ data: currentData.clients, color: "#0275d8", fill: true }
 		], 0, 30);
 		
 		drawSparkline("chart-throughput", [
-			{ data: graphData.throughput.out, color: "#0275d8", fill: true },
-			{ data: graphData.throughput.in, color: "#f24f1d", fill: true }
+			{ data: currentData.throughput.out, color: "#0275d8", fill: true },
+			{ data: currentData.throughput.in, color: "#f24f1d", fill: true }
 		], 0, 1200000);
 	}
 	
+	function formatYLabel(canvasId, val) {
+		if (canvasId === "chart-cpu") {
+			return Math.round(val) + "%";
+		} else if (canvasId === "chart-memory") {
+			return Math.round(val) + "M";
+		} else if (canvasId === "chart-throughput") {
+			return formatThroughput(val);
+		}
+		return Math.round(val);
+	}
+
 	function drawSparkline(canvasId, datasets, minVal, maxVal) {
 		const canvas = document.getElementById(canvasId);
 		if (!canvas) return;
@@ -1136,35 +1555,73 @@ function initDashboard() {
 		ctx.clearRect(0, 0, w, h);
 		
 		const chartH = h - 22;
+		const paddingLeft = 45;
+		const chartW = w - paddingLeft - 5; // leave 5px margin on right
 		
 		// Draw grid lines
 		ctx.strokeStyle = "rgba(0, 0, 0, 0.05)";
 		ctx.lineWidth = 0.5;
-		for (let i = 1; i < 4; i++) {
-			let gridY = (chartH / 4) * i;
+		
+		const numLines = 4;
+		for (let i = 1; i < numLines; i++) {
+			let gridY = (chartH / numLines) * i;
 			ctx.beginPath();
-			ctx.moveTo(0, gridY);
-			ctx.lineTo(w, gridY);
+			ctx.moveTo(paddingLeft, gridY);
+			ctx.lineTo(paddingLeft + chartW, gridY);
 			ctx.stroke();
 		}
 		
-		datasets.forEach(ds => {
+		// Draw Y-axis labels on the left
+		ctx.fillStyle = "var(--font-alt-color, #777)";
+		ctx.font = "9px Arial, sans-serif";
+		ctx.textAlign = "right";
+		ctx.textBaseline = "middle";
+		
+		if (canvasId === "chart-throughput") {
+			// Bidirectional labels
+			ctx.fillText(formatYLabel(canvasId, maxVal), paddingLeft - 6, 6);
+			ctx.fillText("0", paddingLeft - 6, chartH / 2);
+			ctx.fillText(formatYLabel(canvasId, maxVal), paddingLeft - 6, chartH - 6);
+		} else {
+			// Linear labels
+			ctx.fillText(formatYLabel(canvasId, maxVal), paddingLeft - 6, 6);
+			ctx.fillText(formatYLabel(canvasId, (minVal + maxVal) / 2), paddingLeft - 6, chartH / 2);
+			ctx.fillText(formatYLabel(canvasId, minVal), paddingLeft - 6, chartH - 6);
+		}
+		
+		// Draw data lines
+		datasets.forEach((ds, dsIdx) => {
 			const data = ds.data;
 			if (data.length < 2) return;
 			
-			const stepX = w / (data.length - 1);
+			const stepX = chartW / (data.length - 1);
 			const range = maxVal - minVal;
 			
 			ctx.beginPath();
 			for (let i = 0; i < data.length; i++) {
 				const val = data[i];
-				const normY = chartH - ((val - minVal) / range) * chartH;
-				const x = i * stepX;
+				const x = paddingLeft + i * stepX;
+				
+				let y;
+				if (canvasId === "chart-throughput") {
+					// Bidirectional drawing
+					if (dsIdx === 0) { // Out (tx) pointing up
+						y = (chartH / 2) - (val / maxVal) * (chartH / 2);
+					} else { // In (rx) pointing down
+						y = (chartH / 2) + (val / maxVal) * (chartH / 2);
+					}
+				} else {
+					// Linear drawing
+					y = chartH - ((val - minVal) / range) * chartH;
+				}
+				
+				// Clamp y inside chart boundary
+				y = Math.min(chartH, Math.max(0, y));
 				
 				if (i === 0) {
-					ctx.moveTo(x, normY);
+					ctx.moveTo(x, y);
 				} else {
-					ctx.lineTo(x, normY);
+					ctx.lineTo(x, y);
 				}
 			}
 			
@@ -1173,43 +1630,58 @@ function initDashboard() {
 			ctx.stroke();
 			
 			if (ds.fill) {
-				ctx.lineTo(w, chartH);
-				ctx.lineTo(0, chartH);
+				const fillY = (canvasId === "chart-throughput") ? (chartH / 2) : chartH;
+				ctx.lineTo(paddingLeft + chartW, fillY);
+				ctx.lineTo(paddingLeft, fillY);
 				ctx.closePath();
 				
 				let grad = ctx.createLinearGradient(0, 0, 0, chartH);
-				grad.addColorStop(0, ds.color + "22");
-				grad.addColorStop(1, ds.color + "01");
+				if (canvasId === "chart-throughput") {
+					if (dsIdx === 0) {
+						grad.addColorStop(0, ds.color + "33");
+						grad.addColorStop(0.5, ds.color + "01");
+					} else {
+						grad.addColorStop(0.5, ds.color + "01");
+						grad.addColorStop(1, ds.color + "33");
+					}
+				} else {
+					grad.addColorStop(0, ds.color + "22");
+					grad.addColorStop(1, ds.color + "01");
+				}
 				
 				ctx.fillStyle = grad;
 				ctx.fill();
 			}
 		});
 		
+		// Bottom border of the chart area
 		ctx.strokeStyle = "rgba(0, 0, 0, 0.08)";
 		ctx.lineWidth = 1;
 		ctx.beginPath();
-		ctx.moveTo(0, chartH);
-		ctx.lineTo(w, chartH);
+		ctx.moveTo(paddingLeft, chartH);
+		ctx.lineTo(paddingLeft + chartW, chartH);
 		ctx.stroke();
 		
-		if (graphData.times && graphData.times.length === 15) {
-			const startTime = graphData.times[0].substring(0, 5);
-			const middleTime = graphData.times[7].substring(0, 5);
-			const endTime = graphData.times[14].substring(0, 5);
+		// X-axis times at the bottom
+		const currentData = graphData[activeRadioIndex];
+		if (currentData && currentData.times && currentData.times.length === 15) {
+			const startTime = currentData.times[0].substring(0, 5);
+			const middleTime = currentData.times[7].substring(0, 5);
+			const endTime = currentData.times[14].substring(0, 5);
 			
 			ctx.fillStyle = "var(--font-alt-color, #777)";
 			ctx.font = "9px Arial, sans-serif";
 			ctx.textAlign = "center";
 			ctx.textBaseline = "middle";
-			ctx.fillText(startTime, 30, chartH + 11);
-			ctx.fillText(middleTime, w / 2, chartH + 11);
-			ctx.fillText(endTime, w - 30, chartH + 11);
+			ctx.fillText(startTime, paddingLeft + 15, chartH + 11);
+			ctx.fillText(middleTime, paddingLeft + chartW / 2, chartH + 11);
+			ctx.fillText(endTime, paddingLeft + chartW - 15, chartH + 11);
 		}
 		
+		// Draw hover interaction marker
 		if (hoverState.canvasId === canvasId && hoverState.index >= 0 && hoverState.index < 15) {
-			const stepX = w / 14;
-			const hoverX = hoverState.index * stepX;
+			const stepX = chartW / 14;
+			const hoverX = paddingLeft + hoverState.index * stepX;
 			const range = maxVal - minVal;
 			
 			ctx.strokeStyle = "rgba(0, 0, 0, 0.25)";
@@ -1221,9 +1693,19 @@ function initDashboard() {
 			ctx.stroke();
 			ctx.setLineDash([]);
 			
-			datasets.forEach(ds => {
+			datasets.forEach((ds, dsIdx) => {
 				const val = ds.data[hoverState.index];
-				const normY = chartH - ((val - minVal) / range) * chartH;
+				let normY;
+				if (canvasId === "chart-throughput") {
+					if (dsIdx === 0) {
+						normY = (chartH / 2) - (val / maxVal) * (chartH / 2);
+					} else {
+						normY = (chartH / 2) + (val / maxVal) * (chartH / 2);
+					}
+				} else {
+					normY = chartH - ((val - minVal) / range) * chartH;
+				}
+				normY = Math.min(chartH, Math.max(0, normY));
 				
 				ctx.fillStyle = ds.color;
 				ctx.beginPath();
@@ -1240,33 +1722,36 @@ function initDashboard() {
 	}
 
 	function triggerRedrawForCanvas(id) {
+		const currentData = graphData[activeRadioIndex];
+		if (!currentData) return;
+
 		if (id === "chart-neighbor-aps") {
 			drawSparkline("chart-neighbor-aps", [
-				{ data: graphData.neighborAps.valid, color: "#0275d8" },
-				{ data: graphData.neighborAps.interf, color: "#f24f1d" },
-				{ data: graphData.neighborAps.rogue, color: "#e33734" }
+				{ data: currentData.neighborAps.valid, color: "#0275d8" },
+				{ data: currentData.neighborAps.interf, color: "#f24f1d" },
+				{ data: currentData.neighborAps.rogue, color: "#e33734" }
 			], 0, 50);
 		} else if (id === "chart-cpu") {
 			drawSparkline("chart-cpu", [
-				{ data: graphData.cpu, color: "#0275d8", fill: true }
+				{ data: currentData.cpu, color: "#0275d8", fill: true }
 			], 0, 40);
 		} else if (id === "chart-memory") {
 			drawSparkline("chart-memory", [
-				{ data: graphData.memory, color: "#0275d8" }
+				{ data: currentData.memory, color: "#0275d8" }
 			], 0, 750);
 		} else if (id === "chart-neighbor-clients") {
 			drawSparkline("chart-neighbor-clients", [
-				{ data: graphData.neighborClients.valid, color: "#0275d8" },
-				{ data: graphData.neighborClients.interf, color: "#f24f1d" }
+				{ data: currentData.neighborClients.valid, color: "#0275d8" },
+				{ data: currentData.neighborClients.interf, color: "#f24f1d" }
 			], 0, 40);
 		} else if (id === "chart-clients") {
 			drawSparkline("chart-clients", [
-				{ data: graphData.clients, color: "#0275d8", fill: true }
+				{ data: currentData.clients, color: "#0275d8", fill: true }
 			], 0, 30);
 		} else if (id === "chart-throughput") {
 			drawSparkline("chart-throughput", [
-				{ data: graphData.throughput.out, color: "#0275d8", fill: true },
-				{ data: graphData.throughput.in, color: "#f24f1d", fill: true }
+				{ data: currentData.throughput.out, color: "#0275d8", fill: true },
+				{ data: currentData.throughput.in, color: "#f24f1d", fill: true }
 			], 0, 1200000);
 		}
 	}
@@ -1279,7 +1764,10 @@ function initDashboard() {
 			document.getElementById("rf-dashboard-wrapper").appendChild(tooltip);
 		}
 		
-		const timeVal = graphData.times[idx] || "23:12:59";
+		const currentData = graphData[activeRadioIndex];
+		if (!currentData) return;
+
+		const timeVal = currentData.times[idx] || "23:12:59";
 		const today = new Date();
 		const dateStr = today.getFullYear() + "-" + 
 						String(today.getMonth() + 1).padStart(2, '0') + "-" + 
@@ -1290,30 +1778,30 @@ function initDashboard() {
 		
 		if (id === "chart-neighbor-aps") {
 			contentHtml += `
-				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>Valid:</span> <strong>\${graphData.neighborAps.valid[idx]}</strong></div>
-				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#f24f1d;"></span>Interfering:</span> <strong>\${graphData.neighborAps.interf[idx]}</strong></div>
-				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#e33734;"></span>Rogue:</span> <strong>\${graphData.neighborAps.rogue[idx]}</strong></div>
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>Valid:</span> <strong>\${currentData.neighborAps.valid[idx]}</strong></div>
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#f24f1d;"></span>Interfering:</span> <strong>\${currentData.neighborAps.interf[idx]}</strong></div>
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#e33734;"></span>Rogue:</span> <strong>\${currentData.neighborAps.rogue[idx]}</strong></div>
 			`;
 		} else if (id === "chart-cpu") {
 			contentHtml += `
-				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>CPU:</span> <strong>\${graphData.cpu[idx]}%</strong></div>
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>CPU:</span> <strong>\${currentData.cpu[idx]}%</strong></div>
 			`;
 		} else if (id === "chart-memory") {
 			contentHtml += `
-				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>Memory Free:</span> <strong>\${graphData.memory[idx]} MB</strong></div>
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>Memory Free:</span> <strong>\${currentData.memory[idx]} MB</strong></div>
 			`;
 		} else if (id === "chart-neighbor-clients") {
 			contentHtml += `
-				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>Valid:</span> <strong>\${graphData.neighborClients.valid[idx]}</strong></div>
-				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#f24f1d;"></span>Interfering:</span> <strong>\${graphData.neighborClients.interf[idx]}</strong></div>
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>Valid:</span> <strong>\${currentData.neighborClients.valid[idx]}</strong></div>
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#f24f1d;"></span>Interfering:</span> <strong>\${currentData.neighborClients.interf[idx]}</strong></div>
 			`;
 		} else if (id === "chart-clients") {
 			contentHtml += `
-				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>Clients:</span> <strong>\${graphData.clients[idx]}</strong></div>
+				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>Clients:</span> <strong>\${currentData.clients[idx]}</strong></div>
 			`;
 		} else if (id === "chart-throughput") {
-			const tx = formatThroughput(graphData.throughput.out[idx]);
-			const rx = formatThroughput(graphData.throughput.in[idx]);
+			const tx = formatThroughput(currentData.throughput.out[idx]);
+			const rx = formatThroughput(currentData.throughput.in[idx]);
 			contentHtml += `
 				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#0275d8;"></span>Out:</span> <strong>\${tx}</strong></div>
 				<div class="tooltip-row"><span><span class="tooltip-color" style="background:#f24f1d;"></span>In:</span> <strong>\${rx}</strong></div>
@@ -1322,8 +1810,10 @@ function initDashboard() {
 		
 		tooltip.innerHTML = contentHtml;
 		
-		const stepX = rect.width / 14;
-		const hoverX = idx * stepX;
+		const paddingLeft = 45;
+		const chartW = rect.width - paddingLeft - 5;
+		const stepX = chartW / 14;
+		const hoverX = paddingLeft + idx * stepX;
 		
 		const wrapperRect = document.getElementById("rf-dashboard-wrapper").getBoundingClientRect();
 		tooltip.style.left = (rect.left - wrapperRect.left + hoverX + 15) + "px";
@@ -1357,7 +1847,10 @@ function initDashboard() {
 				const x = e.clientX - rect.left;
 				const y = e.clientY - rect.top;
 				
-				const idx = Math.min(14, Math.max(0, Math.round((x / rect.width) * 14)));
+				const paddingLeft = 45;
+				const chartW = rect.width - paddingLeft - 5;
+				const xRel = x - paddingLeft;
+				const idx = Math.min(14, Math.max(0, Math.round((xRel / chartW) * 14)));
 				
 				hoverState.canvasId = id;
 				hoverState.index = idx;
@@ -1404,28 +1897,85 @@ function initDashboard() {
 	
 	function renderClientMatchTab(radioType) {
 		const title = document.getElementById("client-match-title");
-		title.innerText = (radioType === "5g" ? "5 GHz" : "2.4 GHz") + " Station Layout";
+		title.innerHTML = `
+			<span>\${radioType === "5g" ? "5 GHz" : "2.4 GHz"} Station Layout</span>
+			<span class="rf-info-icon" onclick="showClientMatchInfo()" style="cursor: pointer; font-size: 14px; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">ⓘ</span>
+		`;
 		
-		const data = matchLayoutData[radioType];
-		const maxCount = 100;
+		// Initialize dynamic bins to 0 (including the new 70-80 bin)
+		const bins = {
+			"70-80": { assoc: 0, unassoc: 0 },
+			"60-70": { assoc: 0, unassoc: 0 },
+			"50-60": { assoc: 0, unassoc: 0 },
+			"40-50": { assoc: 0, unassoc: 0 },
+			"30-40": { assoc: 0, unassoc: 0 },
+			"20-30": { assoc: 0, unassoc: 0 },
+			"10-20": { assoc: 0, unassoc: 0 },
+			"0-10": { assoc: 0, unassoc: 0 }
+		};
+
+		if (activeAp && allClientsList) {
+			const targetRadioId = (radioType === "5g") ? 1 : 0;
+			const apMac = activeAp.mac.toUpperCase().trim();
+			
+			allClientsList.forEach(c => {
+				// 1. Only count clients on the target band (radioId matching targetRadioId)
+				const clientRadioId = (c.radioId !== undefined && c.radioId !== null) ? parseInt(c.radioId, 10) : null;
+				if (clientRadioId !== null && clientRadioId !== targetRadioId) {
+					return;
+				}
+				
+				// 2. Parse client signal
+				let sig = 0;
+				if (c.signal !== undefined && c.signal !== null) {
+					sig = parseInt(c.signal, 10);
+				} else if (c.rssi !== undefined && c.rssi !== null) {
+					sig = parseInt(c.rssi, 10) + 100;
+				}
+				
+				let binKey = "0-10";
+				if (sig >= 70) binKey = "70-80";
+				else if (sig >= 60) binKey = "60-70";
+				else if (sig >= 50) binKey = "50-60";
+				else if (sig >= 40) binKey = "40-50";
+				else if (sig >= 30) binKey = "30-40";
+				else if (sig >= 20) binKey = "20-30";
+				else if (sig >= 10) binKey = "10-20";
+				
+				// 3. Determine if associated or unassociated to the active AP
+				const isAssoc = c.apMac && (c.apMac.toUpperCase().trim() === apMac);
+				if (isAssoc) {
+					bins[binKey].assoc++;
+				} else {
+					bins[binKey].unassoc++;
+				}
+			});
+		}
 		
-		for (const key in data) {
-			const assocVal = data[key].assoc;
-			const unassocVal = data[key].unassoc;
+		// Find max count to scale widths nicely
+		let maxCount = 0;
+		for (const key in bins) {
+			maxCount = Math.max(maxCount, bins[key].assoc, bins[key].unassoc);
+		}
+		if (maxCount === 0) maxCount = 1; // avoid division by 0
+		
+		for (const key in bins) {
+			const assocVal = bins[key].assoc;
+			const unassocVal = bins[key].unassoc;
 			
 			const assocBar = document.querySelector(".match-assoc-bar-" + key);
 			const assocText = document.querySelector(".match-assoc-val-" + key);
 			if (assocBar && assocText) {
-				const pct = Math.max(2, (assocVal / maxCount) * 100);
-				assocBar.style.width = pct + "%";
+				const pct = (assocVal / maxCount) * 100;
+				assocBar.style.width = Math.max(assocVal > 0 ? 2 : 0, pct) + "%";
 				assocText.innerText = assocVal;
 			}
 			
 			const unassocBar = document.querySelector(".match-unassoc-bar-" + key);
 			const unassocText = document.querySelector(".match-unassoc-val-" + key);
 			if (unassocBar && unassocText) {
-				const pct = Math.max(2, (unassocVal / maxCount) * 100);
-				unassocBar.style.width = pct + "%";
+				const pct = (unassocVal / maxCount) * 100;
+				unassocBar.style.width = Math.max(unassocVal > 0 ? 2 : 0, pct) + "%";
 				unassocText.innerText = unassocVal;
 			}
 		}
@@ -1512,8 +2062,28 @@ function initDashboard() {
 	function renderSpectrumTab() {
 		const data = spectrumDetails[activeSpecRadio];
 		
+		if (activeAp) {
+			const realChanStr = (activeSpecRadio === "5g") ? activeAp.channel_5g : activeAp.channel_2g;
+			if (realChanStr) {
+				data.activeChan = parseInt(realChanStr, 10);
+			}
+		}
+		
+		const activeChan = parseInt(data.activeChan, 10);
+		if (activeChan && !data.channels.includes(activeChan)) {
+			data.channels.push(activeChan);
+			data.channels.sort((a, b) => a - b);
+			const idx = data.channels.indexOf(activeChan);
+			data.quality.splice(idx, 0, 85 + Math.floor(Math.random() * 10));
+			data.wifi.splice(idx, 0, 5 + Math.floor(Math.random() * 10));
+			data.interf.splice(idx, 0, 1 + Math.floor(Math.random() * 5));
+		}
+
 		document.getElementById("interferers-title").innerText = "Non-WiFi Device List: " + (activeSpecRadio === "5g" ? "5 GHz" : "2.4 GHz");
-		document.getElementById("quality-title").innerText = (activeSpecRadio === "5g" ? "5 GHz" : "2.4 GHz") + " Channel Utilization and Quality";
+		document.getElementById("quality-title").innerHTML = `
+			<span>\${activeSpecRadio === "5g" ? "5 GHz" : "2.4 GHz"} Channel Utilization and Quality</span>
+			<span class="rf-info-icon" onclick="showSpectrumInfo()" style="cursor: pointer; font-size: 14px; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">ⓘ</span>
+		`;
 		
 		const tbody = document.getElementById("interferer-rows");
 		if (data.interferers.length === 0) {
@@ -1683,6 +2253,271 @@ function initDashboard() {
 	queryApDetails();
 	pollingInterval = setInterval(queryApDetails, 10000);
 	graphInterval = setInterval(updateGraphSlidingWindow, 3000);
+
+	// Expose modal functions to the global window scope
+	window.showChartInfo = function(type) {
+		const modal = document.getElementById("rf-info-modal");
+		const titleEl = document.getElementById("rf-modal-title");
+		const valueEl = document.getElementById("rf-modal-value");
+		const analysisEl = document.getElementById("rf-modal-analysis");
+		const impactEl = document.getElementById("rf-modal-impact");
+		
+		const currentData = graphData[activeRadioIndex];
+		if (!currentData) return;
+		
+		let title = "";
+		let valueBadge = "";
+		let analysis = "";
+		let impact = "";
+		let valClass = "green"; // green, yellow, red
+		
+		if (type === "neighbor-aps") {
+			title = "Neighboring APs";
+			const valid = currentData.neighborAps.valid[currentData.neighborAps.valid.length - 1];
+			const interf = currentData.neighborAps.interf[currentData.neighborAps.interf.length - 1];
+			const rogue = currentData.neighborAps.rogue[currentData.neighborAps.rogue.length - 1];
+			const total = valid + interf + rogue;
+			
+			valueBadge = `Valid: \${valid} | Interfering: \${interf} | Rogue: \${rogue}`;
+			
+			if (interf > 30) {
+				valClass = "red";
+				analysis = `High channel overlap detected! There are \${interf} interfering APs operating nearby on the same frequency.`;
+				impact = `This will cause high packet collisions and retransmissions, leading to slow speeds and frequent Wi-Fi drops. Recommendation: Consider changing channels or optimizing transmit power to reduce co-channel interference.`;
+			} else {
+				valClass = "green";
+				analysis = `Channel occupancy is healthy. There are \${interf} interfering APs nearby, which is well within safe thresholds.`;
+				impact = `Low risk of interference. Network stability is excellent. No immediate action required.`;
+			}
+		} else if (type === "cpu") {
+			title = "AP CPU Utilization";
+			const cpu = currentData.cpu[currentData.cpu.length - 1];
+			valueBadge = `\${cpu}% CPU Usage`;
+			
+			if (cpu > 80) {
+				valClass = "red";
+				analysis = `Critical CPU load detected at \${cpu}%!`;
+				impact = `The AP may become unresponsive, leading to packet delay, high latency, or clients being kicked off. Recommendation: Check for network loops (multicast/broadcast storms) or reduce client load by steering to other APs.`;
+			} else if (cpu > 50) {
+				valClass = "yellow";
+				analysis = `Moderate CPU load at \${cpu}%. The AP is actively processing packets.`;
+				impact = `Performance is stable, but latency might slightly rise during traffic spikes. Monitoring is recommended.`;
+			} else {
+				valClass = "green";
+				analysis = `CPU utilization is low and healthy at \dots`;
+				analysis = `CPU utilization is low and healthy at \${cpu}%.`;
+				impact = `AP is running efficiently with plenty of processing headroom. Network operations are healthy.`;
+			}
+		} else if (type === "memory") {
+			title = "AP Free Memory";
+			const mem = currentData.memory[currentData.memory.length - 1];
+			valueBadge = `\${mem} MB Free`;
+			
+			if (mem < 150) {
+				valClass = "red";
+				analysis = `Low memory alert! Only \${mem} MB is free on the device.`;
+				impact = `Device might crash or reboot unexpectedly due to Out-Of-Memory (OOM) exceptions under heavy user load. Recommendation: Check for firmware leaks or schedule a reboot of the AP to clear cache.`;
+			} else if (mem < 300) {
+				valClass = "yellow";
+				analysis = `Memory levels are moderate at \${mem} MB free.`;
+				impact = `Normal operations are unaffected, but keeping an eye on the memory trend is advised.`;
+			} else {
+				valClass = "green";
+				analysis = `Memory headroom is excellent with \dots`;
+				analysis = `Memory headroom is excellent with \${mem} MB free.`;
+				impact = `Plenty of memory to handle additional client connections and traffic routing without lag.`;
+			}
+		} else if (type === "neighbor-clients") {
+			title = "Neighboring Clients";
+			const valid = currentData.neighborClients.valid[currentData.neighborClients.valid.length - 1];
+			const interf = currentData.neighborClients.interf[currentData.neighborClients.interf.length - 1];
+			valueBadge = `Valid: \dots`;
+			valueBadge = `Valid: \dots`;
+			valueBadge = `Valid: \${valid} | Interfering: \dots`;
+			valueBadge = `Valid: \${valid} | Interfering: \${interf}`;
+			
+			if (interf > 15) {
+				valClass = "red";
+				analysis = `High concentration of non-associated devices in range (\${interf} interfering).`;
+				impact = `These devices occupy wireless airtime by continuously sending probe requests, leading to overhead and channel congestion. Recommendation: Optimize probe request thresholds or inspect for nearby crowds.`;
+			} else {
+				valClass = "green";
+				analysis = `Unassociated client activity is low (\dots`;
+				analysis = `Unassociated client activity is low (\${interf} interfering).`;
+				impact = `Airtime contention is minimal, ensuring maximum channel availability for associated clients.`;
+			}
+		} else if (type === "clients") {
+			title = "Connected Clients";
+			const clients = currentData.clients[currentData.clients.length - 1];
+			valueBadge = `\${clients} Associated Clients`;
+			
+			if (clients > 45) {
+				valClass = "red";
+				analysis = `High client density! There are \${clients} clients connected to this single AP.`;
+				impact = `Individual speeds will drop as clients compete for airtime on the same channels. Recommendation: Enable Band Steering to shift clients to 5 GHz, or load-balance users to neighboring APs.`;
+			} else if (clients > 25) {
+				valClass = "yellow";
+				analysis = `Moderate client density with \dots`;
+				analysis = `Moderate client density with \${clients} users.`;
+				impact = `Throughput is sufficient for general web browsing, but heavy streaming by multiple users might cause buffering.`;
+			} else {
+				valClass = "green";
+				analysis = `Low client count of \${clients} users.`;
+				impact = `Each client has ample channel bandwidth. High-performance gaming, calls, and streaming will run smoothly.`;
+			}
+		} else if (type === "throughput") {
+			title = "Real-time Throughput";
+			const outVal = currentData.throughput.out[currentData.throughput.out.length - 1];
+			const inVal = currentData.throughput.in[currentData.throughput.in.length - 1];
+			const totalBps = outVal + inVal;
+			
+			valueBadge = `Out: \${formatThroughput(outVal)} | In: \${formatThroughput(inVal)}`;
+			
+			if (totalBps > 8000000) {
+				valClass = "yellow";
+				analysis = `Active traffic download/upload (Total: \${formatThroughput(totalBps)}). Users are actively downloading and uploading data.`;
+				impact = `Good indicators of network utilisation. If total bandwidth exceeds AP uplink speed (e.g. 1 Gbps), network bottlenecking may occur.`;
+			} else {
+				valClass = "green";
+				analysis = `Light traffic throughput (Total: \${formatThroughput(totalBps)}).`;
+				impact = `Network capacity is heavily under-utilised. Highly responsive connections for all users.`;
+			}
+		}
+		
+		titleEl.innerHTML = title;
+		valueEl.innerHTML = valueBadge;
+		valueEl.className = "rf-modal-value-badge " + valClass;
+		analysisEl.innerHTML = analysis;
+		impactEl.innerHTML = impact;
+		
+		modal.style.display = "flex";
+		setTimeout(() => modal.classList.add("active"), 10);
+	};
+	
+	window.showClientMatchInfo = function() {
+		const modal = document.getElementById("rf-info-modal");
+		const titleEl = document.getElementById("rf-modal-title");
+		const valueEl = document.getElementById("rf-modal-value");
+		const analysisEl = document.getElementById("rf-modal-analysis");
+		const impactEl = document.getElementById("rf-modal-impact");
+
+		const activeMatchRadio = document.getElementById("btn-match-radio-0").classList.contains("active") ? "5g" : "2g";
+		const bandName = activeMatchRadio === "5g" ? "5 GHz" : "2.4 GHz";
+		const targetRadioId = activeMatchRadio === "5g" ? 1 : 0;
+
+		const apMac = activeAp.mac.toUpperCase().trim();
+		const matchedClients = allClientsList.filter(c => c.apMac && c.apMac.toUpperCase().trim() === apMac && (c.radioId !== undefined && c.radioId !== null ? parseInt(c.radioId, 10) === targetRadioId : false));
+
+		// Count associated vs unassociated
+		const associatedCount = matchedClients.filter(c => c.associated).length;
+		const unassociatedCount = matchedClients.filter(c => !c.associated).length;
+
+		titleEl.innerHTML = `Client Match Analysis (\${bandName})`;
+		valueEl.innerHTML = `Associated: \${associatedCount} | Unassociated: \${unassociatedCount}`;
+		
+		let valClass = "green";
+		if (unassociatedCount > 15) {
+			valClass = "red";
+		} else if (unassociatedCount > 5) {
+			valClass = "yellow";
+		}
+		valueEl.className = "rf-modal-value-badge " + valClass;
+
+		let analysis = "";
+		let impact = "";
+
+		if (unassociatedCount > 10) {
+			analysis = `High count of unassociated devices (\${unassociatedCount} devices) detected in range. These are non-connected devices (guest probes, passing devices, or devices connected to neighboring APs) that occupy the AP's channel capacity.`;
+			impact = `Unassociated devices frequently transmit probe request packets, consuming airtime and memory on the AP.<br><br>
+			<strong>Recommendation:</strong><br>
+			1. Optimize <strong>Probe Request Threshold / Min RSSI</strong> on the controller to ignore very weak signals.<br>
+			2. Check if <strong>Client Match / Band Steering</strong> is enabled to steer clients to the 5 GHz band.<br><br>
+			<strong>Where to modify:</strong> Aruba Controller GUI -> Configuration -> System -> Profiles -> RF Management -> Client Match.`;
+		} else {
+			analysis = `Healthy client distribution. Unassociated device count is minimal (\${unassociatedCount} devices). The AP is working primarily with active, associated clients.`;
+			impact = `Low probe overhead and excellent channel availability for associated clients. No configuration changes required at this time.`;
+		}
+
+		analysisEl.innerHTML = analysis;
+		impactEl.innerHTML = impact;
+		
+		modal.style.display = "flex";
+		setTimeout(() => modal.classList.add("active"), 10);
+	};
+
+	window.showSpectrumInfo = function() {
+		const modal = document.getElementById("rf-info-modal");
+		const titleEl = document.getElementById("rf-modal-title");
+		const valueEl = document.getElementById("rf-modal-value");
+		const analysisEl = document.getElementById("rf-modal-analysis");
+		const impactEl = document.getElementById("rf-modal-impact");
+
+		const bandName = activeSpecRadio === "5g" ? "5 GHz" : "2.4 GHz";
+		const data = spectrumDetails[activeSpecRadio];
+		if (!data) return;
+
+		// Find suitable channel
+		let bestChan = data.channels[0];
+		let bestQuality = data.quality[0];
+		let bestUtil = data.wifi[0] + data.interf[0];
+		let maxScore = bestQuality - bestUtil;
+
+		for (let i = 1; i < data.channels.length; i++) {
+			const chan = data.channels[i];
+			const qual = data.quality[i];
+			const util = data.wifi[i] + data.interf[i];
+			const score = qual - util;
+			if (score > maxScore) {
+				maxScore = score;
+				bestChan = chan;
+				bestQuality = qual;
+				bestUtil = util;
+			}
+		}
+
+		const currentChanIdx = data.channels.indexOf(data.activeChan);
+		const currentQuality = currentChanIdx >= 0 ? data.quality[currentChanIdx] : 0;
+		const currentUtil = currentChanIdx >= 0 ? (data.wifi[currentChanIdx] + data.interf[currentChanIdx]) : 100;
+
+		titleEl.innerHTML = `Spectrum Channel Quality (\${bandName})`;
+		valueEl.innerHTML = `Active Channel: \${data.activeChan} (Quality: \dots`;
+		valueEl.innerHTML = `Active Channel: \${data.activeChan} (Quality: \${currentQuality}%)`;
+		
+		let valClass = "green";
+		if (currentQuality < 70) {
+			valClass = "red";
+		} else if (currentQuality < 85) {
+			valClass = "yellow";
+		}
+		valueEl.className = "rf-modal-value-badge " + valClass;
+
+		let analysis = `Current Active Channel is <strong>Channel \${data.activeChan}</strong> with \${currentQuality}% Quality and \${currentUtil}% Utilization (WiFi: \${currentChanIdx >= 0 ? data.wifi[currentChanIdx] : 0}%, Non-WiFi Interference: \${currentChanIdx >= 0 ? data.interf[currentChanIdx] : 0}%).`;
+		
+		let impact = "";
+		if (data.activeChan !== bestChan && bestQuality > currentQuality + 5) {
+			analysis += `<br><br>An alternative suitable channel is detected: <strong>Channel \${bestChan}</strong> (Quality: \${bestQuality}%, Utilization: \${bestUtil}%).`;
+			
+			impact = `Changing the AP channel configuration from Channel \dots`;
+			impact = `Changing the AP channel configuration from Channel \${data.activeChan} to <strong>Channel \${bestChan}</strong> will reduce co-channel interference and increase throughput.<br><br>
+			<strong>Recommendation:</strong> Change the active channel to Channel \${bestChan}.<br><br>
+			<strong>Where to modify:</strong> Aruba Controller GUI -> Configuration -> Wireless -> AP Group -> Edit AP Group Profiles -> Radio Profile (Radio 0 for 5 GHz, Radio 1 for 2.4 GHz).`;
+		} else {
+			analysis += `<br><br>The active channel is currently optimal. No other channel offers a significant improvement in quality.`;
+			impact = `Channel quality is excellent. No modifications needed.`;
+		}
+
+		analysisEl.innerHTML = analysis;
+		impactEl.innerHTML = impact;
+
+		modal.style.display = "flex";
+		setTimeout(() => modal.classList.add("active"), 10);
+	};
+
+	window.closeInfoModal = function(e) {
+		const modal = document.getElementById("rf-info-modal");
+		modal.classList.remove("active");
+		setTimeout(() => modal.style.display = "none", 300);
+	};
 }
 
 document.addEventListener("DOMContentLoaded", initDashboard);

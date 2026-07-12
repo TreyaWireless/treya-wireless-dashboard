@@ -147,6 +147,20 @@ $filter_html = <<<HTML
 	opacity: 0.5;
 	cursor: default;
 }
+@keyframes pulse-purple {
+	0% {
+		transform: scale(0.95);
+		box-shadow: 0 0 0 0 rgba(121, 40, 202, 0.7);
+	}
+	70% {
+		transform: scale(1);
+		box-shadow: 0 0 0 6px rgba(121, 40, 202, 0);
+	}
+	100% {
+		transform: scale(0.95);
+		box-shadow: 0 0 0 0 rgba(121, 40, 202, 0);
+	}
+}
 </style>
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -170,6 +184,8 @@ $filter_html = <<<HTML
 			<th style="width: 80px;">Status</th>
 			<th>Name</th>
 			<th>IP Address</th>
+			<th>MAC Address</th>
+			<th>Serial No</th>
 			<th>Mode</th>
 			<th>Clients</th>
 			<th>Type</th>
@@ -179,7 +195,7 @@ $filter_html = <<<HTML
 			<th colspan="4" style="text-align: center; background: rgba(242,79,29,0.03);">5 GHz (Radio 1)</th>
 		</tr>
 		<tr class="second-header-row" style="font-size: 10px; background: rgba(0,0,0,0.02);">
-			<th colspan="8"></th>
+			<th colspan="10"></th>
 			<th style="border-left: 1px solid var(--border-color);">Ch</th>
 			<th>Power</th>
 			<th>Util</th>
@@ -192,7 +208,7 @@ $filter_html = <<<HTML
 	</thead>
 	<tbody id="ap-table-rows">
 		<tr>
-			<td colspan="16" style="text-align: center; padding: 20px; color: var(--font-alt-color);">Loading Access Points list...</td>
+			<td colspan="18" style="text-align: center; padding: 20px; color: var(--font-alt-color);">Loading Access Points list...</td>
 		</tr>
 	</tbody>
 </table>
@@ -251,12 +267,17 @@ document.addEventListener("DOMContentLoaded", () => {
 			.then(results => {
 				let mergedAps = [];
 				let errorMsgs = [];
+				window.aiActions = [];
 				
 				results.forEach((res, resIdx) => {
 					if (res.status === 'success') {
 						const devices = res.devices || [];
 						const clients = res.clients || [];
 						const currentHostId = hostIds[resIdx];
+						
+						if (res.ai_analysis && res.ai_analysis.actions) {
+							window.aiActions = window.aiActions.concat(res.ai_analysis.actions);
+						}
 						
 						// Filter for Access Points
 						let fetchedAps = devices.filter(d => d.type === "ap" || String(d.type).toLowerCase() === "ap");
@@ -390,7 +411,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		// Render table rows
 		const tbody = document.getElementById("ap-table-rows");
 		if (filtered.length === 0) {
-			tbody.innerHTML = '<tr><td colspan="16" style="text-align: center; padding: 20px; color: var(--font-alt-color);">No matching Access Points found.</td></tr>';
+			tbody.innerHTML = '<tr><td colspan="18" style="text-align: center; padding: 20px; color: var(--font-alt-color);">No matching Access Points found.</td></tr>';
 			document.getElementById("pagination-info").innerText = "Showing 0-0 of 0 entries";
 			document.getElementById("pagination-buttons").innerHTML = "";
 			return;
@@ -480,10 +501,25 @@ document.addEventListener("DOMContentLoaded", () => {
 			const p2g = isOnline ? ((t2gVal !== undefined && t2gVal !== null && t2gVal >= 0) ? t2gVal + " dBm" : (is225 ? "24 dBm" : "21 dBm")) : "--";
 			const p5g = isOnline ? ((t5gVal !== undefined && t5gVal !== null && t5gVal >= 0) ? t5gVal + " dBm" : (is225 ? "22 dBm" : "21 dBm")) : "--";
 			
+			const macClean = ap.mac ? ap.mac.toUpperCase().trim() : "";
+			const aiAction = (window.aiActions || []).find(act => act.ap_mac && act.ap_mac.toUpperCase().trim() === macClean);
+			let aiBadgeHtml = '';
+			if (aiAction) {
+				const paramLabel = aiAction.parameter === 'tx_power_2g' ? 'Tx Power' : 'Channel';
+				const safeReason = (aiAction.reason || "").replace(/'/g, "\\'").replace(/"/g, '&quot;');
+				const safeName = ap.name.replace(/'/g, "\\'");
+				aiBadgeHtml = `
+				<span class="ai-rec-badge" style="display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: #7928ca; color: #fff; font-size: 8px; font-weight: bold; cursor: pointer; margin-left: 6px; box-shadow: 0 0 0 0 rgba(121, 40, 202, 0.4); animation: pulse-purple 1.5s infinite; vertical-align: middle;" onclick="showAiApRecommendation('\${ap.mac}', '\${safeName}', '\${aiAction.parameter}', '\${aiAction.new_value}', '\${safeReason}', event)" title="AI Recommendation: Set \${paramLabel} to \${aiAction.new_value}">
+					✨
+				</span>`;
+			}
+
 			rowsHtml += '<tr>' +
 				'<td>' + statusHtml + '</td>' +
-				'<td style="font-weight: bold;"><a href="treya.php?action=omada.rf_dashboard&mac=' + encodeURIComponent(ap.mac) + '&hostid=' + ap.hostId + '" style="color: #ffb300; text-decoration: none;" title="Open RF Dashboard">' + ap.name + '</a></td>' +
+				'<td style="font-weight: bold;"><a href="treya.php?action=omada.rf_dashboard&mac=' + encodeURIComponent(ap.mac) + '&hostid=' + ap.hostId + '" style="color: #ffb300; text-decoration: none;" title="Open RF Dashboard">' + ap.name + '</a>' + aiBadgeHtml + '</td>' +
 				'<td>' + (ap.ip || "--") + '</td>' +
+				'<td style="font-family: monospace; font-size: 11px; color: var(--font-alt-color);">' + (ap.mac ? ap.mac.toUpperCase() : "--") + '</td>' +
+				'<td style="font-family: monospace; font-size: 11px; color: var(--font-alt-color);">' + (ap.serial || "--") + '</td>' +
 				'<td>access</td>' +
 				'<td style="font-weight: bold; color: ' + (ap.clientCount > 0 ? "#ffb300" : "inherit") + ';">' + ap.clientCount + '</td>' +
 				'<td>' + model + '</td>' +
@@ -522,6 +558,15 @@ document.addEventListener("DOMContentLoaded", () => {
 		document.getElementById("pagination-buttons").innerHTML = buttonsHtml;
 	}
 	
+	window.showAiApRecommendation = function(mac, name, param, val, reason, e) {
+		e.preventDefault();
+		e.stopPropagation();
+		const paramLabel = param === 'tx_power_2g' ? '2.4GHz Tx Power' : '5GHz Channel';
+		alert("✨ AI Recommendation for " + name + " (" + mac + ")\\n\\n" +
+		      "👉 Recommendation: Set " + paramLabel + " to " + val + "\\n\\n" +
+		      "📝 Reason: " + reason);
+	};
+
 	// Expose changeApsPage to global window context for onclick handlers
 	window.changeApsPage = function(pageNumber) {
 		currentPage = pageNumber;

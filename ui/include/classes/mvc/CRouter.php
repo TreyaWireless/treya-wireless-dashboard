@@ -205,6 +205,7 @@ class CRouter {
 		'omada.switches'							=> [CControllerOmadaSwitches::class,								'layout.htmlpage',		'monitoring.omada.switches'],
 		'omada.clients'								=> [CControllerOmadaClients::class,									'layout.htmlpage',		'monitoring.omada.clients'],
 		'omada.topology'							=> [CControllerOmadaTopology::class,								'layout.htmlpage',		'monitoring.omada.topology'],
+		'omada.rf'									=> [CControllerOmadaRfDashboard::class,								'layout.htmlpage',		'monitoring.omada.rfdashboard'],
 		'omada.rf_dashboard'						=> [CControllerOmadaRfDashboard::class,								'layout.htmlpage',		'monitoring.omada.rfdashboard'],
 		'popup'										=> [CControllerPopup::class,										'layout.htmlpage',		'popup.view'],
 		'popup.acknowledge.create'					=> [CControllerPopupAcknowledgeCreate::class,						'layout.json',			null],

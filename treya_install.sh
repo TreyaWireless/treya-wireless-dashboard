@@ -79,14 +79,20 @@ echo "[STEP 4] Setting up treya_wireless system user and folders..."
 groupadd --system treya_wireless 2>/dev/null || true
 useradd --system -g treya_wireless -d /var/lib/treya-wireless -s /sbin/nologin -c "Treya Wireless Daemon" treya_wireless 2>/dev/null || true
 
-# Add web server users to treya_wireless group so they can access the web/ config folder
+# Add web server and zabbix users to treya_wireless group so they can access the web/ config folder and cache
 usermod -a -G treya_wireless nginx 2>/dev/null || true
 usermod -a -G treya_wireless apache 2>/dev/null || true
+usermod -a -G treya_wireless zabbix 2>/dev/null || true
 
 # Create logs and run directories
 mkdir -p /var/log/treya-wireless /var/run/treya-wireless
 chown -R treya_wireless:treya_wireless /var/log/treya-wireless /var/run/treya-wireless
 chmod 775 /var/log/treya-wireless /var/run/treya-wireless
+
+# Setup shared cache directories with 777 permissions
+mkdir -p /var/cache/treya-wireless/locks
+chown -R treya_wireless:treya_wireless /var/cache/treya-wireless 2>/dev/null || true
+chmod -R 777 /var/cache/treya-wireless 2>/dev/null || true
 
 # Set MariaDB database setup
 echo "Setting up MariaDB Database and User..."

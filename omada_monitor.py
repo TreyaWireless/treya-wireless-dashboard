@@ -12,6 +12,22 @@ from concurrent.futures import ThreadPoolExecutor
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+def get_cache_dir():
+    if os.name == 'nt':
+        import tempfile
+        return os.path.join(tempfile.gettempdir(), 'treya-wireless')
+    else:
+        return '/var/cache/treya-wireless'
+
+def get_settings_file():
+    if os.name == 'nt':
+        local_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ai_settings.json')
+        if os.path.exists(local_path):
+            return local_path
+        return r"C:\etc\treya-wireless\ai_settings.json"
+    else:
+        return "/etc/treya-wireless/ai_settings.json"
+
 session = requests.Session()
 session.verify = False
 adapter = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=120)
@@ -41,6 +57,20 @@ def make_request(url, method="GET", data=None, token=None):
     except Exception as e:
         raise Exception(f"HTTP request to {url} failed: {e}")
 
+def parse_actual_channel(channel_val):
+    if not channel_val:
+        return None
+    channel_str = str(channel_val).strip()
+    if "/" in channel_str:
+        channel_str = channel_str.split("/")[0].strip()
+    try:
+        match = re.match(r'^\s*(\d+)', channel_str)
+        if match:
+            return int(match.group(1))
+    except Exception:
+        pass
+    return None
+
 def get_radio_stats(device):
     """Extract channel utilization and noise floor from a device's radio list."""
     radio_setting = device.get("radioSetting", device.get("radioConfig", {}))
@@ -52,6 +82,8 @@ def get_radio_stats(device):
     noise_floor_5g = None
     tx_power_2g = None
     tx_power_5g = None
+    ch_2g = None
+    ch_5g = None
 
     for radio in radio_list:
         band = radio.get("band", radio.get("radioId", -1))
@@ -59,6 +91,7 @@ def get_radio_stats(device):
         util = radio.get("utilization", radio.get("channelUtilization", None))
         noise = radio.get("noise", radio.get("noiseFloor", None))
         tx_pwr = radio.get("txPower", None)
+        chan = radio.get("channel", radio.get("actualChannel", None))
 
         if band == 0 or band == "2G":
             if util is not None:
@@ -67,6 +100,8 @@ def get_radio_stats(device):
                 noise_floor_2g = int(noise)
             if tx_pwr is not None:
                 tx_power_2g = int(tx_pwr)
+            if chan is not None:
+                ch_2g = parse_actual_channel(chan)
         elif band == 1 or band == "5G":
             if util is not None:
                 chan_util_5g = int(util)
@@ -74,8 +109,10 @@ def get_radio_stats(device):
                 noise_floor_5g = int(noise)
             if tx_pwr is not None:
                 tx_power_5g = int(tx_pwr)
+            if chan is not None:
+                ch_5g = parse_actual_channel(chan)
 
-    return chan_util_2g, chan_util_5g, noise_floor_2g, noise_floor_5g, tx_power_2g, tx_power_5g
+    return chan_util_2g, chan_util_5g, noise_floor_2g, noise_floor_5g, tx_power_2g, tx_power_5g, ch_2g, ch_5g
 
 def normalize_port(port_str):
     if not port_str:
@@ -87,6 +124,222 @@ def normalize_port(port_str):
     if match:
         return match.group(1)
     return port_str
+
+def get_local_analysis(eaps, clients, ip):
+    issues = []
+    actions = []
+    health_score = 100
+    
+    # Check for high 2.4GHz TX power
+    for ap in eaps:
+        pwr_2g = ap.get("tx_power_2g") or ap.get("pwr_2g")
+        if pwr_2g is not None:
+            try:
+                pwr_val = int(pwr_2g)
+                if pwr_val >= 20:
+                    health_score -= 10
+                    issues.append({
+                        "ap_name": ap.get("name") or "Access Point",
+                        "problem": f"High 2.4GHz TX power ({pwr_val} dBm) detected. This causes 'sticky' clients to remain connected to weak 2.4GHz signals instead of steering to 5GHz."
+                    })
+                    actions.append({
+                        "ap_mac": ap.get("mac") or "",
+                        "ap_name": ap.get("name") or "Access Point",
+                        "parameter": "tx_power_2g",
+                        "current_value": str(pwr_val),
+                        "new_value": "12",
+                        "reason": f"Reduce 2.4GHz TX power on {ap.get('name')} to 12 dBm to encourage client steering to the faster 5GHz band."
+                    })
+            except Exception:
+                pass
+
+    # Check for 5GHz Co-channel interference
+    ch_5g_map = {}
+    for ap in eaps:
+        ch_5g = ap.get("channel_5g") or ap.get("ch_5g")
+        if ch_5g and str(ch_5g).isdigit():
+            ch_val = int(ch_5g)
+            if ch_val > 14: # 5GHz channel
+                ch_5g_map.setdefault(ch_val, []).append(ap)
+
+    # For each channel used by multiple APs
+    for chan, aps in ch_5g_map.items():
+        if len(aps) > 1:
+            health_score -= 15 * (len(aps) - 1)
+            ap_names = ", ".join([ap.get("name") or "AP" for ap in aps])
+            for ap in aps:
+                issues.append({
+                    "ap_name": ap.get("name") or "Access Point",
+                    "problem": f"Co-channel interference on 5GHz Channel {chan} with neighboring APs ({ap_names})."
+                })
+            
+            # Suggest shifting one of the APs to another channel
+            common_5g_channels = [36, 44, 52, 60, 100, 108, 116, 132, 149, 157]
+            unused_channels = [c for c in common_5g_channels if c not in ch_5g_map]
+            suggested_chan = unused_channels[0] if unused_channels else 36
+            
+            for ap in aps[1:]:
+                actions.append({
+                    "ap_mac": ap.get("mac") or "",
+                    "ap_name": ap.get("name") or "Access Point",
+                    "parameter": "channel_5g",
+                    "current_value": str(chan),
+                    "new_value": str(suggested_chan),
+                    "reason": f"Shift 5GHz channel from {chan} to {suggested_chan} to resolve co-channel overlap with {aps[0].get('name')}."
+                })
+                
+    # Check for poor clients
+    poor_clients_count = 0
+    for c in clients:
+        rssi = c.get("rssi")
+        if rssi is not None:
+            try:
+                rssi_val = int(rssi)
+                if rssi_val <= -80:
+                    poor_clients_count += 1
+            except Exception:
+                pass
+                
+    if poor_clients_count > 0:
+        health_score -= min(poor_clients_count * 3, 20)
+        issues.append({
+            "ap_name": "Network clients",
+            "problem": f"{poor_clients_count} client(s) experiencing low RSSI (<= -80 dBm), causing retransmissions and performance degradation."
+        })
+        
+    health_score = max(0, min(100, health_score))
+    
+    return {
+        "health_score": health_score,
+        "issues": issues,
+        "actions": actions
+    }
+
+
+def get_ai_analysis_cached(eaps, clients, ip, cache_file):
+    settings_file = get_settings_file()
+    
+    # Check if cache already contains fresh AI analysis (less than 30 mins old)
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file) as f:
+                old_cache = json.load(f)
+            if "ai_analysis" in old_cache and "ai_analysis_timestamp" in old_cache:
+                age = time.time() - old_cache["ai_analysis_timestamp"]
+                if age < 1800:
+                    return old_cache["ai_analysis"], old_cache["ai_analysis_timestamp"]
+        except Exception:
+            pass
+
+    groq_key = None
+    gemini_key = None
+    if os.path.exists(settings_file):
+        try:
+            with open(settings_file) as f:
+                settings = json.load(f)
+            groq_key = settings.get("groq_api_key")
+            gemini_key = settings.get("gemini_api_key")
+        except Exception:
+            pass
+
+    # Build telemetry payload
+    telemetry = {
+        "site_ip": ip,
+        "eaps": [],
+        "poor_clients": []
+    }
+    
+    for ap in eaps:
+        telemetry["eaps"].append({
+            "name": ap.get("name"),
+            "mac": ap.get("mac"),
+            "ch_2g": ap.get("channel_2g"),
+            "pwr_2g": ap.get("tx_power_2g"),
+            "util_2g": ap.get("channel_util_2g"),
+            "ch_5g": ap.get("channel_5g"),
+            "pwr_5g": ap.get("tx_power_5g"),
+            "util_5g": ap.get("channel_util_5g"),
+            "clientCount": ap.get("clientCount")
+        })
+        
+    for c in clients:
+        if c.get("rssi") is not None and c.get("rssi") <= -80:
+            telemetry["poor_clients"].append({
+                "name": c.get("name"),
+                "mac": c.get("mac"),
+                "apMac": c.get("apMac"),
+                "apName": c.get("apName"),
+                "rssi": c.get("rssi"),
+                "ch": c.get("channel"),
+                "radioId": c.get("radioId")
+            })
+
+    prompt = f"""
+You are an automated RF Optimization Agent. Review this wireless network telemetry data:
+{json.dumps(telemetry)}
+
+Tasks:
+1. Identify APs experiencing Co-Channel Interference on 5GHz.
+2. Identify APs with extremely high 2.4GHz TX power causing sticky clients.
+3. Suggest remediation actions (reducing 2.4GHz power or shifting 5GHz channels to non-overlapping ones).
+
+You must respond ONLY with a valid JSON object matching the schema below. Do not include any markdown styling, conversational text, or explanation outside the JSON.
+
+Required JSON Schema:
+{{
+    "health_score": 85,
+    "issues": [
+        {{"ap_name": "AP Name", "problem": "Detailed description of the issue"}}
+    ],
+    "actions": [
+        {{"ap_mac": "00:00:00:00:00:00", "ap_name": "AP Name", "parameter": "channel_5g|tx_power_2g", "current_value": "161", "new_value": "36", "reason": "Why this action is recommended"}}
+    ]
+}}
+"""
+
+    # 4. Try Groq
+    if groq_key:
+        try:
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
+            payload = {
+                "model": "llama-3.3-70b-versatile",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.0,
+                "response_format": {"type": "json_object"}
+            }
+            r = requests.post(url, headers=headers, json=payload, timeout=20)
+            if r.status_code == 200:
+                res_txt = r.json()["choices"][0]["message"]["content"].strip()
+                res_dict = json.loads(res_txt)
+                res_dict["engine"] = "Groq Llama 3.3"
+                return res_dict, time.time()
+        except Exception:
+            pass
+
+    # 5. Fallback to Gemini
+    if gemini_key:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [{"parts": [{"text": prompt + " Respond in strict JSON."}]}],
+                "generationConfig": {"responseMimeType": "application/json"}
+            }
+            r = requests.post(url, headers=headers, json=payload, timeout=20)
+            if r.status_code == 200:
+                res_txt = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                res_dict = json.loads(res_txt)
+                res_dict["engine"] = "Gemini 1.5 Flash"
+                return res_dict, time.time()
+        except Exception:
+            pass
+
+    # 6. Fallback to Local Heuristics
+    local_res = get_local_analysis(eaps, clients, ip)
+    local_res["engine"] = "Local Heuristics"
+    return local_res, time.time()
+
 
 def main():
     script_start_time = time.time()
@@ -120,23 +373,27 @@ def main():
         }))
         sys.exit(0)
 
-    lock_dir = "/var/cache/treya-wireless/locks"
+    cache_dir = get_cache_dir()
+    lock_dir = os.path.join(cache_dir, 'locks')
     try:
         os.makedirs(lock_dir, exist_ok=True)
-        os.chmod(lock_dir, 0o777)
+        if os.name != 'nt':
+            os.chmod(lock_dir, 0o777)
     except Exception:
         pass
 
-    cache_file = f"/var/cache/treya-wireless/omada_cache_{ip}.json"
+    cache_file = os.path.join(cache_dir, f"omada_cache_{ip}.json")
     lock_file = os.path.join(lock_dir, f"omada_lock_{ip}.lock")
 
     if not is_update_task:
+        cache_valid = False
         if os.path.exists(cache_file):
             try:
                 with open(cache_file, "r") as f:
                     cache_data = f.read()
                 json.loads(cache_data)  # Validate JSON
                 print(cache_data)
+                cache_valid = True
                 
                 # If cache is older than 30 seconds, spawn background process to update it
                 mtime = os.path.getmtime(cache_file)
@@ -144,15 +401,80 @@ def main():
                     if not os.path.exists(lock_file):
                         import subprocess
                         script_file = os.path.abspath(__file__)
+                        
+                        popen_kwargs = {
+                            'stdout': subprocess.DEVNULL,
+                            'stderr': subprocess.DEVNULL
+                        }
+                        if os.name == 'nt':
+                            popen_kwargs['creationflags'] = 0x00000008  # DETACHED_PROCESS
+                        else:
+                            popen_kwargs['start_new_session'] = True
+                        
                         subprocess.Popen(
                             [sys.executable, script_file, ip, port, arg3, arg4, omadac_id, "--update-cache"],
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL,
-                            start_new_session=True
+                            **popen_kwargs
                         )
                 sys.exit(0)
             except Exception:
                 pass
+
+        if not cache_valid:
+            # Write a placeholder and spawn background task immediately!
+            placeholder = {
+                "status": "error",
+                "error_message": "Cache is initializing. Please wait for next polling cycle.",
+                "online_aps": 0,
+                "offline_aps": 0,
+                "total_aps": 0,
+                "online_switches": 0,
+                "offline_switches": 0,
+                "total_switches": 0,
+                "online_gateways": 0,
+                "offline_gateways": 0,
+                "total_gateways": 0,
+                "total_devices": 0,
+                "total_clients": 0,
+                "active_loops": 0,
+                "loop_status_text": "Cache is initializing.",
+                "lldp_count": 0,
+                "lldp_neighbors": {},
+                "eaps": [],
+                "switches": [],
+                "clients": [],
+                "ai_analysis": None,
+                "ai_analysis_timestamp": 0
+            }
+            placeholder_str = json.dumps(placeholder, separators=(',', ':'))
+            try:
+                with open(cache_file, "w") as f:
+                    f.write(placeholder_str)
+                try:
+                    os.chmod(cache_file, 0o666)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+            
+            if not os.path.exists(lock_file):
+                import subprocess
+                script_file = os.path.abspath(__file__)
+                
+                popen_kwargs = {
+                    'stdout': subprocess.DEVNULL,
+                    'stderr': subprocess.DEVNULL
+                }
+                if os.name == 'nt':
+                    popen_kwargs['creationflags'] = 0x00000008  # DETACHED_PROCESS
+                else:
+                    popen_kwargs['start_new_session'] = True
+                
+                subprocess.Popen(
+                    [sys.executable, script_file, ip, port, arg3, arg4, omadac_id, "--update-cache"],
+                    **popen_kwargs
+                )
+            print(placeholder_str)
+            sys.exit(0)
 
     # Try to acquire lock
     acquired_lock = False
@@ -324,6 +646,13 @@ def main():
                         if r_data:
                             openapi_radios[mac] = r_data
 
+        ap_client_counts = {}
+        for c in clients:
+            ap_mac = c.get("apMac", c.get("ap_mac", ""))
+            if ap_mac:
+                ap_mac_up = str(ap_mac).upper()
+                ap_client_counts[ap_mac_up] = ap_client_counts.get(ap_mac_up, 0) + 1
+
         online_aps = 0
         offline_aps = 0
         online_switches = 0
@@ -372,8 +701,11 @@ def main():
                     
                     nf2g = 0
                     nf5g = 0
+
+                    ch_2g = parse_actual_channel(wp2g.get("actualChannel", ""))
+                    ch_5g = parse_actual_channel(wp5g.get("actualChannel", ""))
                 else:
-                    cu2g, cu5g, nf2g, nf5g, tp2g, tp5g = get_radio_stats(dev)
+                    cu2g, cu5g, nf2g, nf5g, tp2g, tp5g, ch_2g, ch_5g = get_radio_stats(dev)
                     intf2g = -1
                     intf5g = -1
 
@@ -399,6 +731,10 @@ def main():
                     # TX Power (dBm)
                     "tx_power_2g": tp2g if tp2g is not None else -1,
                     "tx_power_5g": tp5g if tp5g is not None else -1,
+                    # Added telemetry fields
+                    "channel_2g": ch_2g,
+                    "channel_5g": ch_5g,
+                    "clientCount": ap_client_counts.get(mac.upper(), 0)
                 })
 
             elif dev_type == 1 or "switch" in dev_type_str:
@@ -608,8 +944,11 @@ def main():
                 "trafficUp": c.get("trafficUp", c.get("upload", None)),
                 "uptime": c.get("uptime", None),
                 "radioId": c.get("radioId", None),
+                "channel": c.get("channel", None),
                 "currentSpeedMbps": None
             })
+
+        ai_analysis, ai_time = get_ai_analysis_cached(eaps, formatted_clients, ip, cache_file)
 
         result_data = {
             "status": "success",
@@ -631,7 +970,9 @@ def main():
             "eaps": eaps,
             "switches": switches,
             "clients": formatted_clients,
-            "error_message": ""
+            "error_message": "",
+            "ai_analysis": ai_analysis,
+            "ai_analysis_timestamp": ai_time
         }
         json_str = json.dumps(result_data, separators=(',', ':'))
         try:

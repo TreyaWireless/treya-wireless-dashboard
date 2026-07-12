@@ -158,6 +158,20 @@ $filter_html = <<<HTML
 	opacity: 0.5;
 	cursor: default;
 }
+@keyframes pulse-purple {
+	0% {
+		transform: scale(0.95);
+		box-shadow: 0 0 0 0 rgba(121, 40, 202, 0.7);
+	}
+	70% {
+		transform: scale(1);
+		box-shadow: 0 0 0 6px rgba(121, 40, 202, 0);
+	}
+	100% {
+		transform: scale(0.95);
+		box-shadow: 0 0 0 0 rgba(121, 40, 202, 0);
+	}
+}
 </style>
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -484,7 +498,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			const statusHtml = '<span class="status-green" style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 8px; height: 8px; border-radius: 50%; background-color: #26c281; display: inline-block;"></span>Connected</span>';
 			
 			const connName = isWireless 
-				? '<span style="color: #0275d8; font-weight: bold;">Wi-Fi</span> (' + c.ssid + (c.radioId !== undefined && c.radioId !== null ? (c.radioId === 1 ? ' - 5G' : ' - 2.4G') : '') + ')'
+				? '<span style="color: #0275d8; font-weight: bold;">Wi-Fi</span> (' + c.ssid + (c.radioId !== undefined && c.radioId !== null ? (c.radioId === 1 ? ' - 5G' : ' - 2.4G') : '') + (c.channel ? ' / Ch ' + c.channel : '') + ')'
 				: '<span style="color: #26c281; font-weight: bold;">Ethernet</span>';
 				
 			const signalHtml = isWireless ? getSignalBadge(c.rssi) : '<span style="color: var(--font-alt-color);">--</span>';
@@ -515,10 +529,25 @@ document.addEventListener("DOMContentLoaded", () => {
 			
 			// Clean display name avoiding script errors
 			const displayName = (c.name || c.mac).replace(/'/g, "\\'");
+
+			let clientAiBadgeHtml = '';
+			if (isWireless && c.rssi !== undefined && c.rssi !== null && c.rssi <= -80) {
+				const bandText = c.radioId === 1 ? '5GHz' : '2.4GHz';
+				let advice = '';
+				if (c.radioId === 0) {
+					advice = "Client is experiencing low signal (-" + Math.abs(c.rssi) + " dBm) on the 2.4GHz band. We recommend reducing 2.4GHz Tx power on this AP to 12 dBm, which will prompt this device to connect to the faster 5GHz band of a closer AP.";
+				} else {
+					advice = "Client is on 5GHz but signal is poor (-" + Math.abs(c.rssi) + " dBm) due to distance or walls. We recommend steering this client to a closer AP (like " + (c.apName || 'a neighboring AP') + ") or checking for obstructions.";
+				}
+				clientAiBadgeHtml = `
+				<span class="ai-client-tip" style="display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: #7928ca; color: #fff; font-size: 8px; font-weight: bold; cursor: pointer; margin-left: 6px; box-shadow: 0 0 0 0 rgba(121, 40, 202, 0.4); animation: pulse-purple 1.5s infinite; vertical-align: middle;" onclick="showAiClientTip('\${displayName}', '\${advice.replace(/'/g, "\\'")}', event)" title="AI Client Insight Available">
+					💡
+				</span>`;
+			}
 			
 			rowsHtml += '<tr>' +
 				'<td>' + statusHtml + '</td>' +
-				'<td style="font-weight: bold; color: #ffb300;">' + (c.name || 'Unknown') + '</td>' +
+				'<td style="font-weight: bold; color: #ffb300;">' + (c.name || 'Unknown') + clientAiBadgeHtml + '</td>' +
 				'<td>' + (c.ip || '--') + '</td>' +
 				'<td>' + (c.mac ? c.mac.toUpperCase() : '--') + '</td>' +
 				'<td>' + connName + '</td>' +
@@ -552,6 +581,12 @@ document.addEventListener("DOMContentLoaded", () => {
 		document.getElementById("pagination-buttons").innerHTML = buttonsHtml;
 	}
 	
+	window.showAiClientTip = function(name, advice, e) {
+		e.preventDefault();
+		e.stopPropagation();
+		alert("💡 AI Optimization Insight for client: " + name + "\\n\\n" + advice);
+	};
+
 	// Expose changeClientsPage to global window context for onclick handlers
 	window.changeClientsPage = function(pageNumber) {
 		currentPage = pageNumber;
