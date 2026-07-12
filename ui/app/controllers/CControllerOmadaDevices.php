@@ -54,13 +54,29 @@ class CControllerOmadaDevices extends CController {
 			@mkdir($lock_dir, 0777, true);
 		}
 		
-		// Fetch macros from database
+		// Fetch macros from database (host macros)
 		$db_macros = DBselect(
 			'SELECT macro, value FROM hostmacro WHERE hostid='.zbx_dbstr($hostid)
 		);
 		$macros = [];
 		while ($row = DBfetch($db_macros)) {
 			$macros[$row['macro']] = $row['value'];
+		}
+
+		// Fetch global macros (fallback)
+		$db_global_macros = DBselect('SELECT macro, value FROM globalmacro');
+		while ($row = DBfetch($db_global_macros)) {
+			if (!isset($macros[$row['macro']])) {
+				$macros[$row['macro']] = $row['value'];
+			}
+		}
+
+		// Securely pass Gemini & Groq API keys as environment variables
+		if (isset($macros['{$GEMINI_API_KEY}'])) {
+			putenv("GEMINI_API_KEY=" . $macros['{$GEMINI_API_KEY}']);
+		}
+		if (isset($macros['{$GROQ_API_KEY}'])) {
+			putenv("GROQ_API_KEY=" . $macros['{$GROQ_API_KEY}']);
 		}
 		
 		// Detect vendor based on configured macro

@@ -131,13 +131,14 @@ def get_local_analysis(eaps, clients, ip):
     health_score = 100
     
     # Check for high 2.4GHz TX power
+    high_pwr_count = 0
     for ap in eaps:
         pwr_2g = ap.get("tx_power_2g") or ap.get("pwr_2g")
         if pwr_2g is not None:
             try:
                 pwr_val = int(pwr_2g)
                 if pwr_val >= 20:
-                    health_score -= 10
+                    high_pwr_count += 1
                     issues.append({
                         "ap_name": ap.get("name") or "Access Point",
                         "problem": f"High 2.4GHz TX power ({pwr_val} dBm) detected. This causes 'sticky' clients to remain connected to weak 2.4GHz signals instead of steering to 5GHz."
@@ -153,6 +154,9 @@ def get_local_analysis(eaps, clients, ip):
             except Exception:
                 pass
 
+    if high_pwr_count > 0:
+        health_score -= min(high_pwr_count * 2, 20)
+
     # Check for 5GHz Co-channel interference
     ch_5g_map = {}
     for ap in eaps:
@@ -163,9 +167,10 @@ def get_local_analysis(eaps, clients, ip):
                 ch_5g_map.setdefault(ch_val, []).append(ap)
 
     # For each channel used by multiple APs
+    overlap_groups = 0
     for chan, aps in ch_5g_map.items():
         if len(aps) > 1:
-            health_score -= 15 * (len(aps) - 1)
+            overlap_groups += 1
             ap_names = ", ".join([ap.get("name") or "AP" for ap in aps])
             for ap in aps:
                 issues.append({
@@ -188,6 +193,9 @@ def get_local_analysis(eaps, clients, ip):
                     "reason": f"Shift 5GHz channel from {chan} to {suggested_chan} to resolve co-channel overlap with {aps[0].get('name')}."
                 })
                 
+    if overlap_groups > 0:
+        health_score -= min(overlap_groups * 8, 30)
+
     # Check for poor clients
     poor_clients_count = 0
     for c in clients:
@@ -231,16 +239,20 @@ def get_ai_analysis_cached(eaps, clients, ip, cache_file):
         except Exception:
             pass
 
-    groq_key = None
-    gemini_key = None
-    if os.path.exists(settings_file):
-        try:
-            with open(settings_file) as f:
-                settings = json.load(f)
-            groq_key = settings.get("groq_api_key")
-            gemini_key = settings.get("gemini_api_key")
-        except Exception:
-            pass
+    groq_key = os.environ.get("GROQ_API_KEY")
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    
+    if not groq_key or not gemini_key:
+        if os.path.exists(settings_file):
+            try:
+                with open(settings_file) as f:
+                    settings = json.load(f)
+                if not groq_key:
+                    groq_key = settings.get("groq_api_key")
+                if not gemini_key:
+                    gemini_key = settings.get("gemini_api_key")
+            except Exception:
+                pass
 
     # Build telemetry payload
     telemetry = {
