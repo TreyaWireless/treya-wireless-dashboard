@@ -340,11 +340,11 @@ def get_local_analysis(eaps, clients, ip):
     }
 
 
-def get_ai_analysis_cached(eaps, clients, ip, cache_file):
+def get_ai_analysis_cached(eaps, clients, ip, cache_file, force=False):
     settings_file = get_settings_file()
     
     # Check if cache already contains fresh AI analysis (less than 30 mins old)
-    if os.path.exists(cache_file):
+    if not force and os.path.exists(cache_file):
         try:
             with open(cache_file) as f:
                 old_cache = json.load(f)
@@ -986,7 +986,7 @@ def main():
         offline_switches = len([s for s in switches if s["status"] == 0])
         total_switches = len(switches)
 
-        ai_analysis, ai_time = get_ai_analysis_cached(eaps, clients, ip, cache_file)
+        ai_analysis, ai_time = get_ai_analysis_cached(eaps, clients, ip, cache_file, force=is_update_task)
 
         result_data = {
             "status": "success",
