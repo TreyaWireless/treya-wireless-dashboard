@@ -448,7 +448,7 @@ Required JSON Schema:
     # 5. Fallback to Gemini
     if gemini_key:
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={gemini_key}"
             headers = {"Content-Type": "application/json"}
             payload = {
                 "contents": [{"parts": [{"text": prompt + " Respond in strict JSON."}]}],
@@ -458,7 +458,7 @@ Required JSON Schema:
             if r.status_code == 200:
                 res_txt = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
                 res_dict = json.loads(res_txt)
-                res_dict["engine"] = "Gemini 1.5 Flash"
+                res_dict["engine"] = "Gemini Flash"
                 return res_dict, time.time()
         except Exception:
             pass
