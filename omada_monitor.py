@@ -317,26 +317,27 @@ Respond ONLY with compact JSON (no markdown):
 
     # 4. Try Groq
     if groq_key:
-        try:
-            url = "https://api.groq.com/openai/v1/chat/completions"
-            headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
-            payload = {
-                "model": "llama-3.3-70b-versatile",
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.0,
-                "max_tokens": 2048,
-                "response_format": {"type": "json_object"}
-            }
-            r = requests.post(url, headers=headers, json=payload, timeout=60)
-            if r.status_code == 200:
-                res_txt = r.json()["choices"][0]["message"]["content"].strip()
-                res_dict = json.loads(res_txt)
-                res_dict["engine"] = "Groq Llama 3.3"
-                return res_dict, time.time()
-            else:
-                sys.stderr.write(f"Groq API Error: Status {r.status_code}, Body: {r.text}\n")
-        except Exception as e:
-            sys.stderr.write(f"Groq Exception: {str(e)}\n")
+        for model_name in ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]:
+            try:
+                url = "https://api.groq.com/openai/v1/chat/completions"
+                headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
+                payload = {
+                    "model": model_name,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.0,
+                    "max_tokens": 2048,
+                    "response_format": {"type": "json_object"}
+                }
+                r = requests.post(url, headers=headers, json=payload, timeout=60)
+                if r.status_code == 200:
+                    res_txt = r.json()["choices"][0]["message"]["content"].strip()
+                    res_dict = json.loads(res_txt)
+                    res_dict["engine"] = "Groq Llama 3.3" if "70b" in model_name else "Groq Llama 3.1 8B"
+                    return res_dict, time.time()
+                else:
+                    sys.stderr.write(f"Groq API Error for {model_name}: Status {r.status_code}, Body: {r.text}\n")
+            except Exception as e:
+                sys.stderr.write(f"Groq Exception for {model_name}: {str(e)}\n")
 
     # 5. Fallback to Gemini
     if gemini_key:
