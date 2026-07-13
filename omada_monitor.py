@@ -261,14 +261,23 @@ def get_ai_analysis_cached(eaps, clients, ip, cache_file, force=False):
     sys.stderr.write(f"DEBUG: settings_file={settings_file}, exists={os.path.exists(settings_file)}\n")
     sys.stderr.write(f"DEBUG: groq_key={bool(groq_key)}, gemini_key={bool(gemini_key)}\n")
 
-    # Build telemetry payload
+    # Build telemetry payload - only include APs with active RF data to minimize token usage
+    # APs with channel_util == -1 have no meaningful data (offline/no stats), skip them
+    active_eaps = [ap for ap in eaps if ap.get("channel_util_5g", -1) != -1]
+    
+    # Sort by 5GHz utilization descending (most problematic first), cap at 40 APs
+    active_eaps.sort(key=lambda x: (x.get("channel_util_5g") or 0), reverse=True)
+    active_eaps = active_eaps[:40]
+    
     telemetry = {
         "site_ip": ip,
+        "total_aps": len(eaps),
+        "analyzed_aps": len(active_eaps),
         "eaps": [],
         "poor_clients": []
     }
     
-    for ap in eaps:
+    for ap in active_eaps:
         telemetry["eaps"].append({
             "name": ap.get("name"),
             "mac": ap.get("mac"),
@@ -278,7 +287,7 @@ def get_ai_analysis_cached(eaps, clients, ip, cache_file, force=False):
             "ch_5g": ap.get("channel_5g"),
             "pwr_5g": ap.get("tx_power_5g"),
             "util_5g": ap.get("channel_util_5g"),
-            "clientCount": ap.get("clientCount")
+            "clients": ap.get("clientCount")
         })
         
     for c in clients:
@@ -293,28 +302,14 @@ def get_ai_analysis_cached(eaps, clients, ip, cache_file, force=False):
                 "radioId": c.get("radioId")
             })
 
-    prompt = f"""
-You are an automated RF Optimization Agent. Review this wireless network telemetry data:
-{json.dumps(telemetry)}
+    prompt = f"""RF Optimization Agent. Analyze {telemetry['analyzed_aps']} active APs (of {telemetry['total_aps']} total) below.
+Data: {json.dumps(telemetry['eaps'])}
+Poor clients: {json.dumps(telemetry['poor_clients'])}
 
-Tasks:
-1. Identify APs experiencing Co-Channel Interference on 5GHz.
-2. Identify APs with extremely high 2.4GHz TX power causing sticky clients.
-3. Suggest remediation actions (reducing 2.4GHz power or shifting 5GHz channels to non-overlapping ones).
-
-You must respond ONLY with a valid JSON object matching the schema below. Do not include any markdown styling, conversational text, or explanation outside the JSON.
-
-Required JSON Schema:
-{{
-    "health_score": 85,
-    "issues": [
-        {{"ap_name": "AP Name", "problem": "Detailed description of the issue"}}
-    ],
-    "actions": [
-        {{"ap_mac": "00:00:00:00:00:00", "ap_name": "AP Name", "parameter": "channel_5g|tx_power_2g", "current_value": "161", "new_value": "36", "reason": "Why this action is recommended"}}
-    ]
-}}
-"""
+Find: 1) 5GHz co-channel interference (same channel_5g on nearby APs) 2) High 2.4GHz TX power (pwr_2g>20) causing sticky clients.
+Output TOP 10 most impactful issues and TOP 10 recommended actions only.
+Respond ONLY with compact JSON (no markdown):
+{{"health_score":85,"issues":[{{"ap_name":"name","problem":"short description"}}],"actions":[{{"ap_mac":"mac","ap_name":"name","parameter":"channel_5g","current_value":"36","new_value":"52","reason":"short reason"}}]}}"""
 
     # 4. Try Groq
     if groq_key:
@@ -325,6 +320,7 @@ Required JSON Schema:
                 "model": "llama-3.3-70b-versatile",
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.0,
+                "max_tokens": 2048,
                 "response_format": {"type": "json_object"}
             }
             r = requests.post(url, headers=headers, json=payload, timeout=60)
@@ -344,8 +340,11 @@ Required JSON Schema:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={gemini_key}"
             headers = {"Content-Type": "application/json"}
             payload = {
-                "contents": [{"parts": [{"text": prompt + " Respond in strict JSON."}]}],
-                "generationConfig": {"responseMimeType": "application/json"}
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "responseMimeType": "application/json",
+                    "maxOutputTokens": 2048
+                }
             }
             r = requests.post(url, headers=headers, json=payload, timeout=60)
             if r.status_code == 200:
