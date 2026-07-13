@@ -327,7 +327,7 @@ Required JSON Schema:
                 "temperature": 0.0,
                 "response_format": {"type": "json_object"}
             }
-            r = requests.post(url, headers=headers, json=payload, timeout=20)
+            r = requests.post(url, headers=headers, json=payload, timeout=60)
             if r.status_code == 200:
                 res_txt = r.json()["choices"][0]["message"]["content"].strip()
                 res_dict = json.loads(res_txt)
@@ -347,7 +347,7 @@ Required JSON Schema:
                 "contents": [{"parts": [{"text": prompt + " Respond in strict JSON."}]}],
                 "generationConfig": {"responseMimeType": "application/json"}
             }
-            r = requests.post(url, headers=headers, json=payload, timeout=20)
+            r = requests.post(url, headers=headers, json=payload, timeout=60)
             if r.status_code == 200:
                 res_txt = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
                 res_dict = json.loads(res_txt)
