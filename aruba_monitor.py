@@ -62,15 +62,15 @@ def fetch_switches_info(fw_ip, fw_user, fw_pass, sw_pass, sw_ips):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
-        ssh.connect(fw_ip, port=22, username=fw_user, password=fw_pass, timeout=8)
+        ssh.connect(fw_ip, port=22, username=fw_user, password=fw_pass, timeout=3)
         chan = ssh.invoke_shell()
         
-        recv_until(chan, ["Press 'a' to accept", "(Press 'a' to accept):"], timeout=8)
+        recv_until(chan, ["Press 'a' to accept", "(Press 'a' to accept):"], timeout=3)
         chan.send("a")
         time.sleep(0.5)
         
         # Determine dynamic firewall prompt
-        fw_init_output = recv_until(chan, ["# "], timeout=8)
+        fw_init_output = recv_until(chan, ["# "], timeout=3)
         lines = fw_init_output.splitlines()
         fw_prompt = "# "
         for line in reversed(lines):
