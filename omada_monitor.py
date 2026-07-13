@@ -257,6 +257,10 @@ def get_ai_analysis_cached(eaps, clients, ip, cache_file):
             except Exception:
                 pass
 
+    import sys
+    sys.stderr.write(f"DEBUG: settings_file={settings_file}, exists={os.path.exists(settings_file)}\n")
+    sys.stderr.write(f"DEBUG: groq_key={bool(groq_key)}, gemini_key={bool(gemini_key)}\n")
+
     # Build telemetry payload
     telemetry = {
         "site_ip": ip,
