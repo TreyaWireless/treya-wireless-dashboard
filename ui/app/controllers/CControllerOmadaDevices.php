@@ -370,7 +370,7 @@ class CControllerOmadaDevices extends CController {
 						pclose(popen($cmd, "r"));
 					} else {
 						$cmd = "{$env_prefix}{$python_bin} " . escapeshellarg($script_path) . " " .
-						       escapeshellarg($ip) . " {$port} {$client_id} {$client_secret} {$omadac_id} --update-cache > /dev/null 2>&1 &";
+						       escapeshellarg($ip) . " {$port} {$client_id} {$client_secret} {$omadac_id} --update-cache > /var/cache/treya-wireless/python_output.log 2>&1 &";
 						exec($cmd);
 					}
 				}
