@@ -21,6 +21,10 @@ def get_cache_dir():
 
 def get_settings_file():
     if os.name == 'nt':
+        import tempfile
+        temp_path = os.path.join(tempfile.gettempdir(), 'treya-wireless', 'ai_settings.json')
+        if os.path.exists(temp_path):
+            return temp_path
         local_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ai_settings.json')
         if os.path.exists(local_path):
             return local_path

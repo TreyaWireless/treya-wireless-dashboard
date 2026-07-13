@@ -89,12 +89,14 @@ class CControllerOmadaDevices extends CController {
 			}
 		}
 		$keys_changed = false;
-		if (isset($macros['{$GEMINI_API_KEY}']) && ($ai_settings['gemini_api_key'] ?? '') !== $macros['{$GEMINI_API_KEY}']) {
-			$ai_settings['gemini_api_key'] = $macros['{$GEMINI_API_KEY}'];
+		$gemini_val = isset($macros['{$GEMINI_API_KEY}']) ? $macros['{$GEMINI_API_KEY}'] : '';
+		if (($ai_settings['gemini_api_key'] ?? '') !== $gemini_val) {
+			$ai_settings['gemini_api_key'] = $gemini_val;
 			$keys_changed = true;
 		}
-		if (isset($macros['{$GROQ_API_KEY}']) && ($ai_settings['groq_api_key'] ?? '') !== $macros['{$GROQ_API_KEY}']) {
-			$ai_settings['groq_api_key'] = $macros['{$GROQ_API_KEY}'];
+		$groq_val = isset($macros['{$GROQ_API_KEY}']) ? $macros['{$GROQ_API_KEY}'] : '';
+		if (($ai_settings['groq_api_key'] ?? '') !== $groq_val) {
+			$ai_settings['groq_api_key'] = $groq_val;
 			$keys_changed = true;
 		}
 		if ($keys_changed) {
