@@ -329,8 +329,10 @@ Required JSON Schema:
                 res_dict = json.loads(res_txt)
                 res_dict["engine"] = "Groq Llama 3.3"
                 return res_dict, time.time()
-        except Exception:
-            pass
+            else:
+                sys.stderr.write(f"Groq API Error: Status {r.status_code}, Body: {r.text}\n")
+        except Exception as e:
+            sys.stderr.write(f"Groq Exception: {str(e)}\n")
 
     # 5. Fallback to Gemini
     if gemini_key:
@@ -347,8 +349,10 @@ Required JSON Schema:
                 res_dict = json.loads(res_txt)
                 res_dict["engine"] = "Gemini 1.5 Flash"
                 return res_dict, time.time()
-        except Exception:
-            pass
+            else:
+                sys.stderr.write(f"Gemini API Error: Status {r.status_code}, Body: {r.text}\n")
+        except Exception as e:
+            sys.stderr.write(f"Gemini Exception: {str(e)}\n")
 
     # 6. Fallback to Local Heuristics
     local_res = get_local_analysis(eaps, clients, ip)
