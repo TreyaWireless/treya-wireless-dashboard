@@ -265,9 +265,9 @@ def get_ai_analysis_cached(eaps, clients, ip, cache_file, force=False):
     # APs with channel_util == -1 have no meaningful data (offline/no stats), skip them
     active_eaps = [ap for ap in eaps if ap.get("channel_util_5g", -1) != -1]
     
-    # Sort by 5GHz utilization descending (most problematic first), cap at 40 APs
+    # Sort by 5GHz utilization descending (most problematic first), cap at 15 APs
     active_eaps.sort(key=lambda x: (x.get("channel_util_5g") or 0), reverse=True)
-    active_eaps = active_eaps[:40]
+    active_eaps = active_eaps[:15]
     
     telemetry = {
         "site_ip": ip,
@@ -337,7 +337,7 @@ Respond ONLY with compact JSON (no markdown):
     # 5. Fallback to Gemini
     if gemini_key:
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={gemini_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={gemini_key}"
             headers = {"Content-Type": "application/json"}
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
@@ -350,7 +350,7 @@ Respond ONLY with compact JSON (no markdown):
             if r.status_code == 200:
                 res_txt = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
                 res_dict = json.loads(res_txt)
-                res_dict["engine"] = "Gemini Flash"
+                res_dict["engine"] = "Gemini Flash Lite"
                 return res_dict, time.time()
             else:
                 sys.stderr.write(f"Gemini API Error: Status {r.status_code}, Body: {r.text}\n")
