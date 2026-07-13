@@ -78,6 +78,29 @@ class CControllerOmadaDevices extends CController {
 		if (isset($macros['{$GROQ_API_KEY}'])) {
 			putenv("GROQ_API_KEY=" . $macros['{$GROQ_API_KEY}']);
 		}
+
+		// Also save keys in the shared cache directory for Zabbix server daemon script runs
+		$ai_settings_file = $cache_dir . DIRECTORY_SEPARATOR . 'ai_settings.json';
+		$ai_settings = [];
+		if (file_exists($ai_settings_file)) {
+			$ai_settings_content = @file_get_contents($ai_settings_file);
+			if ($ai_settings_content) {
+				$ai_settings = json_decode($ai_settings_content, true) ?: [];
+			}
+		}
+		$keys_changed = false;
+		if (isset($macros['{$GEMINI_API_KEY}']) && ($ai_settings['gemini_api_key'] ?? '') !== $macros['{$GEMINI_API_KEY}']) {
+			$ai_settings['gemini_api_key'] = $macros['{$GEMINI_API_KEY}'];
+			$keys_changed = true;
+		}
+		if (isset($macros['{$GROQ_API_KEY}']) && ($ai_settings['groq_api_key'] ?? '') !== $macros['{$GROQ_API_KEY}']) {
+			$ai_settings['groq_api_key'] = $macros['{$GROQ_API_KEY}'];
+			$keys_changed = true;
+		}
+		if ($keys_changed) {
+			@file_put_contents($ai_settings_file, json_encode($ai_settings));
+			@chmod($ai_settings_file, 0666);
+		}
 		
 		// Detect vendor based on configured macro
 		$vendor = null;
@@ -128,12 +151,22 @@ class CControllerOmadaDevices extends CController {
 								$script_path = dirname(dirname(dirname(__DIR__))) . DIRECTORY_SEPARATOR . 'aruba_monitor.py';
 							}
 							
+							$env_prefix = '';
+							if (!$is_windows) {
+								if (isset($macros['{$GEMINI_API_KEY}']) && $macros['{$GEMINI_API_KEY}'] !== '') {
+									$env_prefix .= 'GEMINI_API_KEY=' . escapeshellarg($macros['{$GEMINI_API_KEY}']) . ' ';
+								}
+								if (isset($macros['{$GROQ_API_KEY}']) && $macros['{$GROQ_API_KEY}'] !== '') {
+									$env_prefix .= 'GROQ_API_KEY=' . escapeshellarg($macros['{$GROQ_API_KEY}']) . ' ';
+								}
+							}
+							
 							if ($is_windows) {
 								$cmd = "start /B " . $python_bin . " " . escapeshellarg($script_path) . " " .
 								       escapeshellarg($ip) . " {$port} {$user} {$pass} {$sw_ssh_pass} {$fw_pass} {$sw_ips} --update-cache > NUL 2>&1";
 								pclose(popen($cmd, "r"));
 							} else {
-								$cmd = "{$python_bin} " . escapeshellarg($script_path) . " " .
+								$cmd = "{$env_prefix}{$python_bin} " . escapeshellarg($script_path) . " " .
 								       escapeshellarg($ip) . " {$port} {$user} {$pass} {$sw_ssh_pass} {$fw_pass} {$sw_ips} --update-cache > /dev/null 2>&1 &";
 								exec($cmd);
 							}
@@ -321,12 +354,22 @@ class CControllerOmadaDevices extends CController {
 						$script_path = dirname(dirname(dirname(__DIR__))) . DIRECTORY_SEPARATOR . 'omada_monitor.py';
 					}
 					
+					$env_prefix = '';
+					if (!$is_windows) {
+						if (isset($macros['{$GEMINI_API_KEY}']) && $macros['{$GEMINI_API_KEY}'] !== '') {
+							$env_prefix .= 'GEMINI_API_KEY=' . escapeshellarg($macros['{$GEMINI_API_KEY}']) . ' ';
+						}
+						if (isset($macros['{$GROQ_API_KEY}']) && $macros['{$GROQ_API_KEY}'] !== '') {
+							$env_prefix .= 'GROQ_API_KEY=' . escapeshellarg($macros['{$GROQ_API_KEY}']) . ' ';
+						}
+					}
+					
 					if ($is_windows) {
 						$cmd = "start /B " . $python_bin . " " . escapeshellarg($script_path) . " " .
 						       escapeshellarg($ip) . " {$port} {$client_id} {$client_secret} {$omadac_id} --update-cache > NUL 2>&1";
 						pclose(popen($cmd, "r"));
 					} else {
-						$cmd = "{$python_bin} " . escapeshellarg($script_path) . " " .
+						$cmd = "{$env_prefix}{$python_bin} " . escapeshellarg($script_path) . " " .
 						       escapeshellarg($ip) . " {$port} {$client_id} {$client_secret} {$omadac_id} --update-cache > /dev/null 2>&1 &";
 						exec($cmd);
 					}

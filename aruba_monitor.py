@@ -26,6 +26,9 @@ def get_settings_file():
             return local_path
         return r"C:\etc\treya-wireless\ai_settings.json"
     else:
+        cache_path = "/var/cache/treya-wireless/ai_settings.json"
+        if os.path.exists(cache_path):
+            return cache_path
         return "/etc/treya-wireless/ai_settings.json"
 
 def recv_until(chan, pattern, timeout=10):
