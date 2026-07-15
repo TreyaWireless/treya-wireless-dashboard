@@ -572,6 +572,7 @@ $body_html = <<<HTML
 	<div class="rf-tab" data-tab="client_match">Client Match</div>
 	<div class="rf-tab" data-tab="spectrum">Spectrum</div>
 	<div class="rf-tab" data-tab="cellular">Cellular</div>
+	<div class="rf-tab" data-tab="cochannel_map">Co-channel Map</div>
 </div>
 
 <!-- ================= TABS CONTENT ================= -->
@@ -1007,6 +1008,35 @@ $body_html = <<<HTML
 		<div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(38,194,129,0.1); border: 1px solid #26c281; border-radius: 4px; color: #26c281; font-weight: bold; font-size: 11px; margin-top: 15px;">
 			<span style="width: 6px; height: 6px; border-radius: 50%; background: #26c281; display: inline-block;"></span> STANDBY (OK)
 		</div>
+</div>
+<!-- TAB 5: CO-CHANNEL MAP -->
+<div id="tab-content-cochannel_map" class="tab-pane" style="display: none;">
+	<div class="rf-card" style="padding: 20px;">
+		<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+			<h4 class="rf-card-title" style="margin: 0; border: none; padding: 0;">Co-channel Overlap Map</h4>
+			<div style="display: flex; gap: 10px; align-items: center;">
+				<div class="rf-radio-selectors" style="margin: 0;">
+					<button id="map-band-5g" class="rf-radio-btn active" type="button" onclick="switchMapBand('5g')">5 GHz</button>
+					<button id="map-band-2g" class="rf-radio-btn" type="button" onclick="switchMapBand('2g')">2.4 GHz</button>
+				</div>
+			</div>
+		</div>
+		<div style="position: relative; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; background: var(--form-bg-color, #fdfdfd); height: 500px;">
+			<canvas id="co-channel-map-canvas" width="800" height="500" style="display: block; width: 100%; height: 500px; cursor: default;"></canvas>
+			<!-- Side Panel Legend and Info -->
+			<div id="map-info-panel" style="position: absolute; top: 15px; right: 15px; width: 220px; background: var(--ui-bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); font-size: 11px;">
+				<h5 style="margin-top: 0; margin-bottom: 8px; font-weight: bold; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">Channel Legend</h5>
+				<div id="map-legend-list" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;"></div>
+				<h5 style="margin-top: 0; margin-bottom: 8px; font-weight: bold; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">Selected Access Point</h5>
+				<div id="map-selected-ap-details" style="color: var(--font-alt-color);">
+					Click an Access Point on the map to view details.
+				</div>
+			</div>
+			<!-- Instructions overlay -->
+			<div style="position: absolute; bottom: 10px; left: 10px; font-size: 10px; color: var(--font-alt-color); background: rgba(255,255,255,0.7); padding: 3px 8px; border-radius: 4px;">
+				Drag nodes to reposition. Red lines show same-channel overlap.
+			</div>
+		</div>
 	</div>
 </div>
 </div>
@@ -1143,6 +1173,57 @@ function initDashboard() {
 					populateApSelector();
 					loadActiveApDetails();
 					updateAiOptimizerPanel(res.ai_analysis);
+					
+					// Live refresh map nodes if the map tab is active
+					const activeTab = document.querySelector(".rf-tab.active").getAttribute("data-tab");
+					if (activeTab === "cochannel_map") {
+						const nodeMap = {};
+						mapNodes.forEach(node => { nodeMap[node.mac.toUpperCase().trim()] = node; });
+						
+						const newNodes = [];
+						allHostAps.forEach((ap, idx) => {
+							const mac = ap.mac.toUpperCase().trim();
+							const channel = currentMapBand === "5g" ? (ap.channel_5g || ap.ch_5g) : (ap.channel_2g || ap.ch_2g);
+							const txPower = currentMapBand === "5g" ? (ap.tx_power_5g || ap.pwr_5g) : (ap.tx_power_2g || ap.pwr_2g);
+							
+							if (nodeMap[mac]) {
+								const node = nodeMap[mac];
+								node.channel = channel ? String(channel) : "-";
+								node.power = txPower ? String(txPower) : "-";
+								node.status = ap.status;
+								node.name = ap.name || "Access Point";
+								newNodes.push(node);
+							} else {
+								const center = { x: 260, y: 250 };
+								const angle = Math.random() * Math.PI * 2;
+								newNodes.push({
+									x: center.x + Math.cos(angle) * 150,
+									y: center.y + Math.sin(angle) * 150,
+									vx: 0,
+									vy: 0,
+									mac: ap.mac,
+									name: ap.name || "Access Point",
+									ip: ap.ip || "--",
+									channel: channel ? String(channel) : "-",
+									power: txPower ? String(txPower) : "-",
+									radius: 24,
+									status: ap.status
+								});
+							}
+						});
+						mapNodes = newNodes;
+						updateMapLegend();
+						if (selectedNode) {
+							const updated = mapNodes.find(n => n.mac.toUpperCase().trim() === selectedNode.mac.toUpperCase().trim());
+							if (updated) {
+								selectedNode = updated;
+								updateSelectedApPanel(updated);
+							} else {
+								selectedNode = null;
+								updateSelectedApPanel(null);
+							}
+						}
+					}
 					
 					document.getElementById("connection-status-msg").innerText = "Data updated at " + new Date().toLocaleTimeString();
 				} else {
@@ -2170,6 +2251,344 @@ function initDashboard() {
 		document.getElementById("spec-stat-snir").innerText = data.snir + " dB";
 	}
 
+	// ================= CO-CHANNEL OVERLAP MAP ENGINE (CANVAS) =================
+	let mapNodes = [];
+	let selectedNode = null;
+	let draggedNode = null;
+	let currentMapBand = "5g";
+	let mapAnimationId = null;
+
+	const channelColors = {
+		"1": "#26c281", "6": "#0275d8", "11": "#f0ad4e",
+		"36": "#26c281", "40": "#0275d8", "44": "#5bc0de", "48": "#7928ca",
+		"52": "#f0ad4e", "56": "#d9534f", "60": "#a069c3", "64": "#777777",
+		"100": "#ef5a24", "104": "#a0e85b", "108": "#5be8c5", "112": "#e85bb7",
+		"149": "#00aba9", "153": "#ff007f", "157": "#1b8a5a", "161": "#6d8a1b", "165": "#8a1b83"
+	};
+
+	function getChannelColor(channel) {
+		if (!channel || channel === "-") return "#777777";
+		if (channelColors[channel]) return channelColors[channel];
+		let hash = 0;
+		for (let i = 0; i < channel.length; i++) {
+			hash = channel.charCodeAt(i) + ((hash << 5) - hash);
+		}
+		const colors = ["#26c281", "#0275d8", "#5bc0de", "#7928ca", "#f0ad4e", "#d9534f", "#a069c3", "#ef5a24", "#00aba9", "#ff007f"];
+		return colors[Math.abs(hash) % colors.length];
+	}
+
+	function initMapNodes() {
+		mapNodes = [];
+		const filteredAps = allHostAps;
+		if (filteredAps.length === 0) return;
+
+		const center = { x: 260, y: 250 };
+		const radius = Math.min(180, filteredAps.length * 10 + 80);
+		
+		filteredAps.forEach((ap, idx) => {
+			const angle = (idx / filteredAps.length) * Math.PI * 2;
+			const channel = currentMapBand === "5g" ? (ap.channel_5g || ap.ch_5g) : (ap.channel_2g || ap.ch_2g);
+			const txPower = currentMapBand === "5g" ? (ap.tx_power_5g || ap.pwr_5g) : (ap.tx_power_2g || ap.pwr_2g);
+			
+			mapNodes.push({
+				x: center.x + Math.cos(angle) * radius + (Math.random() - 0.5) * 5,
+				y: center.y + Math.sin(angle) * radius + (Math.random() - 0.5) * 5,
+				vx: 0,
+				vy: 0,
+				mac: ap.mac,
+				name: ap.name || "Access Point",
+				ip: ap.ip || "--",
+				channel: channel ? String(channel) : "-",
+				power: txPower ? String(txPower) : "-",
+				radius: 24,
+				status: ap.status
+			});
+		});
+	}
+
+	function applyMapPhysics() {
+		const center = { x: 260, y: 250 };
+		const minDistance = 60;
+		
+		mapNodes.forEach(node => {
+			if (node === draggedNode) return;
+			const dx = center.x - node.x;
+			const dy = center.y - node.y;
+			node.vx += dx * 0.002;
+			node.vy += dy * 0.002;
+		});
+		
+		for (let i = 0; i < mapNodes.length; i++) {
+			const n1 = mapNodes[i];
+			for (let j = i + 1; j < mapNodes.length; j++) {
+				const n2 = mapNodes[j];
+				const dx = n2.x - n1.x;
+				const dy = n2.y - n1.y;
+				const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+				if (dist < minDistance) {
+					const force = (minDistance - dist) * 0.05;
+					const fx = (dx / dist) * force;
+					const fy = (dy / dist) * force;
+					
+					if (n1 !== draggedNode) {
+						n1.vx -= fx;
+						n1.vy -= fy;
+					}
+					if (n2 !== draggedNode) {
+						n2.vx += fx;
+						n2.vy += fy;
+					}
+				}
+			}
+		}
+		
+		mapNodes.forEach(node => {
+			if (node === draggedNode) {
+				node.vx = 0;
+				node.vy = 0;
+				return;
+			}
+			node.x += node.vx;
+			node.y += node.vy;
+			node.vx *= 0.85;
+			node.vy *= 0.85;
+			
+			// Bound checking
+			node.x = Math.max(node.radius + 15, Math.min(800 - node.radius - 245, node.x));
+			node.y = Math.max(node.radius + 15, Math.min(500 - node.radius - 15, node.y));
+		});
+	}
+
+	function drawMapConnections(ctx) {
+		const channelGroups = {};
+		mapNodes.forEach(node => {
+			if (node.channel && node.channel !== "-") {
+				if (!channelGroups[node.channel]) channelGroups[node.channel] = [];
+				channelGroups[node.channel].push(node);
+			}
+		});
+		
+		ctx.lineWidth = 2.5;
+		ctx.setLineDash([6, 4]);
+		const dashOffset = (Date.now() / 120) % 20;
+		ctx.lineDashOffset = -dashOffset;
+		
+		Object.keys(channelGroups).forEach(chan => {
+			const nodes = channelGroups[chan];
+			if (nodes.length > 1) {
+				ctx.strokeStyle = "rgba(217, 83, 79, 0.75)";
+				ctx.shadowColor = "rgba(217, 83, 79, 0.4)";
+				ctx.shadowBlur = 6;
+				
+				for (let i = 0; i < nodes.length; i++) {
+					for (let j = i + 1; j < nodes.length; j++) {
+						ctx.beginPath();
+						ctx.moveTo(nodes[i].x, nodes[i].y);
+						ctx.lineTo(nodes[j].x, nodes[j].y);
+						ctx.stroke();
+					}
+				}
+			}
+		});
+		
+		ctx.setLineDash([]);
+		ctx.shadowBlur = 0;
+	}
+
+	function drawMapNodes(ctx) {
+		mapNodes.forEach(node => {
+			const isSelected = selectedNode === node;
+			const isActive = node.status === 1;
+			
+			ctx.beginPath();
+			ctx.arc(node.x, node.y, node.radius + 2, 0, Math.PI * 2);
+			ctx.fillStyle = "#ffffff";
+			ctx.shadowColor = "rgba(0,0,0,0.06)";
+			ctx.shadowBlur = 4;
+			ctx.fill();
+			ctx.shadowBlur = 0;
+			
+			ctx.beginPath();
+			ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+			ctx.strokeStyle = isActive ? "#26c281" : "#d9534f";
+			ctx.lineWidth = isSelected ? 4.5 : 2.5;
+			ctx.stroke();
+			
+			ctx.beginPath();
+			ctx.arc(node.x, node.y, node.radius - 6, 0, Math.PI * 2);
+			ctx.fillStyle = getChannelColor(node.channel);
+			ctx.fill();
+			
+			ctx.fillStyle = "#ffffff";
+			ctx.font = "bold 9px Arial, sans-serif";
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			ctx.fillText(node.channel, node.x, node.y);
+			
+			ctx.fillStyle = isSelected ? "#7928ca" : "var(--font-color, #333333)";
+			ctx.font = isSelected ? "bold 9px Arial, sans-serif" : "bold 8.5px Arial, sans-serif";
+			ctx.fillText(node.name.length > 14 ? node.name.substring(0, 12) + "..." : node.name, node.x, node.y + node.radius + 12);
+		});
+	}
+
+	function updateSelectedApPanel(node) {
+		const panel = document.getElementById("map-selected-ap-details");
+		if (!node) {
+			panel.innerHTML = `<div style="color: var(--font-alt-color);">Click an Access Point on the map to view details.</div>`;
+			return;
+		}
+		
+		const overlaps = mapNodes.filter(n => n !== node && n.channel === node.channel && n.channel !== "-").map(n => n.name);
+		let overlapHtml = '<span style="color: #26c281; font-weight: bold;">🟢 None (Optimal)</span>';
+		if (overlaps.length > 0) {
+			overlapHtml = `<span style="color: #d9534f; font-weight: bold;">🔴 Overlaps with:</span><br>` + overlaps.join(", ");
+		}
+		
+		panel.innerHTML = `
+			<div style="font-weight: bold; color: #7928ca; margin-bottom: 6px; font-size: 11px; word-break: break-all;">\${node.name}</div>
+			<table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 10px;">
+				<tr><td style="color: var(--font-alt-color); padding: 2px 0;">IP:</td><td style="text-align: right; font-weight: bold;">\${node.ip}</td></tr>
+				<tr><td style="color: var(--font-alt-color); padding: 2px 0;">Channel:</td><td style="text-align: right; font-weight: bold; color: \${getChannelColor(node.channel)}">\${node.channel}</td></tr>
+				<tr><td style="color: var(--font-alt-color); padding: 2px 0;">Power:</td><td style="text-align: right; font-weight: bold;">\${node.power} dBm</td></tr>
+				<tr><td style="color: var(--font-alt-color); padding: 2px 0;">Status:</td><td style="text-align: right; font-weight: bold; color: \${node.status === 1 ? '#26c281' : '#d9534f'}">\${node.status === 1 ? 'Online' : 'Offline'}</td></tr>
+			</table>
+			<div style="border-top: 1px solid var(--border-color); padding-top: 6px; margin-top: 6px; font-size: 10px;">
+				<div style="font-weight: bold; font-size: 9px; text-transform: uppercase; color: var(--font-alt-color); margin-bottom: 4px;">Co-channel status:</div>
+				<div style="line-height: 1.3;">\${overlapHtml}</div>
+			</div>
+		`;
+	}
+
+	function updateMapLegend() {
+		const legendList = document.getElementById("map-legend-list");
+		if (!legendList) return;
+		
+		const channels = {};
+		mapNodes.forEach(node => {
+			if (node.channel && node.channel !== "-") {
+				channels[node.channel] = (channels[node.channel] || 0) + 1;
+			}
+		});
+		
+		let legendHtml = '';
+		Object.keys(channels).sort((a,b) => parseInt(a,10) - parseInt(b,10)).forEach(chan => {
+			const count = channels[chan];
+			legendHtml += `
+				<div style="display: flex; align-items: center; justify-content: space-between; font-size: 10px;">
+					<div style="display: flex; align-items: center; gap: 6px;">
+						<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: \${getChannelColor(chan)};"></span>
+						<span>Channel \${chan}</span>
+					</div>
+					<strong style="color: var(--font-alt-color);">\${count} AP\${count > 1 ? 's' : ''}</strong>
+				</div>
+			`;
+		});
+		
+		legendList.innerHTML = legendHtml || '<div style="color: var(--font-alt-color);">No active channels.</div>';
+	}
+
+	function renderMapLoop() {
+		const canvas = document.getElementById("co-channel-map-canvas");
+		if (!canvas) return;
+		const ctx = canvas.getContext("2d");
+		
+		applyMapPhysics();
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		
+		// Draw grid
+		ctx.strokeStyle = "rgba(0,0,0,0.015)";
+		ctx.lineWidth = 1;
+		for (let x = 0; x < canvas.width; x += 40) {
+			ctx.beginPath();
+			ctx.moveTo(x, 0);
+			ctx.lineTo(x, canvas.height);
+			ctx.stroke();
+		}
+		for (let y = 0; y < canvas.height; y += 40) {
+			ctx.beginPath();
+			ctx.moveTo(0, y);
+			ctx.lineTo(canvas.width, y);
+			ctx.stroke();
+		}
+		
+		drawMapConnections(ctx);
+		drawMapNodes(ctx);
+		
+		mapAnimationId = requestAnimationFrame(renderMapLoop);
+	}
+
+	window.switchMapBand = function(band) {
+		currentMapBand = band;
+		document.getElementById("map-band-5g").classList.toggle("active", band === "5g");
+		document.getElementById("map-band-2g").classList.toggle("active", band === "2g");
+		
+		initMapNodes();
+		updateMapLegend();
+		updateSelectedApPanel(null);
+	};
+
+	function setupMapEvents() {
+		const canvas = document.getElementById("co-channel-map-canvas");
+		if (!canvas) return;
+		
+		function getMousePos(e) {
+			const rect = canvas.getBoundingClientRect();
+			const scaleX = canvas.width / rect.width;
+			const scaleY = canvas.height / rect.height;
+			return {
+				x: (e.clientX - rect.left) * scaleX,
+				y: (e.clientY - rect.top) * scaleY
+			};
+		}
+		
+		// Remove existing listeners
+		const newCanvas = canvas.cloneNode(true);
+		canvas.parentNode.replaceChild(newCanvas, canvas);
+		
+		newCanvas.addEventListener("mousedown", (e) => {
+			const pos = getMousePos(e);
+			draggedNode = null;
+			
+			for (let i = 0; i < mapNodes.length; i++) {
+				const node = mapNodes[i];
+				const dx = pos.x - node.x;
+				const dy = pos.y - node.y;
+				const dist = Math.sqrt(dx*dx + dy*dy);
+				if (dist <= node.radius) {
+					draggedNode = node;
+					selectedNode = node;
+					updateSelectedApPanel(node);
+					break;
+				}
+			}
+		});
+		
+		newCanvas.addEventListener("mousemove", (e) => {
+			const pos = getMousePos(e);
+			if (draggedNode) {
+				draggedNode.x = pos.x;
+				draggedNode.y = pos.y;
+			}
+			
+			let overNode = false;
+			for (let i = 0; i < mapNodes.length; i++) {
+				const node = mapNodes[i];
+				const dx = pos.x - node.x;
+				const dy = pos.y - node.y;
+				const dist = Math.sqrt(dx*dx + dy*dy);
+				if (dist <= node.radius) {
+					overNode = true;
+					break;
+				}
+			}
+			newCanvas.style.cursor = overNode ? "pointer" : "default";
+		});
+		
+		const stopDrag = () => { draggedNode = null; };
+		newCanvas.addEventListener("mouseup", stopDrag);
+		newCanvas.addEventListener("mouseleave", stopDrag);
+	}
+
 	// ================= CONTROLS & EVENT HANDLERS =================
 	
 	const tabs = document.querySelectorAll(".rf-tab");
@@ -2181,6 +2600,12 @@ function initDashboard() {
 			const targetPane = tab.getAttribute("data-tab");
 			document.querySelectorAll(".tab-pane").forEach(pane => pane.style.display = "none");
 			document.getElementById("tab-content-" + targetPane).style.display = "block";
+			
+			// Cancel map loop if switching away
+			if (targetPane !== "cochannel_map" && mapAnimationId) {
+				cancelAnimationFrame(mapAnimationId);
+				mapAnimationId = null;
+			}
 			
 			renderActiveTabContent();
 		});
@@ -2195,6 +2620,14 @@ function initDashboard() {
 			renderClientMatchTab(activeMatchRadio);
 		} else if (activeTab === "spectrum") {
 			renderSpectrumTab();
+		} else if (activeTab === "cochannel_map") {
+			if (!mapAnimationId) {
+				initMapNodes();
+				updateMapLegend();
+				updateSelectedApPanel(null);
+				setupMapEvents();
+				renderMapLoop();
+			}
 		}
 	}
 	
