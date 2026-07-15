@@ -1022,8 +1022,8 @@ $body_html = <<<HTML
 				</div>
 			</div>
 		</div>
-		<div style="position: relative; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; background: var(--form-bg-color, #fdfdfd); height: 500px;">
-			<canvas id="co-channel-map-canvas" width="800" height="500" style="display: block; width: 100%; height: 500px; cursor: default;"></canvas>
+		<div style="position: relative; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; background: var(--form-bg-color, #fdfdfd); height: 600px;">
+			<canvas id="co-channel-map-canvas" width="1100" height="600" style="display: block; width: 100%; height: 600px; cursor: default;"></canvas>
 			<!-- Side Panel Legend and Info -->
 			<div id="map-info-panel" style="position: absolute; top: 15px; right: 15px; width: 220px; background: var(--ui-bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); font-size: 11px;">
 				<h5 style="margin-top: 0; margin-bottom: 8px; font-weight: bold; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">Channel Legend</h5>
@@ -2283,8 +2283,8 @@ function initDashboard() {
 		const filteredAps = allHostAps;
 		if (filteredAps.length === 0) return;
 
-		const center = { x: 260, y: 250 };
-		const radius = Math.min(180, filteredAps.length * 10 + 80);
+		const center = { x: 420, y: 300 };
+		const radius = Math.min(260, filteredAps.length * 12 + 100);
 		
 		filteredAps.forEach((ap, idx) => {
 			const angle = (idx / filteredAps.length) * Math.PI * 2;
@@ -2308,15 +2308,15 @@ function initDashboard() {
 	}
 
 	function applyMapPhysics() {
-		const center = { x: 260, y: 250 };
-		const minDistance = 60;
+		const center = { x: 420, y: 300 };
+		const minDistance = 110;
 		
 		mapNodes.forEach(node => {
 			if (node === draggedNode) return;
 			const dx = center.x - node.x;
 			const dy = center.y - node.y;
-			node.vx += dx * 0.002;
-			node.vy += dy * 0.002;
+			node.vx += dx * 0.001;
+			node.vy += dy * 0.001;
 		});
 		
 		for (let i = 0; i < mapNodes.length; i++) {
@@ -2327,7 +2327,7 @@ function initDashboard() {
 				const dy = n2.y - n1.y;
 				const dist = Math.sqrt(dx*dx + dy*dy) || 1;
 				if (dist < minDistance) {
-					const force = (minDistance - dist) * 0.05;
+					const force = (minDistance - dist) * 0.08;
 					const fx = (dx / dist) * force;
 					const fy = (dy / dist) * force;
 					
@@ -2351,12 +2351,12 @@ function initDashboard() {
 			}
 			node.x += node.vx;
 			node.y += node.vy;
-			node.vx *= 0.85;
-			node.vy *= 0.85;
+			node.vx *= 0.8;
+			node.vy *= 0.8;
 			
 			// Bound checking
-			node.x = Math.max(node.radius + 15, Math.min(800 - node.radius - 245, node.x));
-			node.y = Math.max(node.radius + 15, Math.min(500 - node.radius - 15, node.y));
+			node.x = Math.max(node.radius + 20, Math.min(1100 - node.radius - 260, node.x));
+			node.y = Math.max(node.radius + 20, Math.min(600 - node.radius - 20, node.y));
 		});
 	}
 
@@ -2369,17 +2369,15 @@ function initDashboard() {
 			}
 		});
 		
-		ctx.lineWidth = 2.5;
-		ctx.setLineDash([6, 4]);
-		const dashOffset = (Date.now() / 120) % 20;
+		ctx.lineWidth = 2;
+		ctx.setLineDash([5, 5]);
+		const dashOffset = (Date.now() / 150) % 20;
 		ctx.lineDashOffset = -dashOffset;
 		
 		Object.keys(channelGroups).forEach(chan => {
 			const nodes = channelGroups[chan];
 			if (nodes.length > 1) {
-				ctx.strokeStyle = "rgba(217, 83, 79, 0.75)";
-				ctx.shadowColor = "rgba(217, 83, 79, 0.4)";
-				ctx.shadowBlur = 6;
+				ctx.strokeStyle = "rgba(217, 83, 79, 0.8)";
 				
 				for (let i = 0; i < nodes.length; i++) {
 					for (let j = i + 1; j < nodes.length; j++) {
@@ -2393,7 +2391,6 @@ function initDashboard() {
 		});
 		
 		ctx.setLineDash([]);
-		ctx.shadowBlur = 0;
 	}
 
 	function drawMapNodes(ctx) {
@@ -2401,6 +2398,7 @@ function initDashboard() {
 			const isSelected = selectedNode === node;
 			const isActive = node.status === 1;
 			
+			// 1. White border container
 			ctx.beginPath();
 			ctx.arc(node.x, node.y, node.radius + 2, 0, Math.PI * 2);
 			ctx.fillStyle = "#ffffff";
@@ -2409,26 +2407,61 @@ function initDashboard() {
 			ctx.fill();
 			ctx.shadowBlur = 0;
 			
+			// 2. Online/Offline border
 			ctx.beginPath();
 			ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
 			ctx.strokeStyle = isActive ? "#26c281" : "#d9534f";
 			ctx.lineWidth = isSelected ? 4.5 : 2.5;
 			ctx.stroke();
 			
+			// 3. Inner channel indicator
 			ctx.beginPath();
 			ctx.arc(node.x, node.y, node.radius - 6, 0, Math.PI * 2);
 			ctx.fillStyle = getChannelColor(node.channel);
 			ctx.fill();
 			
+			// 4. Channel text
 			ctx.fillStyle = "#ffffff";
 			ctx.font = "bold 9px Arial, sans-serif";
 			ctx.textAlign = "center";
 			ctx.textBaseline = "middle";
 			ctx.fillText(node.channel, node.x, node.y);
 			
-			ctx.fillStyle = isSelected ? "#7928ca" : "var(--font-color, #333333)";
-			ctx.font = isSelected ? "bold 9px Arial, sans-serif" : "bold 8.5px Arial, sans-serif";
-			ctx.fillText(node.name.length > 14 ? node.name.substring(0, 12) + "..." : node.name, node.x, node.y + node.radius + 12);
+			// 5. Warning indicator if co-channel overlap
+			const hasOverlap = mapNodes.some(n => n !== node && n.channel === node.channel && n.channel !== "-");
+			if (hasOverlap) {
+				const bx = node.x + node.radius - 6;
+				const by = node.y - node.radius + 6;
+				ctx.beginPath();
+				ctx.arc(bx, by, 7, 0, Math.PI * 2);
+				ctx.fillStyle = "#d9534f";
+				ctx.fill();
+				
+				ctx.fillStyle = "#ffffff";
+				ctx.font = "bold 9px Arial, sans-serif";
+				ctx.textBaseline = "middle";
+				ctx.textAlign = "center";
+				ctx.fillText("!", bx, by);
+			}
+			
+			// 6. Legible background badge for name
+			const nameText = node.name;
+			ctx.font = isSelected ? "bold 9.5px Arial, sans-serif" : "bold 9px Arial, sans-serif";
+			ctx.textBaseline = "top";
+			ctx.textAlign = "center";
+			const textWidth = ctx.measureText(nameText).width;
+			
+			ctx.fillStyle = isSelected ? "rgba(121, 40, 202, 0.08)" : "rgba(255, 255, 255, 0.85)";
+			ctx.strokeStyle = isSelected ? "#7928ca" : "rgba(0,0,0,0.06)";
+			ctx.lineWidth = 1;
+			
+			ctx.beginPath();
+			ctx.roundRect(node.x - textWidth/2 - 4, node.y + node.radius + 4, textWidth + 8, 14, 3);
+			ctx.fill();
+			ctx.stroke();
+			
+			ctx.fillStyle = isSelected ? "#7928ca" : "#333333";
+			ctx.fillText(nameText, node.x, node.y + node.radius + 6);
 		});
 	}
 
