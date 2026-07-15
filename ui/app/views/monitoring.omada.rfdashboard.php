@@ -1007,7 +1007,8 @@ $body_html = <<<HTML
 		</p>
 		<div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(38,194,129,0.1); border: 1px solid #26c281; border-radius: 4px; color: #26c281; font-weight: bold; font-size: 11px; margin-top: 15px;">
 			<span style="width: 6px; height: 6px; border-radius: 50%; background: #26c281; display: inline-block;"></span> STANDBY (OK)
-		</div>
+	</div>
+</div>
 </div>
 <!-- TAB 5: CO-CHANNEL MAP -->
 <div id="tab-content-cochannel_map" class="tab-pane" style="display: none;">
