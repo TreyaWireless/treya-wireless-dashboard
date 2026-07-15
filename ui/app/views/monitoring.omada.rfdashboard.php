@@ -2381,10 +2381,15 @@ function initDashboard() {
 				
 				for (let i = 0; i < nodes.length; i++) {
 					for (let j = i + 1; j < nodes.length; j++) {
-						ctx.beginPath();
-						ctx.moveTo(nodes[i].x, nodes[i].y);
-						ctx.lineTo(nodes[j].x, nodes[j].y);
-						ctx.stroke();
+						const dx = nodes[j].x - nodes[i].x;
+						const dy = nodes[j].y - nodes[i].y;
+						const dist = Math.sqrt(dx*dx + dy*dy);
+						if (dist < 220) {
+							ctx.beginPath();
+							ctx.moveTo(nodes[i].x, nodes[i].y);
+							ctx.lineTo(nodes[j].x, nodes[j].y);
+							ctx.stroke();
+						}
 					}
 				}
 			}
@@ -2427,8 +2432,8 @@ function initDashboard() {
 			ctx.textBaseline = "middle";
 			ctx.fillText(node.channel, node.x, node.y);
 			
-			// 5. Warning indicator if co-channel overlap
-			const hasOverlap = mapNodes.some(n => n !== node && n.channel === node.channel && n.channel !== "-");
+			// 5. Warning indicator if co-channel overlap is within 220px proximity
+			const hasOverlap = mapNodes.some(n => n !== node && n.channel === node.channel && n.channel !== "-" && (Math.sqrt((n.x - node.x)**2 + (n.y - node.y)**2) < 220));
 			if (hasOverlap) {
 				const bx = node.x + node.radius - 6;
 				const by = node.y - node.radius + 6;
@@ -2472,7 +2477,7 @@ function initDashboard() {
 			return;
 		}
 		
-		const overlaps = mapNodes.filter(n => n !== node && n.channel === node.channel && n.channel !== "-").map(n => n.name);
+		const overlaps = mapNodes.filter(n => n !== node && n.channel === node.channel && n.channel !== "-" && (Math.sqrt((n.x - node.x)**2 + (n.y - node.y)**2) < 220)).map(n => n.name);
 		let overlapHtml = '<span style="color: #26c281; font-weight: bold;">🟢 None (Optimal)</span>';
 		if (overlaps.length > 0) {
 			overlapHtml = `<span style="color: #d9534f; font-weight: bold;">🔴 Overlaps with:</span><br>` + overlaps.join(", ");
@@ -2565,19 +2570,19 @@ function initDashboard() {
 		const canvas = document.getElementById("co-channel-map-canvas");
 		if (!canvas) return;
 		
+		// Remove existing listeners
+		const newCanvas = canvas.cloneNode(true);
+		canvas.parentNode.replaceChild(newCanvas, canvas);
+		
 		function getMousePos(e) {
-			const rect = canvas.getBoundingClientRect();
-			const scaleX = canvas.width / rect.width;
-			const scaleY = canvas.height / rect.height;
+			const rect = newCanvas.getBoundingClientRect();
+			const scaleX = newCanvas.width / rect.width;
+			const scaleY = newCanvas.height / rect.height;
 			return {
 				x: (e.clientX - rect.left) * scaleX,
 				y: (e.clientY - rect.top) * scaleY
 			};
 		}
-		
-		// Remove existing listeners
-		const newCanvas = canvas.cloneNode(true);
-		canvas.parentNode.replaceChild(newCanvas, canvas);
 		
 		newCanvas.addEventListener("mousedown", (e) => {
 			const pos = getMousePos(e);
