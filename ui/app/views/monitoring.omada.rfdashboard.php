@@ -1207,7 +1207,7 @@ function initDashboard() {
 									ip: ap.ip || "--",
 									channel: channel ? String(channel) : "-",
 									power: txPower ? String(txPower) : "-",
-									radius: 24,
+									radius: 19,
 									status: ap.status
 								});
 							}
@@ -2283,8 +2283,12 @@ function initDashboard() {
 		const filteredAps = allHostAps;
 		if (filteredAps.length === 0) return;
 
-		const center = { x: 420, y: 300 };
-		const radius = Math.min(260, filteredAps.length * 12 + 100);
+		const canvas = document.getElementById("co-channel-map-canvas");
+		const canvasWidth = canvas ? canvas.clientWidth : 1100;
+		const canvasHeight = canvas ? canvas.clientHeight : 600;
+		
+		const center = { x: (canvasWidth - 250) / 2, y: canvasHeight / 2 };
+		const radius = Math.min(240, filteredAps.length * 10 + 100);
 		
 		filteredAps.forEach((ap, idx) => {
 			const angle = (idx / filteredAps.length) * Math.PI * 2;
@@ -2301,15 +2305,18 @@ function initDashboard() {
 				ip: ap.ip || "--",
 				channel: channel ? String(channel) : "-",
 				power: txPower ? String(txPower) : "-",
-				radius: 24,
+				radius: 19,
 				status: ap.status
 			});
 		});
 	}
 
 	function applyMapPhysics() {
-		const center = { x: 420, y: 300 };
-		const minDistance = 110;
+		const canvas = document.getElementById("co-channel-map-canvas");
+		if (!canvas) return;
+		
+		const center = { x: (canvas.width - 250) / 2, y: canvas.height / 2 };
+		const minDistance = 90;
 		
 		mapNodes.forEach(node => {
 			if (node === draggedNode) return;
@@ -2355,8 +2362,8 @@ function initDashboard() {
 			node.vy *= 0.8;
 			
 			// Bound checking
-			node.x = Math.max(node.radius + 20, Math.min(1100 - node.radius - 260, node.x));
-			node.y = Math.max(node.radius + 20, Math.min(600 - node.radius - 20, node.y));
+			node.x = Math.max(node.radius + 20, Math.min(canvas.width - node.radius - 260, node.x));
+			node.y = Math.max(node.radius + 20, Math.min(canvas.height - node.radius - 20, node.y));
 		});
 	}
 
@@ -2487,12 +2494,12 @@ function initDashboard() {
 				const bx = node.x + node.radius - 2;
 				const by = node.y - node.radius + 2;
 				ctx.beginPath();
-				ctx.arc(bx, by, 7, 0, Math.PI * 2);
+				ctx.arc(bx, by, 5.5, 0, Math.PI * 2);
 				ctx.fillStyle = "#d9534f";
 				ctx.fill();
 				
 				ctx.fillStyle = "#ffffff";
-				ctx.font = "bold 9px Arial, sans-serif";
+				ctx.font = "bold 8px Arial, sans-serif";
 				ctx.textBaseline = "middle";
 				ctx.textAlign = "center";
 				ctx.fillText("!", bx, by);
@@ -2500,7 +2507,7 @@ function initDashboard() {
 			
 			// 9. Legible background badge for name
 			const nameText = node.name;
-			ctx.font = isSelected ? "bold 9.5px Arial, sans-serif" : "bold 9px Arial, sans-serif";
+			ctx.font = isSelected ? "bold 9px Arial, sans-serif" : "bold 8.5px Arial, sans-serif";
 			ctx.textBaseline = "top";
 			ctx.textAlign = "center";
 			const textWidth = ctx.measureText(nameText).width;
@@ -2510,12 +2517,12 @@ function initDashboard() {
 			ctx.lineWidth = 1;
 			
 			ctx.beginPath();
-			ctx.roundRect(node.x - textWidth/2 - 4, node.y + node.radius + 7, textWidth + 8, 14, 3);
+			ctx.roundRect(node.x - textWidth/2 - 4, node.y + node.radius + 5, textWidth + 8, 13, 3);
 			ctx.fill();
 			ctx.stroke();
 			
 			ctx.fillStyle = isSelected ? "#7928ca" : "#333333";
-			ctx.fillText(nameText, node.x, node.y + node.radius + 9);
+			ctx.fillText(nameText, node.x, node.y + node.radius + 7);
 		});
 	}
 
@@ -2578,6 +2585,13 @@ function initDashboard() {
 	function renderMapLoop() {
 		const canvas = document.getElementById("co-channel-map-canvas");
 		if (!canvas) return;
+		
+		// Auto resize buffer to prevent stretching/flattening
+		if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
+			canvas.width = canvas.clientWidth;
+			canvas.height = canvas.clientHeight;
+		}
+		
 		const ctx = canvas.getContext("2d");
 		
 		applyMapPhysics();
