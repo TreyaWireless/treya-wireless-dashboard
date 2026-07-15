@@ -2403,40 +2403,89 @@ function initDashboard() {
 			const isSelected = selectedNode === node;
 			const isActive = node.status === 1;
 			
-			// 1. White border container
-			ctx.beginPath();
-			ctx.arc(node.x, node.y, node.radius + 2, 0, Math.PI * 2);
-			ctx.fillStyle = "#ffffff";
-			ctx.shadowColor = "rgba(0,0,0,0.06)";
-			ctx.shadowBlur = 4;
-			ctx.fill();
-			ctx.shadowBlur = 0;
+			ctx.save();
 			
-			// 2. Online/Offline border
+			// 1. External drop shadow for depth
+			ctx.shadowColor = "rgba(0,0,0,0.12)";
+			ctx.shadowBlur = 8;
+			ctx.shadowOffsetY = 3;
+			
+			// 2. Main AP Outer circular body
 			ctx.beginPath();
 			ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+			ctx.fillStyle = "#ffffff";
+			ctx.fill();
+			
+			ctx.shadowBlur = 0; // reset shadow
+			ctx.shadowOffsetY = 0;
+			
+			// 3. AP Chassis ring (border) - color represents status
 			ctx.strokeStyle = isActive ? "#26c281" : "#d9534f";
-			ctx.lineWidth = isSelected ? 4.5 : 2.5;
+			ctx.lineWidth = isSelected ? 4 : 2;
 			ctx.stroke();
 			
-			// 3. Inner channel indicator
+			// Highlight ring if selected
+			if (isSelected) {
+				ctx.beginPath();
+				ctx.arc(node.x, node.y, node.radius + 3, 0, Math.PI * 2);
+				ctx.strokeStyle = "rgba(121, 40, 202, 0.4)";
+				ctx.lineWidth = 2;
+				ctx.stroke();
+			}
+			
+			// 4. Subtle inner plate contour
 			ctx.beginPath();
-			ctx.arc(node.x, node.y, node.radius - 6, 0, Math.PI * 2);
+			ctx.arc(node.x, node.y, node.radius * 0.72, 0, Math.PI * 2);
+			ctx.strokeStyle = "rgba(0, 0, 0, 0.05)";
+			ctx.lineWidth = 1;
+			ctx.stroke();
+			
+			// 5. Center Dome / LED indicator
+			ctx.beginPath();
+			ctx.arc(node.x, node.y, node.radius * 0.45, 0, Math.PI * 2);
 			ctx.fillStyle = getChannelColor(node.channel);
 			ctx.fill();
 			
-			// 4. Channel text
+			// Central glossy reflection dot
+			ctx.beginPath();
+			ctx.arc(node.x - node.radius * 0.12, node.y - node.radius * 0.12, node.radius * 0.12, 0, Math.PI * 2);
+			ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+			ctx.fill();
+			
+			// 6. WiFi transmission waves (radiating outwards on left and right)
+			ctx.strokeStyle = isActive ? "rgba(38, 194, 129, 0.35)" : "rgba(217, 83, 79, 0.35)";
+			ctx.lineWidth = 1.5;
+			
+			// Left waves
+			ctx.beginPath();
+			ctx.arc(node.x, node.y, node.radius + 5, Math.PI * 0.8, Math.PI * 1.2);
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.arc(node.x, node.y, node.radius + 9, Math.PI * 0.84, Math.PI * 1.16);
+			ctx.stroke();
+			
+			// Right waves
+			ctx.beginPath();
+			ctx.arc(node.x, node.y, node.radius + 5, -Math.PI * 0.2, Math.PI * 0.2);
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.arc(node.x, node.y, node.radius + 9, -Math.PI * 0.16, Math.PI * 0.16);
+			ctx.stroke();
+			
+			// 7. Channel text in the center
 			ctx.fillStyle = "#ffffff";
 			ctx.font = "bold 9px Arial, sans-serif";
 			ctx.textAlign = "center";
 			ctx.textBaseline = "middle";
 			ctx.fillText(node.channel, node.x, node.y);
 			
-			// 5. Warning indicator if co-channel overlap is within 220px proximity
+			ctx.restore();
+			
+			// 8. Warning exclamation mark badge if co-channel overlap is within 220px proximity
 			const hasOverlap = mapNodes.some(n => n !== node && n.channel === node.channel && n.channel !== "-" && (Math.sqrt((n.x - node.x)**2 + (n.y - node.y)**2) < 220));
 			if (hasOverlap) {
-				const bx = node.x + node.radius - 6;
-				const by = node.y - node.radius + 6;
+				const bx = node.x + node.radius - 2;
+				const by = node.y - node.radius + 2;
 				ctx.beginPath();
 				ctx.arc(bx, by, 7, 0, Math.PI * 2);
 				ctx.fillStyle = "#d9534f";
@@ -2449,7 +2498,7 @@ function initDashboard() {
 				ctx.fillText("!", bx, by);
 			}
 			
-			// 6. Legible background badge for name
+			// 9. Legible background badge for name
 			const nameText = node.name;
 			ctx.font = isSelected ? "bold 9.5px Arial, sans-serif" : "bold 9px Arial, sans-serif";
 			ctx.textBaseline = "top";
@@ -2461,12 +2510,12 @@ function initDashboard() {
 			ctx.lineWidth = 1;
 			
 			ctx.beginPath();
-			ctx.roundRect(node.x - textWidth/2 - 4, node.y + node.radius + 4, textWidth + 8, 14, 3);
+			ctx.roundRect(node.x - textWidth/2 - 4, node.y + node.radius + 7, textWidth + 8, 14, 3);
 			ctx.fill();
 			ctx.stroke();
 			
 			ctx.fillStyle = isSelected ? "#7928ca" : "#333333";
-			ctx.fillText(nameText, node.x, node.y + node.radius + 6);
+			ctx.fillText(nameText, node.x, node.y + node.radius + 9);
 		});
 	}
 
